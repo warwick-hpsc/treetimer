@@ -1,0 +1,81 @@
+/*
+ * @file
+ * @author James Davis
+ * @version 0.1
+ *
+ * @section LICENSE
+ * Based on PMTM/Ichniea - ToDo: Check License for these
+ *
+ * @section DESCRIPTION
+ *
+ */
+
+#include "tt_linkedlist.h"
+#include "tt_linkedlist_node.h"
+#include "tt_trace_timer.h"
+#include "tt_trace_parameter.h"
+#include <iostream>
+
+namespace treetimer
+{
+	namespace data_structures
+	{
+		template <class T>
+		LinkedList<T>::LinkedList()
+		{
+			head = nullptr;
+			tail = nullptr;
+		}
+
+		template <class T>
+		LinkedList<T>::~LinkedList()
+		{
+			reset();
+		}
+
+		template <class T>
+		void LinkedList<T>::reset()
+		{
+			if(this->head != nullptr)
+			{
+				LinkedListNode<T> * ptr = this->head;
+
+				while(ptr != nullptr)
+				{
+					LinkedListNode<T> * current = ptr;
+					ptr = ptr->next;
+					delete(current);
+				}
+			}
+
+			this->head = nullptr;
+			this->tail = nullptr;
+		}
+
+		template <class T>
+		void LinkedList<T>::add(T data)
+		{
+			if(head == nullptr)
+			{
+				head = new LinkedListNode<T>(data);
+				tail = head;
+			}
+			else
+			{
+				tail->next = new LinkedListNode<T>(data);
+				tail = tail->next;
+			}
+
+		}
+	}
+}
+
+// Explicit Instantiation
+using namespace treetimer::data_structures;
+
+//Classes
+template class LinkedList<treetimer::timers::TraceTimer>;
+template class LinkedList<treetimer::parameters::TraceParameter<int>>;
+template class LinkedList<treetimer::parameters::TraceParameter<double>>;
+template class LinkedList<treetimer::parameters::TraceParameter<bool>>;
+template class LinkedList<treetimer::parameters::TraceParameter<std::string>>;

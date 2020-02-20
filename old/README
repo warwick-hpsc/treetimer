@@ -1,0 +1,2 @@
+This folder contains an old implementation of a python script that creates the database.
+This is now handled inside the library code at initialisation if the database file does not exist.

@@ -1,0 +1,28 @@
+
+
+Licensing:
+
+Most of this code was written from scratch at the University of Warwick.
+
+(a) Ichneia/PMTM (AWE/Tessella?):
+	The use of F2C along with wrappers to generate a fortran interface (although the interfaces themselves are from scratch)
+	are based on the Ichneia/PMTM timing library which seems to be a AWE/Tessella Plc item. This would include an entry in the
+	Makefile on using F2C.
+	It may or may not be distributable without a license, although fortran wrappers could be written by hand if desired.
+
+	The system timers directly taken from the Ichneia/PMTM library (AWE/Tessella) - the relevant files can be found
+	at include/timing_library/measurement/timers/tt_systimers_linux.h and src/timing-library/measurement/timers/tt_systimers_linux.cpp.
+	However, these can be easily substituted with a different timer implementation if desired.
+
+(b) JSON parsing is included from jsoncpp (https://github.com/open-source-parsers/jsoncpp). The files for this can
+	be found under include/third-party/jsoncpp/ and at src/third-party/jsoncpp/jsoncpp.cpp
+    
+    JSONCPP uses the MIT license for this, though if there is an issue with this license another JSON parser could
+    potentially be substituted.
+
+	The JSON functionality was intended to be for writing out data, although it is not currently implemented (or at least
+	hasn't been used in some time if functional) so it may be possible to remove if desired. It was intended to be a more
+	portable replacement for SQLite, since it could be destributed as two headers rather than requiring an SQlite library
+	if needed.
+
+(c) The TreeTimer library uses SQLite. This may pose distribution problems.

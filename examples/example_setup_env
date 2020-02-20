@@ -1,0 +1,40 @@
+# This file provides an example of the environment variables that can be used with the library
+
+# Set the program name
+export TT_CONFIG_APPNAME="TestApp"
+
+# Set the program version
+export TT_CONFIG_APPVER="0.1"
+
+# Set the machine name in use
+export TT_CONFIG_MACHINENAME="Eion"
+
+# Enable(1)/Disable(0) Aggregate Block Timers
+export TT_CONFIG_ATIMERS=1
+
+# Enable(1)/Disable(0) Trace Block Timers
+export TT_CONFIG_TTIMERS=1
+
+# Enable(1)/Disable(0) Aggregate PAPI - Currently not implemented
+export TT_CONFIG_APAPI=0
+
+# Enable(1)/Disable(0) Trace PAPI - Currently not implemented
+export TT_CONFIG_TPAPI=0
+
+# Enable(1)/Disable(0) Aggregate Parameter Tracking
+export TT_CONFIG_APARAM=1
+
+# Enable(1)/Disable(0) Trace Parameter Tracking
+export TT_CONFIG_TPARAM=1
+
+# Enable(1)/Disable(0) MPI Instrumentation Capture (requires use of LD_PRELOAD and a shared library)
+export TT_CONFIG_MPI_HOOKS=1
+
+# Set a list of global parameters of different types at the environment level
+# Can be used to store parameters that are not coded into the program
+# Will be overwritten if a parameter of the same name is declared in the program
+# GlobalIntTest should get overwritten by the declaration in the test program
+export TT_CONFIG_GLOBAL_PARAM_INT="Test=1,Test2=2,Test3=3,GlobalIntTest=22"
+export TT_CONFIG_GLOBAL_PARAM_FLOAT="Test4=0.1,Test5=0.2,Test6=0.3"
+export TT_CONFIG_GLOBAL_PARAM_BOOL="Test7=1,Test8=0,Test9=1"
+export TT_CONFIG_GLOBAL_PARAM_STRING="Test10=Hello,Test11=Hello2"
