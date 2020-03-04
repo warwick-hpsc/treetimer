@@ -47,10 +47,11 @@ LINK = ${SQLITE_LIB} -lm -lc
 
 # Fortran flags:
 FFLAGS        := $(debug)
-FSTDLIBS      = $(LIB)ifcore $(LIB)ifport $(LIB)irc
+FSTDLIBS      :=
 F2C_NAMING    = F2C_UNDERSCORE
 ifeq ($(COMPILER),intel)
 	FFLAGS = -heap-arrays 64 $(FFLAGS)
+	FSTDLIBS      = $(LIB)ifcore $(LIB)ifport $(LIB)irc
 endif
 
 # C flags:
