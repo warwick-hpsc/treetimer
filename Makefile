@@ -108,9 +108,10 @@ OBJECTS = \
 		  src/timing-library/configuration/tt_config.o \
 		  src/timing-library/configuration/tt_state.o \
 		  src/timing-library/core/tt_core.o \
-		  src/timing-library/interface/tt_interface_c.o \
-		  src/timing-library/interface/tt_interface_f90.o \
-		  src/timing-library/interface/tt_wrapper_f90.o
+		  src/timing-library/interface/tt_interface_c.o
+		  ## Disabling F2C interface as not compiling with GNU:
+		  # src/timing-library/interface/tt_interface_f90.o \
+		  # src/timing-library/interface/tt_wrapper_f90.o
 
 INCLUDE+= \
         ${INC} include/third-party/jsoncpp \
