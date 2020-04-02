@@ -141,7 +141,7 @@ module treetimer
 		character(len=*)	:: blockName
 		logical				:: value
 		
-		if(value .eq. .true.) then
+		if(value .eqv. .true.) then
 			call c_tree_timer_log_parameter_bool(blockName, len_trim(blockName), 1)
 		else
 			call c_tree_timer_log_parameter_bool(blockName, len_trim(blockName), 0)			
@@ -174,7 +174,7 @@ module treetimer
 		character(len=*)	:: blockName
 		logical				:: value
 		
-		if(value .eq. .true.) then
+		if(value .eqv. .true.) then
 			call c_tree_timer_log_global_parameter_bool(blockName, len_trim(blockName), 1)
 		else
 			call c_tree_timer_log_global_parameter_bool(blockName, len_trim(blockName), 0)			

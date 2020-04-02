@@ -2,7 +2,6 @@
 # ===== Third party =====
 
 # Directories
-SQLITE_DIR=/path/to/sqlite
 SQLITE_INC=${SQLITE_DIR}/include
 
 # Library Name
@@ -15,13 +14,21 @@ LIB = -l
 INC = -I
 
 # Compilers:
-CC  = icc
-FC  = ifort
-AR  = xiar
-
-MPIFC  = mpiifort
-MPICC  = mpiicc
-MPICXX = mpiicpc
+ifeq ($(COMPILER),gnu)
+	CC  = gcc
+	FC  = gfortran
+	AR  = ar
+	MPIFC  = mpif90
+	MPICC  = mpicc
+	MPICXX = mpic++
+else ifeq ($(COMPILER),intel)
+	CC  = icc
+	FC  = ifort
+	AR  = xiar
+	MPIFC = mpiifort
+	MPICC = mpiicc
+	MPICXX = mpiicpc
+endif
 
 # Build options:
 opt           = -O2
@@ -39,13 +46,20 @@ SQLITE_LIB=${LIBDIR}${SQLITE_DIR}/lib -lsqlite3
 LINK = ${SQLITE_LIB} -lm -lc
 
 # Fortran flags:
-FFLAGS        = -heap-arrays 64 $(debug)
-FSTDLIBS      = $(LIB)ifcore $(LIB)ifport $(LIB)irc
+FFLAGS        := $(debug)
+FSTDLIBS      :=
 F2C_NAMING    = F2C_UNDERSCORE
+ifeq ($(COMPILER),intel)
+	FFLAGS = -heap-arrays 64 $(FFLAGS)
+	FSTDLIBS      = $(LIB)ifcore $(LIB)ifport $(LIB)irc
+endif
 
 # C flags:
 CFLAGS        = $(debug) -std=gnu99
 CDEF          = -D
+
+# C++ flags:
+CXXFLAGS      = $(debug)
 
 LD = $(MPIFC)
 
@@ -94,9 +108,10 @@ OBJECTS = \
 		  src/timing-library/configuration/tt_config.o \
 		  src/timing-library/configuration/tt_state.o \
 		  src/timing-library/core/tt_core.o \
-		  src/timing-library/interface/tt_interface_c.o \
-		  src/timing-library/interface/tt_interface_f90.o \
-		  src/timing-library/interface/tt_wrapper_f90.o
+		  src/timing-library/interface/tt_interface_c.o
+		  ## Disabling F2C interface as not compiling with GNU:
+		  # src/timing-library/interface/tt_interface_f90.o \
+		  # src/timing-library/interface/tt_wrapper_f90.o
 
 INCLUDE+= \
         ${INC} include/third-party/jsoncpp \
@@ -126,7 +141,7 @@ lib-shared: ${OBJECTS}
 	${MPICC} -shared -o lib${LIB_NAME}.so ${OBJECTS} ${SQLITE_LIB}
 
 lib-static: ${OBJECTS}
-	xiar rv lib${LIB_NAME}.a ${OBJECTS}
+	$(AR) rv lib${LIB_NAME}.a ${OBJECTS}
 
 testing-c: lib-static
 	${MPICC} -O2 -c examples/c_interface/main.c ${INCLUDE}
@@ -154,7 +169,7 @@ clean:
 	${MPICC} -fPIC ${INCLUDE} ${CFLAGS} -c $< -o $@
 
 %.o : %.cpp
-	${MPICXX} -fPIC ${INCLUDE} ${CFLAGS} -c $< -o $@
+	${MPICXX} -fPIC ${INCLUDE} ${CXXFLAGS} -c $< -o $@
 
 F2C_conf:
 	@ echo "subroutine test" > tmp.f90; \

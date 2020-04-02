@@ -90,5 +90,6 @@ or a static library, but is not guaranteed or recommended since it will likely d
 #  Building
 #==============
 
-SQLITE_DIR and SQLITE_INC must be set in the Makefile to point at the root and include directories for SQLite. Once this is done, it can be built with
-make all or make lib etc.
+SQLITE_DIR must be set to point at the root directory for SQLite, this assumes that the include files are located at SQLITE_DIR/include/.
+GNU or Intel compilers can be set by setting COMPILER=gnu or COMPILER=intel, respectively.
+Once this is done, it can be built with make all or make lib etc.
