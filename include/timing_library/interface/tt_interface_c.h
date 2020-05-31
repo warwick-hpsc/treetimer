@@ -30,6 +30,7 @@ void TreeTimerEnterBlockComputeLoop(const char * blockName);
 void TreeTimerEnterBlockUnspecified(const char * blockName);
 void TreeTimerEnterBlockNonMPICall(const char * blockName);
 void TreeTimerEnterBlockMPICommCall(const char * blockName);
+void TreeTimerEnterBlockMPISyncCall(const char * blockName);
 void TreeTimerEnterBlockMPINonCommCall(const char * blockName);
 void TreeTimeEnterBlockIOCall(const char * blockName);
 

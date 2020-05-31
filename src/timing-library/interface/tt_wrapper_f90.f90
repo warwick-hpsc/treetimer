@@ -22,6 +22,7 @@ module treetimer
 			  TreeTimerEnterBlockUnspecified,		&
 			  TreeTimerEnterBlockNonMPICall,		&
 			  TreeTimerEnterBlockMPICommCall,		&
+			  TreeTimerEnterBlockMPISyncCall,		&
 			  TreeTimerEnterBlockMPINonCommCall,	&
 			  TreeTimeEnterBlockIOCall,				&
 			  TreeTimerExitBlock,					&
@@ -89,6 +90,13 @@ module treetimer
 		character(len=*)	:: blockName
 		
 		call c_tree_timer_enter_block_mpi_comm_call(blockName, len_trim(blockName))
+		
+	end subroutine
+	
+	subroutine TreeTimerEnterBlockMPISyncCall(blockName)
+		character(len=*)	:: blockName
+		
+		call c_tree_timer_enter_block_mpi_sync_call(blockName, len_trim(blockName))
 		
 	end subroutine
 	

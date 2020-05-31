@@ -26,6 +26,7 @@ extern const std::string codeBlockNames[TT_CODE_BLOCK_COUNT] = {std::string("Pro
 																std::string("NonMPIMethodCall"),
 																std::string("Unspecified"),
 																std::string("MPICommCall"),
+																std::string("MPISyncCall"),
 																std::string("MPINonCommMethodCall"),
 																std::string("MPIIOCall"),
 																std::string("ComputeLoop")};

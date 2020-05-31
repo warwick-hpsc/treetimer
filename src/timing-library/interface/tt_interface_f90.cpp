@@ -115,6 +115,16 @@ int F2C(c_tree_timer_enter_block_mpi_comm_call, C_TREE_TIMER_ENTER_BLOCK_MPI_COM
 	return 0;
 }
 
+int F2C(c_tree_timer_enter_block_mpi_sync_call, C_TREE_TIMER_ENTER_BLOCK_MPI_SYNC_CALL)(const char * name, int * text_len)
+{
+	char c_name[*text_len + 1];
+	F2C_strcpy(c_name, name, *text_len);
+
+	TreeTimerEnterBlockMPISyncCall(c_name);
+
+	return 0;
+}
+
 int F2C(c_tree_timer_enter_block_mpi_non_comm_call, C_TREE_TIMER_ENTER_BLOCK_MPI_COMM_CALL)(const char * name, int * text_len)
 {
 	char c_name[*text_len + 1];

@@ -62,6 +62,12 @@ void TreeTimerEnterBlockMPICommCall(const char * blockName)
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_MPI_COMM_CALL);
 }
 
+void TreeTimerEnterBlockMPISyncCall(const char * blockName)
+{
+	std::string strName(blockName);
+	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_MPI_SYNC_CALL);
+}
+
 void TreeTimerEnterBlockMPINonCommCall(const char * blockName)
 {
 	std::string strName(blockName);
