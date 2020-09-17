@@ -264,7 +264,7 @@ int MPI_Test(MPI_Request *request, int * flag, MPI_Status *status)
 	if(treetimer::core::libInit && treetimer::core::instrumState->config->eMPIHooks && !(treetimer::core::instrumState->config->inLibrary))
 	{
 		// Code Block
-		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Test",TT_NODE_TYPE_MPI_NONCOMM_CALL);
+		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Test",TT_NODE_TYPE_MPI_COMM_CALL);
 	}
 
 	int r = PMPI_Test(request, flag, status);
@@ -284,7 +284,7 @@ int MPI_Unpack(const void *inbuf, int insize, int *position,
 	if(treetimer::core::libInit && treetimer::core::instrumState->config->eMPIHooks && !(treetimer::core::instrumState->config->inLibrary))
 	{
 		// Code Block
-		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Unpack",TT_NODE_TYPE_MPI_NONCOMM_CALL);
+		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Unpack",TT_NODE_TYPE_MPI_COMM_CALL);
 
 		// Parameters
 		char commGroupName[MPI_MAX_OBJECT_NAME+1];
@@ -315,7 +315,7 @@ int MPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype,
 	if(treetimer::core::libInit && treetimer::core::instrumState->config->eMPIHooks && !(treetimer::core::instrumState->config->inLibrary))
 	{
 		// Code Block
-		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Pack",TT_NODE_TYPE_MPI_NONCOMM_CALL);
+		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Pack",TT_NODE_TYPE_MPI_COMM_CALL);
 
 		// Parameters
 		char commGroupName[MPI_MAX_OBJECT_NAME+1];
@@ -376,7 +376,7 @@ int MPI_Buffer_attach(void *buffer, int size)
 	if(treetimer::core::libInit && treetimer::core::instrumState->config->eMPIHooks && !(treetimer::core::instrumState->config->inLibrary))
 	{
 		// Code Block
-		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Buffer_attach",TT_NODE_TYPE_MPI_NONCOMM_CALL);
+		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Buffer_attach",TT_NODE_TYPE_MPI_COMM_CALL);
 	}
 
 	int r = PMPI_Buffer_attach(buffer, size);
@@ -495,7 +495,7 @@ int MPI_Comm_size(MPI_Comm comm, int * size)
 	if(treetimer::core::libInit && treetimer::core::instrumState->config->eMPIHooks && !(treetimer::core::instrumState->config->inLibrary))
 	{
 		// Code Block
-		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Comm_size",TT_NODE_TYPE_MPI_NONCOMM_CALL);
+		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Comm_size",TT_NODE_TYPE_MPI_COMM_CALL);
 
 		// Parameters
 		char commGroupName[MPI_MAX_OBJECT_NAME+1];
@@ -519,7 +519,7 @@ int MPI_Comm_rank(MPI_Comm comm, int * rank)
 	if(treetimer::core::libInit && treetimer::core::instrumState->config->eMPIHooks && !(treetimer::core::instrumState->config->inLibrary))
 	{
 		// Code Block
-		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Comm_rank",TT_NODE_TYPE_MPI_NONCOMM_CALL);
+		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Comm_rank",TT_NODE_TYPE_MPI_COMM_CALL);
 
 		// Parameters
 		char commGroupName[MPI_MAX_OBJECT_NAME+1];
@@ -634,7 +634,7 @@ int MPI_Send_init(const void *buf, int count, MPI_Datatype datatype, int dest, i
 	if(treetimer::core::libInit && treetimer::core::instrumState->config->eMPIHooks && !(treetimer::core::instrumState->config->inLibrary))
 	{
 		// Code Block
-		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Send_init",TT_NODE_TYPE_MPI_NONCOMM_CALL);
+		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Send_init",TT_NODE_TYPE_MPI_COMM_CALL);
 
 		// Parameters
 		char commGroupName[MPI_MAX_OBJECT_NAME+1];
@@ -665,7 +665,7 @@ int MPI_Bsend_init(const void *buf, int count, MPI_Datatype datatype, int dest, 
 	if(treetimer::core::libInit && treetimer::core::instrumState->config->eMPIHooks && !(treetimer::core::instrumState->config->inLibrary))
 	{
 		// Code Block
-		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Bsend_init",TT_NODE_TYPE_MPI_NONCOMM_CALL);
+		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Bsend_init",TT_NODE_TYPE_MPI_COMM_CALL);
 
 		// Parameters
 		char commGroupName[MPI_MAX_OBJECT_NAME+1];
@@ -696,7 +696,7 @@ int MPI_Ssend_init(const void *buf, int count, MPI_Datatype datatype, int dest, 
 	if(treetimer::core::libInit && treetimer::core::instrumState->config->eMPIHooks && !(treetimer::core::instrumState->config->inLibrary))
 	{
 		// Code Block
-		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Ssend_init",TT_NODE_TYPE_MPI_NONCOMM_CALL);
+		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Ssend_init",TT_NODE_TYPE_MPI_COMM_CALL);
 
 		// Parameters
 		char commGroupName[MPI_MAX_OBJECT_NAME+1];
@@ -728,7 +728,7 @@ int MPI_Rsend_init(const void *buf, int count, MPI_Datatype datatype, int dest, 
 	if(treetimer::core::libInit && treetimer::core::instrumState->config->eMPIHooks && !(treetimer::core::instrumState->config->inLibrary))
 	{
 		// Code Block
-		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Rsend_init",TT_NODE_TYPE_MPI_NONCOMM_CALL);
+		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Rsend_init",TT_NODE_TYPE_MPI_COMM_CALL);
 
 		// Parameters
 		char commGroupName[MPI_MAX_OBJECT_NAME+1];
@@ -759,7 +759,7 @@ int MPI_Recv_init(void *buf, int count, MPI_Datatype datatype, int source, int t
 	if(treetimer::core::libInit && treetimer::core::instrumState->config->eMPIHooks && !(treetimer::core::instrumState->config->inLibrary))
 	{
 		// Code Block
-		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Recv_init",TT_NODE_TYPE_MPI_NONCOMM_CALL);
+		treetimer::core::drivers::TreeTimerEnterBlock("MPI_PMPI_Recv_init",TT_NODE_TYPE_MPI_COMM_CALL);
 
 		// Parameters
 		char commGroupName[MPI_MAX_OBJECT_NAME+1];

@@ -24,17 +24,20 @@ void TreeTimerLogParameterInt(const char * paramName, int value);
 void TreeTimerLogParameterDouble(const char * paramName, double value);
 void TreeTimerLogParameterBool(const char * paramName, int value);
 
-void TreeTimerEnterBlockMethod(const char * blockName);
-void TreeTimerEnterBlockLoop(const char * blockName);
-void TreeTimerEnterBlockComputeLoop(const char * blockName);
-void TreeTimerEnterBlockUnspecified(const char * blockName);
-void TreeTimerEnterBlockNonMPICall(const char * blockName);
-void TreeTimerEnterBlockMPICommCall(const char * blockName);
-void TreeTimerEnterBlockMPISyncCall(const char * blockName);
-void TreeTimerEnterBlockMPINonCommCall(const char * blockName);
-void TreeTimeEnterBlockIOCall(const char * blockName);
+void TreeTimerEnterMethod(const char * blockName);
+void TreeTimerEnterLoop(const char * blockName);
+void TreeTimerEnterCompute(const char * blockName);
+// void TreeTimerEnterUnspecified(const char * blockName);
+void TreeTimerEnterBlock(const char * blockName);
+// void TreeTimerEnterNonMPICall(const char * blockName);
+void TreeTimerEnterMPICommCall(const char * blockName);
+void TreeTimerEnterMPISyncCall(const char * blockName);
+void TreeTimerEnterMPICollectiveCall(const char * blockName);
+// void TreeTimerEnterMPINonCommCall(const char * blockName);
+void TreeTimerEnterIOCall(const char * blockName);
+void TreeTimerEnterLibraryCall(const char * blockName);
 
-void TreeTimerExitBlock(const char * blockName);
+void TreeTimerExit(const char * blockName);
 
 void TreeTimerLogGlobalParameterInt(const char * paramName, int value);
 void TreeTimerLogGlobalParameterDouble(const char * paramName, double value);

@@ -20,16 +20,22 @@
 #include "tt_process_config.h"
 #include <iostream>
 
+// Carefully ensure codeBlockNames[] matches with 'enum CodeBlockType' in 'tt_code_block_type.h'.
+// Logic would dictate that variables should be declared in same file, but 
+// I lack the CPP knowledge to achieve this.
 extern const std::string codeBlockNames[TT_CODE_BLOCK_COUNT] = {std::string("Program"),
 																std::string("Method"),
+																std::string("Block"),
 																std::string("Loop"),
-																std::string("NonMPIMethodCall"),
-																std::string("Unspecified"),
+																std::string("Compute"),
 																std::string("MPICommCall"),
 																std::string("MPISyncCall"),
-																std::string("MPINonCommMethodCall"),
+																std::string("MPICollectiveCall"),
 																std::string("MPIIOCall"),
-																std::string("ComputeLoop")};
+																std::string("LibraryCall")};
+																// std::string("MPINonCommMethodCall"),
+																// std::string("NonMPIMethodCall"),
+																// std::string("Unspecified"),
 
 namespace treetimer
 {

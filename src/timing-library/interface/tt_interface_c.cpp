@@ -26,61 +26,61 @@ void TreeTimerFinalize()
 	treetimer::core::drivers::TreeTimerFinalize();
 }
 
-void TreeTimerEnterBlockMethod(const char * blockName)
+void TreeTimerEnterMethod(const char * blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_METHOD);
 }
 
-void TreeTimerEnterBlockLoop(const char * blockName)
+void TreeTimerEnterLoop(const char * blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_LOOP);
 }
 
-void TreeTimerEnterBlockComputeLoop(const char * blockName)
+void TreeTimerEnterCompute(const char * blockName)
 {
 	std::string strName(blockName);
-	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_COMPUTE_LOOP);
+	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_COMPUTE);
 }
 
-void TreeTimerEnterBlockUnspecified(const char * blockName)
+void TreeTimerEnterBlock(const char * blockName)
 {
 	std::string strName(blockName);
-	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_UNSPECIFIED);
+	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_BLOCK);
 }
 
-void TreeTimerEnterBlockNonMPICall(const char * blockName)
-{
-	std::string strName(blockName);
-	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_NONMPI_CALL);
-}
-
-void TreeTimerEnterBlockMPICommCall(const char * blockName)
+void TreeTimerEnterMPICommCall(const char * blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_MPI_COMM_CALL);
 }
 
-void TreeTimerEnterBlockMPISyncCall(const char * blockName)
+void TreeTimerEnterMPISyncCall(const char * blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_MPI_SYNC_CALL);
 }
 
-void TreeTimerEnterBlockMPINonCommCall(const char * blockName)
+void TreeTimerEnterMPICollectiveCall(const char * blockName)
 {
 	std::string strName(blockName);
-	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_MPI_NONCOMM_CALL);
+	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_MPI_COLLECTIVE_CALL);
 }
 
-void TreeTimeEnterBlockIOCall(const char * blockName)
+void TreeTimerEnterIOCall(const char * blockName)
 {
 	std::string strName(blockName);
-	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_MPI_IO_CALL);
+	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_IO_CALL);
 }
 
-void TreeTimerExitBlock(const char * blockName)
+void TreeTimerEnterLibraryCall(const char * blockName)
+{
+	std::string strName(blockName);
+	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_LIB_CALL);
+}
+
+void TreeTimerExit(const char * blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerExitBlock(strName);
