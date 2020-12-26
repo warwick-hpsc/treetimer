@@ -32,10 +32,7 @@ namespace treetimer
 }
 
 // Explicit Instantiation
-using namespace treetimer::parameters;
-
-// Classes
-template class ParameterSingular<int>;
-template class ParameterSingular<double>;
-template class ParameterSingular<bool>;
-template class ParameterSingular<std::string>;
+template class treetimer::parameters::ParameterSingular<int>;
+template class treetimer::parameters::ParameterSingular<double>;
+template class treetimer::parameters::ParameterSingular<bool>;
+template class treetimer::parameters::ParameterSingular<std::string>;

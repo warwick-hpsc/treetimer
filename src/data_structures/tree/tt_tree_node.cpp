@@ -47,7 +47,4 @@ namespace treetimer
 }
 
 // Explicit Instantiation
-using namespace treetimer::data_structures;
-
-// Classes
-template class TreeNode<std::string, treetimer::measurement::InstrumentationData>;
+template class treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>;
