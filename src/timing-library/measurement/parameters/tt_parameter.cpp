@@ -74,16 +74,13 @@ namespace treetimer
 }
 
 // Explicit Instantiation
-using namespace treetimer::parameters;
-
 // Class
-template class Parameter<int>;
-template class Parameter<double>;
-template class Parameter<bool>;
-template class Parameter<std::string>;
-
+template class treetimer::parameters::Parameter<int>;
+template class treetimer::parameters::Parameter<double>;
+template class treetimer::parameters::Parameter<bool>;
+template class treetimer::parameters::Parameter<std::string>;
 // Drivers
-template void drivers::addValue<int>(Parameter<int>& param, int value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
-template void drivers::addValue<double>(Parameter<double>& param, double value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
-template void drivers::addValue<bool>(Parameter<bool>& param, bool value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
-template void drivers::addValue<>(Parameter<std::string>& param, std::string value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
+template void treetimer::parameters::drivers::addValue<int>(Parameter<int>& param, int value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
+template void treetimer::parameters::drivers::addValue<double>(Parameter<double>& param, double value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
+template void treetimer::parameters::drivers::addValue<bool>(Parameter<bool>& param, bool value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
+template void treetimer::parameters::drivers::addValue<>(Parameter<std::string>& param, std::string value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);

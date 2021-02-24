@@ -28,6 +28,13 @@ else ifeq ($(COMPILER),intel)
 	MPIFC = mpiifort
 	MPICC = mpiicc
 	MPICXX = mpiicpc
+else ifeq ($(COMPILER),clang)
+    CC = clang
+    FC = gfortran ## LLVM-Fortran far from ready (pre-Alpha)
+    AR = ar
+    MPIFC = mpif90 ## LLVM-Fortran far from ready (pre-Alpha)
+    MPICC = mpicc -cc=clang
+    MPICXX = mpicxx -cxx=clang++
 endif
 
 # Build options:

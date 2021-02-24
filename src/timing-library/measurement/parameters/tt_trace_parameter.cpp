@@ -50,10 +50,7 @@ namespace treetimer
 }
 
 // Explicit Instantiation
-using namespace treetimer::parameters;
-
-// Class
-template class TraceParameter<int>;
-template class TraceParameter<double>;
-template class TraceParameter<bool>;
-template class TraceParameter<std::string>;
+template class treetimer::parameters::TraceParameter<int>;
+template class treetimer::parameters::TraceParameter<double>;
+template class treetimer::parameters::TraceParameter<bool>;
+template class treetimer::parameters::TraceParameter<std::string>;

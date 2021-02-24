@@ -156,15 +156,13 @@ namespace treetimer
 }
 
 // Explicit Instantiation
-using namespace treetimer::parameters;
-
 // Classes
-template class AggParameter<int>;
-template class AggParameter<double>;
-template class AggParameter<bool>;
-template class AggParameter<std::string>;
+template class treetimer::parameters::AggParameter<int>;
+template class treetimer::parameters::AggParameter<double>;
+template class treetimer::parameters::AggParameter<bool>;
+template class treetimer::parameters::AggParameter<std::string>;
 
-template void drivers::updateValue<int>(AggParameter<int>& param, int value);
-template void drivers::updateValue<double>(AggParameter<double>& param, double value);
-template void drivers::updateValue<>(AggParameter<bool>& param, bool value);
-template void drivers::updateValue<>(AggParameter<std::string>& param, std::string value);
+template void treetimer::parameters::drivers::updateValue<int>(AggParameter<int>& param, int value);
+template void treetimer::parameters::drivers::updateValue<double>(AggParameter<double>& param, double value);
+template void treetimer::parameters::drivers::updateValue<>(AggParameter<bool>& param, bool value);
+template void treetimer::parameters::drivers::updateValue<>(AggParameter<std::string>& param, std::string value);
