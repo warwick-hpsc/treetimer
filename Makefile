@@ -57,7 +57,7 @@ FFLAGS        := $(debug)
 FSTDLIBS      :=
 F2C_NAMING    = F2C_UNDERSCORE
 ifeq ($(COMPILER),intel)
-	FFLAGS = -heap-arrays 64 $(FFLAGS)
+	FFLAGS += -heap-arrays 64
 	FSTDLIBS      = $(LIB)ifcore $(LIB)ifport $(LIB)irc
 endif
 
@@ -70,8 +70,8 @@ CXXFLAGS      = $(debug)
 
 LD = $(MPIFC)
 
-FFLAGS +=
-CFLAGS += ${F2C_INC} ${CDEF}${F2C_OPT}
+CFLAGS += -D${F2C_NAMING}
+CXXFLAGS += -D${F2C_NAMING}
 
 OBJECTS = \
 		  src/third-party/jsoncpp/jsoncpp.o \
@@ -115,10 +115,9 @@ OBJECTS = \
 		  src/timing-library/configuration/tt_config.o \
 		  src/timing-library/configuration/tt_state.o \
 		  src/timing-library/core/tt_core.o \
-		  src/timing-library/interface/tt_interface_c.o
-		  ## Disabling F2C interface as not compiling with GNU:
-		  # src/timing-library/interface/tt_interface_f90.o \
-		  # src/timing-library/interface/tt_wrapper_f90.o
+		  src/timing-library/interface/tt_interface_c.o \
+		  src/timing-library/interface/tt_interface_f90.o \
+		  src/timing-library/interface/tt_wrapper_f90.o
 
 INCLUDE+= \
         ${INC} include/third-party/jsoncpp \

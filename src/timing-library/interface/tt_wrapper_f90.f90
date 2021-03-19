@@ -16,16 +16,16 @@ module treetimer
 	! Subroutines
 	public :: TreeTimerInit,						&
 			  TreeTimerFinalize,					&
-			  TreeTimerEnterBlockMethod,			&
-			  TreeTimerEnterBlockLoop,				&
-			  TreeTimerEnterBlockComputeLoop,		&
-			  TreeTimerEnterBlockUnspecified,		&
-			  TreeTimerEnterBlockNonMPICall,		&
-			  TreeTimerEnterBlockMPICommCall,		&
-			  TreeTimerEnterBlockMPISyncCall,		&
-			  TreeTimerEnterBlockMPINonCommCall,	&
-			  TreeTimeEnterBlockIOCall,				&
-			  TreeTimerExitBlock,					&
+			  TreeTimerEnterMethod,					&
+			  TreeTimerEnterLoop,					&
+			  TreeTimerEnterCompute,				&
+			  TreeTimerEnterBlock,					&
+			  TreeTimerEnterMPICommCall,			&
+			  TreeTimerEnterMPISyncCall,			&
+			  TreeTimerEnterMPICollectiveCall,		&
+			  TreeTimerEnterIOCall,					&
+			  TreeTimerEnterLibraryCall,			&
+			  TreeTimerExit,						&
 			  TreeTimerLogParameterInt,				&
 			  TreeTimerLogParameterRealSingle,		&
 			  TreeTimerLogParameterRealDouble,		&
@@ -51,73 +51,73 @@ module treetimer
 		
 	end subroutine
 	
-	subroutine TreeTimerEnterBlockMethod(blockName)
+	subroutine TreeTimerEnterMethod(blockName)
 		character(len=*)	:: blockName
 		
-		call c_tree_timer_enter_block_method(blockName, len_trim(blockName))
+		call c_tree_timer_enter_method(blockName, len_trim(blockName))
 		
 	end subroutine
 	
-	subroutine TreeTimerEnterBlockLoop(blockName)
+	subroutine TreeTimerEnterLoop(blockName)
 		character(len=*)	:: blockName
 		
-		call c_tree_timer_enter_block_loop(blockName, len_trim(blockName))
+		call c_tree_timer_enter_loop(blockName, len_trim(blockName))
 	
 	end subroutine
 	
-	subroutine TreeTimerEnterBlockComputeLoop(blockName)
+	subroutine TreeTimerEnterCompute(blockName)
 		character(len=*)	:: blockName
 		
-		call c_tree_timer_enter_block_compute_loop(blockName, len_trim(blockName))
+		call c_tree_timer_enter_compute(blockName, len_trim(blockName))
 		
 	end subroutine
 	
-	subroutine TreeTimerEnterBlockUnspecified(blockName)
+	subroutine TreeTimerEnterBlock(blockName)
 		character(len=*)	:: blockName
 		
-		call c_tree_timer_enter_block_unspecified(blockName, len_trim(blockName))
+		call c_tree_timer_enter_block(blockName, len_trim(blockName))
 		
 	end subroutine
 			  
-	subroutine TreeTimerEnterBlockNonMPICall(blockName)
+	subroutine TreeTimerEnterMPICommCall(blockName)
 		character(len=*)	:: blockName
 		
-		call c_tree_timer_enter_block_non_mpi_call(blockName, len_trim(blockName))
+		call c_tree_timer_enter_mpi_comm_call(blockName, len_trim(blockName))
 		
 	end subroutine
 	
-	subroutine TreeTimerEnterBlockMPICommCall(blockName)
+	subroutine TreeTimerEnterMPISyncCall(blockName)
 		character(len=*)	:: blockName
 		
-		call c_tree_timer_enter_block_mpi_comm_call(blockName, len_trim(blockName))
+		call c_tree_timer_enter_mpi_sync_call(blockName, len_trim(blockName))
 		
 	end subroutine
 	
-	subroutine TreeTimerEnterBlockMPISyncCall(blockName)
+	subroutine TreeTimerEnterMPICollectiveCall(blockName)
 		character(len=*)	:: blockName
 		
-		call c_tree_timer_enter_block_mpi_sync_call(blockName, len_trim(blockName))
+		call c_tree_timer_enter_mpi_collective_call(blockName, len_trim(blockName))
 		
 	end subroutine
 	
-	subroutine TreeTimerEnterBlockMPINonCommCall(blockName)
+	subroutine TreeTimerEnterIOCall(blockName)
 		character(len=*)	:: blockName
 		
-		call c_tree_timer_enter_block_mpi_non_comm_call(blockName, len_trim(blockName))
+		call c_tree_timer_enter_io_call(blockName, len_trim(blockName))
 		
 	end subroutine
 	
-	subroutine TreeTimeEnterBlockIOCall(blockName)
+	subroutine TreeTimerEnterLibraryCall(blockName)
 		character(len=*)	:: blockName
 		
-		call c_tree_timer_enter_block_io_call(blockName, len_trim(blockName))
+		call c_tree_timer_enter_library_call(blockName, len_trim(blockName))
 		
 	end subroutine
 	
-	subroutine TreeTimerExitBlock(blockName)
+	subroutine TreeTimerExit(blockName)
 		character(len=*)	:: blockName
 		
-		call c_tree_timer_exit_block(blockName, len_trim(blockName))
+		call c_tree_timer_exit(blockName, len_trim(blockName))
 		
 	end subroutine
 	
