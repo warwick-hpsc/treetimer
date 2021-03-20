@@ -42,7 +42,7 @@ import matplotlib.patches as mpatches
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--tt-results-dirpath', required=True, help="Dirpath to 'tt_results' folder")
+parser.add_argument('-d', '--tt-results-dirpath', required=True, help="Dirpath to 'tt_results' folder")
 parser.add_argument('-c', '--charts', choices=["polar", "horizontal", "vertical"], help="Chart the call stack runtime breakdown across ranks")
 parser.add_argument('-r', '--chart-ranks', action='store_true', help="If charting, also draw call stack chart for each rank. Expensive!")
 parser.add_argument('-l', '--label', action='store_true', help="Add labels to chart elements. Optional because can create clutter")
@@ -125,7 +125,7 @@ def main():
 					if dbm is None:
 						dbm = sqlite3.connect(':memory:')
 						db.backup(dbm)
-					df = loadHotspotsAggregateTime(1, 1, dbm)
+					df = aggregatedTimes_calculateHotspots(1, 1, dbm)
 					df["rank"] = rank
 					df.to_csv(df_csv, index=False)
 				if df_all_raw is None:
@@ -161,16 +161,16 @@ def main():
 					with open(tree_fp, 'wb') as output:
 						pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
 
-				if rank == 0:
-					# print(t)
-					particlesLoopTree = None
-					particlesLoopTree = buildCallPathNodeTraversal(1, 1, db, particlesLoopTree, 3, 0)
-					print(particlesLoopTree)
-					quit()
-					for l in t.leaves:
-						if l.name == "presol":
-							print(l)
-					quit()
+				# if rank == 0:
+				# 	# print(t)
+				# 	particlesLoopTree = None
+				# 	particlesLoopTree = buildCallPathNodeTraversal(1, 1, db, particlesLoopTree, 3, 0)
+				# 	print(particlesLoopTree)
+				# 	quit()
+				# 	for l in t.leaves:
+				# 		if l.name == "presol":
+				# 			print(l)
+				# 	quit()
 
 				if not args.charts is None:
 					## Add tree to a group
@@ -255,111 +255,65 @@ def main():
 	print("Collated aggregated data written to '{0}'".format(df_filename))
 
 
-# Note - RunID is the SQL Key for the RunID, and processID is the SQL Key ProcessID in the db, not the process rank! (They may not be the same)
-def loadHotspotsAggregateTime(runID, processID, db):
-
-	# Get Root Details
-	rootID = getRootCallPathID(db)
+# Note - ProcessID is just a DB key, NOT the MPI rank.
+def aggregatedTimes_calculateHotspots(runID, processID, db):
+	rootID = getCallpathId(db, 'ProgramRoot')
 	rootRecord = getNodeAggregatedStats(rootID, runID, processID, db)
 
-	records = getAllProfileNodesAggregateTimeExclusive(runID, processID, db)
+	df = getAllProfileNodesAggregateTimeExclusive(runID, processID, db)
 
-	col_names = ["Name", "TypeName", "CallCount", "InclusiveAggregateTime(s)", "ExclusiveAggregateTime(s)", "ExclusiveAggregateTime(% of Run)"]
-	df = None
-
-	df_cols = {c:[] for c in col_names}
-
-	sum = 0.0
-	nonfunctionsum = 0.0
-	for r in records:
-		df_cols["Name"].append(r['Name'])
-		df_cols["TypeName"].append(r['TypeName'])
-		df_cols["CallCount"].append(r['CallCount'])
-		df_cols["InclusiveAggregateTime(s)"].append(r['AggTotalTimeI'])
-		df_cols["ExclusiveAggregateTime(s)"].append(r['AggTotalTimeE'])
-		df_cols["ExclusiveAggregateTime(% of Run)"].append(r['AggTotalTimeE']/rootRecord['AggTotalTimeI'])
-
-		sum = sum + r['AggTotalTimeE']
-
-		if(r['TypeName'] != 'Method'):
-			nonfunctionsum = nonfunctionsum + r['AggTotalTimeE']
-	df = pd.DataFrame(data=df_cols, columns=col_names)
+	df['ExclusiveAggregateTime(% of Run)'] = df['AggTotalTimeE']/rootRecord['AggTotalTimeI']
+	df = df.rename(columns={'AggTotalTimeI':'InclusiveAggregateTime(s)', 'AggTotalTimeE':'ExclusiveAggregateTime(s)'})
+	df = df.drop(['AggAvgTime', 'AggMaxTime', 'AggMinTime', 'CallPathID'], axis=1)
+	df = df.sort_values('ExclusiveAggregateTime(% of Run)', ascending=False)
 
 	return df
 
-# Note - RunID is the SQL Key for the RunID, and processID is the SQL Key ProcessID in the db, not the process rank! (They may not be the same)
+# Note - ProcessID is just a DB key, NOT the MPI rank.
 def getAllProfileNodesAggregateTimeExclusive(runID, processID, db):
 
 	# Since aggregate properties operate on call path nodes (since
 	# times for different paths to the same profile node are stored
 	# separately), we need to merge these values.
 
-	# First, identify the call path nodes associated with a run + process
+	# First, identify the callpath nodes associated with a run & process
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
-
-	cmd = "SELECT DISTINCT CallPathID FROM AggregateTime " + \
-		  "WHERE RunID = " + str(runID) + " AND " + \
-		  "ProcessID = " + str(processID)
-
+	cmd = "SELECT DISTINCT CallPathID FROM AggregateTime WHERE RunID = {0} AND ProcessID = {1}".format(runID, processID)
 	cur.execute(cmd)
 	result = cur.fetchall()
 
-	# Get Aggregate Data
-	records = []
+	callpathIDs = [row['CallPathID'] for row in result]
 
-	for callPaths in result:
-		data = getNodeAggregatedStats(callPaths['CallPathID'], runID, processID, db)
-		data['CallPathID'] = callPaths['CallPathID']
-		records.append(data)
+	col_names = ["Name", "TypeName", "CallPathID", "CallCount", "AggTotalTimeI", "AggTotalTimeE", "AggAvgTime", "AggMaxTime", "AggMinTime"]
+	df = None
+	df_cols = {c:[] for c in col_names}
+	for callpathID in callpathIDs:
+		data = getNodeAggregatedStats(callpathID, runID, processID, db)
+		for k in data.keys():
+			df_cols[k].append(data[k])
+		df_cols['CallPathID'].append(callpathID)
+	df = pd.DataFrame(data=df_cols, columns=col_names)
+	df_grp = df.groupby(['Name', 'TypeName', 'CallPathID']).sum().reset_index()
 
-	# Sort on profile node name - would ideally like to do this in database,
-	# but we need to compute the exclusive time
-	sortedRecords = sorted(records, key=lambda k: k['Name'])
+	return df_grp
 
-	# Group the values together
-	groupRecords = []
-	group = ''
-	count = -1
-	for i in sortedRecords:
-		if(group == "" or group != i['Name']):
-			# Add record to list
-			groupRecords.append(i)
-			group = i['Name']
-			count = count + 1
-		else:
-			# A record with the same name exists, append the values onto this one
-			groupRecords[count]['AggMinTime'] += i['AggMinTime']
-			groupRecords[count]['AggAvgTime'] += i['AggAvgTime']
-			groupRecords[count]['AggMaxTime'] += i['AggMaxTime']
-			groupRecords[count]['CallCount'] += i['CallCount']
-			groupRecords[count]['AggTotalTimeI'] += i['AggTotalTimeI']
-			groupRecords[count]['AggTotalTimeE'] += i['AggTotalTimeE']
-
-	# We now have a list of nodes with the grouped values
-	# Return the list
-	return groupRecords
-
-# Get the CallPathID of the root walltime node
-# Note: This is the only special case, other Call Path Nodes may appear
-# multiple times for the same profile node, since they could have different parent
-# nodes for a different run
-# Since root has no parent nodes, this should only ever appear once and is likely
-# ID 1, but don't wish to assume
-# This is also the only profile/callpath node that is guaranteed to exist
-def getRootCallPathID(db):
+def getCallpathId(db, nodeName):
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
-
-	cmd = "SELECT CallPathID FROM CallPathData NATURAL JOIN ProfileNodeData " + \
-		  "WHERE NodeName LIKE 'ProgramRoot'"
-
+	cmd = "SELECT CallPathID FROM CallPathData NATURAL JOIN ProfileNodeData WHERE NodeName = '{0}'".format(nodeName)
 	cur.execute(cmd)
 	result = cur.fetchone()
 
 	return result['CallPathID']
 
-
+def getNodeChildrenIDs(callPathID, db):
+	db.row_factory = sqlite3.Row
+	cur = db.cursor()
+	cmd = "SELECT CallPathID FROM CallPathData WHERE ParentNodeID = {0}".format(callPathID)
+	cur.execute(cmd)
+	result = cur.fetchall()
+	return [i['CallPathID'] for i in result]
 
 class CallTreeNodeIterator:
 	def __init__(self, callTreeNode, am_root=False):
@@ -501,7 +455,7 @@ class CallTreeNodeAggregated:
 		return nodeStr
 
 def buildCallPathTree(runID, processID, db):
-	rootID = getRootCallPathID(db)
+	rootID = getCallpathId(db, 'ProgramRoot')
 	tree = None
 	x = buildCallPathNodeTraversal(runID, processID, db, tree, rootID, 0)
 	return x
@@ -524,14 +478,6 @@ def buildCallPathNodeTraversal(runID, processID, db, treeNode, nodeID, indentLev
 
 	if am_root:
 		return treeNode
-
-def getNodeChildrenIDs(callPathID, db):
-	db.row_factory = sqlite3.Row
-	cur = db.cursor()
-	cmd = "SELECT CallPathID FROM CallPathData WHERE ParentNodeID = {0}".format(callPathID)
-	cur.execute(cmd)
-	result = cur.fetchall()
-	return [i['CallPathID'] for i in result]
 
 def plotCallPath_root(tree, plotType):
 	if plotType == PlotType.Polar:
@@ -658,17 +604,6 @@ def plotCallPath(tree, root_total, node_total, offset, level, ax, plotType):
 
 
 def getNodeAggregatedStats(callPathID, runID, processID, db):
-	# This method retrieves the following aggregate details about a node and returns them as a dictionary
-	# (1) Node Name: Key 'Name'
-	# (2) Node Type Name: Key 'TypeName'
-	# (3) Min Time: Key 'AggMinTime'
-	# (4) Avg Time: Key 'AggAvgTime'
-	# (5) Max Time: Key 'AggMaxTime'
-	# (6) Count: Key 'CallCount'
-	# (7) Total Time Inclusive (including child node times): Key 'AggTotalTimeI'
-	# (8) Total Time Exclusive (time in this node only, excluding child node times): Key 'AggTotalTimeE'
-	# (9)
-
 	# ToDo: If looping over nodes, this will lead to the same data being loaded from the database multiple
 	# times, which is likely expensive.
 	# Options: Load full data from database into tree in memory (might be v. large)
@@ -678,74 +613,68 @@ def getNodeAggregatedStats(callPathID, runID, processID, db):
 	cur = db.cursor()
 
 	# Get Node Aggregate Details - Should only ever have one entry
-	cmd = "SELECT D.NodeName AS Name, " + \
+	query = "SELECT D.NodeName AS Name, " + \
 			"T.TypeName AS TypeName, " + \
 			"A.MinWallTime AS AggMinTime, A.AvgWallTime AS AggAvgTime, A.MaxWallTime AS AggMaxTime, A.Count AS CallCount " + \
 			"FROM AggregateTime AS A " + \
 			"NATURAL JOIN CallPathData AS C NATURAL JOIN ProfileNodeData AS D NATURAL JOIN ProfileNodeType AS T " + \
 			"WHERE A.CallPathID = {0} AND A.RunID = {1} AND A.ProcessID = {2} ;".format(callPathID, runID, processID)
 
-	cur.execute(cmd)
+	cur.execute(query)
 	result = cur.fetchone()
-
-	rDict = {k:result[k] for k in result.keys()}
-	rDict['AggTotalTimeI'] = rDict['AggAvgTime'] * rDict['CallCount']
+	nodeStats = {k:result[k] for k in result.keys()}
+	nodeStats['AggTotalTimeI'] = nodeStats['AggAvgTime'] * nodeStats['CallCount']
 
 	# === Get Times for any direct children of this node ===
 	childIDs = getNodeChildrenIDs(callPathID, db)
 	if(len(childIDs) == 0):
 		# No child nodes means exclusive time = inclusive time
-		rDict['AggTotalTimeE'] = rDict['AggTotalTimeI']
+		nodeStats['AggTotalTimeE'] = nodeStats['AggTotalTimeI']
 	else:
 		# Get sum of inclusive times taken by child nodes
 		childIDStr = ','.join([str(x) for x in childIDs])
-		cmd = "SELECT SUM(AvgWallTime * Count) AS ChildTimeSum FROM AggregateTime " + \
+		query = "SELECT SUM(AvgWallTime * Count) AS ChildrenWalltime FROM AggregateTime " + \
 			  "WHERE RunID = {0} ".format(processID) + \
 			  "AND CallPathID IN ({0}) ;".format(childIDStr)
-		cur.execute(cmd);
-		result = cur.fetchone()
+		cur.execute(query);
+		childrenWalltime = cur.fetchone()['ChildrenWalltime']
 
-		rDict['AggTotalTimeE'] = rDict['AggTotalTimeI'] - result['ChildTimeSum']
+		nodeStats['AggTotalTimeE'] = nodeStats['AggTotalTimeI'] - childrenWalltime
 		# Due to overhead, potentially possible for this to be slightly negative, so will correct here
-		if(rDict['AggTotalTimeE'] < 0.0):
+		if nodeStats['AggTotalTimeE'] < 0.0:
 			print("Note: negative 'AggTotalTimeE' detected, zeroing")
-			rDict['AggTotalTimeE'] = 0.0
+			nodeStats['AggTotalTimeE'] = 0.0
 
-	return rDict
+	return nodeStats
 
 def aggregateTimesByType(runID, processID, db):
-	# Get all callpath node IDs
+	# # Get all callpath node IDs
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
-	cmd = "SELECT DISTINCT CallPathID FROM AggregateTime NATURAL JOIN CallPathData WHERE RunID = {0};".format(runID)
-	cur.execute(cmd)
+	query = "SELECT DISTINCT CallPathID FROM AggregateTime NATURAL JOIN CallPathData WHERE RunID = {0};".format(runID)
+	cur.execute(query)
 	result = cur.fetchall()
+	callpathIDs = [row['CallPathID'] for row in result]
 
 	# For each callpath node, get the aggregate details
-	records = [getNodeAggregatedStats(row['CallPathID'], runID, processID, db) for row in result]
+	col_names = ["Name", "TypeName", "CallCount", "AggTotalTimeI", "AggTotalTimeE", "AggAvgTime", "AggMaxTime", "AggMinTime"]
+	df = None
+	df_cols = {c:[] for c in col_names}
+	for callpathID in callpathIDs:
+		r = getNodeAggregatedStats(callpathID, runID, processID, db)
+		for k in col_names:
+			df_cols[k].append(r[k])
+	df = pd.DataFrame(data=df_cols, columns=col_names)
 
-	# Get the time for the root node
-	rootID = getRootCallPathID(db)
-	rootProp = getNodeAggregatedStats(rootID, runID, processID, db)
-	walltime = rootProp['AggTotalTimeI']
+	walltime = df[df['Name']=='ProgramRoot'].loc[0,'AggTotalTimeI']
 
 	# Sum times across method types
-	typeExclusiveTimes = {}
-	for r in records:
-		t = r['TypeName']
-		if not t in typeExclusiveTimes.keys():
-			typeExclusiveTimes[t] = r['AggTotalTimeE']
-		else:
-			typeExclusiveTimes[t] += r['AggTotalTimeE']
+	df_sum = df[['TypeName', 'AggTotalTimeE']].groupby('TypeName').sum().reset_index()
+	df_sum = df_sum.rename(columns={'TypeName':'Method type', 'AggTotalTimeE':'Exclusive time'})
+	df_sum['Exclusive time %'] = df_sum['Exclusive time'] / walltime
+	df_sum = df_sum.sort_values("Exclusive time", ascending=False)
 
-	# Pack into a Pandas dataframe
-	methodTypes = list(typeExclusiveTimes.keys())
-	df_init = {'Method type':methodTypes, 
-			   'Exclusive time':[typeExclusiveTimes[t] for t in methodTypes],
-			   'Exclusive time %':[typeExclusiveTimes[t]/walltime for t in methodTypes]}
-	df = pd.DataFrame(data=df_init)
-	df.sort_values("Exclusive time", ascending=False, inplace=True)
-	return(df)
+	return(df_sum)
 
 if __name__ == "__main__":
 	main()
