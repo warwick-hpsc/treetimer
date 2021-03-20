@@ -18,9 +18,9 @@
 namespace treetimer
 {
 	namespace timers
-
+	{
 		class TraceTimings
-
+		{
 			public:
 				TraceTimings();
 				~TraceTimings();

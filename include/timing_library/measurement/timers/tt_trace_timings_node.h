@@ -16,9 +16,9 @@
 namespace treetimer
 {
 	namespace timers
-
+	{
 		class TraceTimingsNode
-
+		{
 			public:
 				TraceTimingsNode();
 				TraceTimingsNode(double walltime, long callEntryID, long callExitID);

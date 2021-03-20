@@ -201,4 +201,6 @@ int F2C(c_tree_timer_log_global_parameter_string, C_TREE_TIMER_LOG_GLOBAL_PARAME
 int F2C(c_tree_timer_flush_trace_data, C_TREE_TIMER_FLUSH_TRACE_DATA)()
 {
 	TreeTimerFlushTraceData();
+
+	return 0;
 }
