@@ -100,8 +100,6 @@ def main():
 			m = re.match("^results\.([0-9]+)\.db$", f)
 			if m:
 				ctr += 1
-				#if ctr > 1:
-				#	break
 				db_fp = os.path.join(tt_folder_dirpath, f)
 				print("Processing: {0} ({1}/{2})".format(db_fp, ctr, num_dbs))
 				rank = int(m.groups()[0])
@@ -112,16 +110,17 @@ def main():
 					os.mkdir(cache_dp)
 
 				db = sqlite3.connect(db_fp)
-				## Loading DB into memory roughly halves 
-				## query times. But only load if 
-				## access required
+				## Loading DB into memory roughly halves query times. 
+				## But only load if access required.
 				dbm = None
+				
+				traceTimes_groupByNode(db, 1, 1, "ParticleSystemTimestep")
+				quit()
 
 				df_csv = os.path.join(cache_dp, f+".csv")
 				if os.path.isfile(df_csv):
 					df = pd.read_csv(df_csv)
 				else:
-					#df = read_db_timings(db_fp)
 					if dbm is None:
 						dbm = sqlite3.connect(':memory:')
 						db.backup(dbm)
@@ -257,7 +256,7 @@ def main():
 
 # Note - ProcessID is just a DB key, NOT the MPI rank.
 def aggregatedTimes_calculateHotspots(runID, processID, db):
-	rootID = getCallpathId(db, 'ProgramRoot')
+	rootID = getNodeCallpathId(db, 'ProgramRoot')
 	rootRecord = getNodeAggregatedStats(rootID, runID, processID, db)
 
 	df = getAllProfileNodesAggregateTimeExclusive(runID, processID, db)
@@ -298,16 +297,15 @@ def getAllProfileNodesAggregateTimeExclusive(runID, processID, db):
 
 	return df_grp
 
-def getCallpathId(db, nodeName):
+def getNodeCallpathId(db, nodeName):
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
 	cmd = "SELECT CallPathID FROM CallPathData NATURAL JOIN ProfileNodeData WHERE NodeName = '{0}'".format(nodeName)
 	cur.execute(cmd)
 	result = cur.fetchone()
-
 	return result['CallPathID']
 
-def getNodeChildrenIDs(callPathID, db):
+def getNodeChildrenIDs(db, callPathID):
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
 	cmd = "SELECT CallPathID FROM CallPathData WHERE ParentNodeID = {0}".format(callPathID)
@@ -455,7 +453,7 @@ class CallTreeNodeAggregated:
 		return nodeStr
 
 def buildCallPathTree(runID, processID, db):
-	rootID = getCallpathId(db, 'ProgramRoot')
+	rootID = getNodeCallpathId(db, 'ProgramRoot')
 	tree = None
 	x = buildCallPathNodeTraversal(runID, processID, db, tree, rootID, 0)
 	return x
@@ -472,7 +470,7 @@ def buildCallPathNodeTraversal(runID, processID, db, treeNode, nodeID, indentLev
 	else:
 		treeNode.addLeaf(leaf)
 
-	childNodes = getNodeChildrenIDs(nodeID, db)
+	childNodes = getNodeChildrenIDs(db, nodeID)
 	for childID in childNodes:
 		buildCallPathNodeTraversal(runID, processID, db, leaf, childID, indentLevel + 1)
 
@@ -626,7 +624,7 @@ def getNodeAggregatedStats(callPathID, runID, processID, db):
 	nodeStats['AggTotalTimeI'] = nodeStats['AggAvgTime'] * nodeStats['CallCount']
 
 	# === Get Times for any direct children of this node ===
-	childIDs = getNodeChildrenIDs(callPathID, db)
+	childIDs = getNodeChildrenIDs(db, callPathID)
 	if(len(childIDs) == 0):
 		# No child nodes means exclusive time = inclusive time
 		nodeStats['AggTotalTimeE'] = nodeStats['AggTotalTimeI']
@@ -675,6 +673,55 @@ def aggregateTimesByType(runID, processID, db):
 	df_sum = df_sum.sort_values("Exclusive time", ascending=False)
 
 	return(df_sum)
+
+def traceTimes_groupByNode(db, runID, processID, nodeName):
+	cid = getNodeCallpathId(db, nodeName)
+	print(cid)
+
+	db.row_factory = sqlite3.Row
+	cur = db.cursor()
+	query = "SELECT NodeEntryID, NodeExitID FROM TraceTimeData WHERE RunID = {0} AND ProcessID = {1} AND CallPathID = {2};".format(runID, processID, cid)
+	cur.execute(query)
+	result = cur.fetchall()
+	traceIds = [(row['NodeEntryID'],row['NodeExitID']) for row in result]
+
+	if len(traceIds) > 0:
+		for tid in traceIds:
+			# print(tid)
+			## Query to get trace entries that occur between start and end if 'tid':
+			query1 = "SELECT * FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
+			# print(query1)
+			# df = pd.read_sql_query(query1, db)
+			# print(df)
+			# cur.execute(query1)
+			# result = cur.fetchall()
+			# print([r for r in result])
+
+			## Query to, for each trace entry, sum walltimes of its children (i.e. grouped by ParentNodeID)
+			# query2 = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
+			# query2 = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
+			query2 = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
+			print(query2)
+			df = pd.read_sql_query(query2, db)
+			print(df)
+			# break
+
+			## Query to join the above two queries into one. Seems to work.
+			# query12 = "SELECT * FROM TraceTimeData"
+			query12 = "SELECT WallTime, ChildrenWalltime, TypeName FROM TraceTimeData"
+			query12 += " LEFT OUTER JOIN ({0}) D ON TraceTimeData.CallPathID = D.PID".format(query2)
+			query12 += " NATURAL JOIN CallPathData"
+			query12 += " NATURAL JOIN ProfileNodeData"
+			query12 += " NATURAL JOIN ProfileNodeType"
+			query12 += " WHERE"
+			query12 += " RunID = {0}".format(runID)
+			query12 += " AND ProcessID = {0}".format(processID)
+			query12 += " AND NodeEntryID >= {0} AND NodeExitID <= {1}".format(tid[0], tid[1])
+			print(query12)
+			df = pd.read_sql_query(query12, db)
+			print(df)
+
+			break
 
 if __name__ == "__main__":
 	main()
