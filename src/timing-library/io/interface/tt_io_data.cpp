@@ -78,7 +78,7 @@ namespace treetimer
 			void resetTraceDataTree(treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node)
 			{
 				// Reset the trace data linked lists to free any linked list nodes
-				node.nodeData.blockTimes->traceTimers.reset();
+				node.nodeData.blockTimer->traceTimers.reset();
 
 				// Reset the trace parameter data linked lists to free any linked list nodes
 				std::unordered_map<std::string, treetimer::parameters::Parameter<int> *>::iterator it_int;

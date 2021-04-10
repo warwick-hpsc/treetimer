@@ -19,13 +19,13 @@ namespace treetimer
 	{
 		InstrumentationData::InstrumentationData()
 		{
-			this->blockTimes = new treetimer::timers::Timer();
+			this->blockTimer = new treetimer::timers::Timer();
 		}
 
 		InstrumentationData::~InstrumentationData()
 		{
 			// Cleanup timer for this instrumentation
-			delete(this->blockTimes);
+			delete(this->blockTimer);
 
 			// Cleanup any parameter storage used for this instrumentation
 
@@ -36,12 +36,12 @@ namespace treetimer
 		{
 			void startInstrumentation(InstrumentationData& node, bool eATimer, bool eTTimer, long callEntryID)
 			{
-				treetimer::timers::drivers::startTimer(*(node.blockTimes), eATimer, eTTimer, callEntryID);
+				treetimer::timers::drivers::startTimer(*(node.blockTimer), eATimer, eTTimer, callEntryID);
 			}
 
 			void stopInstrumentation(InstrumentationData& node, bool eATimer, bool eTTimer, long callExitID)
 			{
-				treetimer::timers::drivers::stopTimer(*(node.blockTimes), eATimer, eTTimer, callExitID);
+				treetimer::timers::drivers::stopTimer(*(node.blockTimer), eATimer, eTTimer, callExitID);
 			}
 
 			void logParameterValue(InstrumentationData& node, std::string name, int val, bool eAParam, bool eTParam, long nodeCallEntry, long nodeCallExit)

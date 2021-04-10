@@ -367,11 +367,11 @@ namespace treetimer
 					{
 						int aggTimeID;
 						treetimer::database::tt_sqlite3::drivers::writeAggregateTimeData(dataAccess, runID, *callPathID, processID,
-										node.nodeData.blockTimes->aggTimings.minWalltime,
-										node.nodeData.blockTimes->aggTimings.avgWalltime,
-										node.nodeData.blockTimes->aggTimings.maxWalltime,
-										sqrt(node.nodeData.blockTimes->aggTimings.varianceWalltime),
-										node.nodeData.blockTimes->aggTimings.count,
+										node.nodeData.blockTimer->aggTimings.minWalltime,
+										node.nodeData.blockTimer->aggTimings.avgWalltime,
+										node.nodeData.blockTimer->aggTimings.maxWalltime,
+										sqrt(node.nodeData.blockTimer->aggTimings.varianceWalltime),
+										node.nodeData.blockTimer->aggTimings.count,
 										&aggTimeID);
 					}
 
@@ -481,7 +481,7 @@ namespace treetimer
 					if(config.eTTimers)
 					{
 						// Loop over trace entries for the timer
-						treetimer::data_structures::LinkedListNode<treetimer::timers::TraceTimer> * ptr = node.nodeData.blockTimes->traceTimers.head;
+						treetimer::data_structures::LinkedListNode<treetimer::timers::TraceTimer> * ptr = node.nodeData.blockTimer->traceTimers.head;
 
 						while(ptr != nullptr)
 						{
