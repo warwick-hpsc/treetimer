@@ -686,42 +686,60 @@ def traceTimes_groupByNode(db, runID, processID, nodeName):
 	traceIds = [(row['NodeEntryID'],row['NodeExitID']) for row in result]
 
 	if len(traceIds) > 0:
+		rows_all = None
 		for tid in traceIds:
+		# for tid in [(33,46)]:
 			# print(tid)
 			## Query to get trace entries that occur between start and end if 'tid':
-			query1 = "SELECT * FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
-			# print(query1)
-			# df = pd.read_sql_query(query1, db)
-			# print(df)
-			# cur.execute(query1)
-			# result = cur.fetchall()
-			# print([r for r in result])
+			# qGetTraces = "SELECT * FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
+			# qGetTraces = "SELECT CallPathID, WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
+			## Update: need to sum within CallPathID
+			qGetTraces = "SELECT TraceTimeID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY CallPathID".format(runID, processID, tid[0], tid[1])
 
 			## Query to, for each trace entry, sum walltimes of its children (i.e. grouped by ParentNodeID)
-			# query2 = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
-			# query2 = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
-			query2 = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
-			print(query2)
-			df = pd.read_sql_query(query2, db)
-			print(df)
-			# break
+			# qGetChildrenWalltime = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
+			# qGetChildrenWalltime = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
+			qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
 
 			## Query to join the above two queries into one. Seems to work.
-			# query12 = "SELECT * FROM TraceTimeData"
-			query12 = "SELECT WallTime, ChildrenWalltime, TypeName FROM TraceTimeData"
-			query12 += " LEFT OUTER JOIN ({0}) D ON TraceTimeData.CallPathID = D.PID".format(query2)
-			query12 += " NATURAL JOIN CallPathData"
-			query12 += " NATURAL JOIN ProfileNodeData"
-			query12 += " NATURAL JOIN ProfileNodeType"
-			query12 += " WHERE"
-			query12 += " RunID = {0}".format(runID)
-			query12 += " AND ProcessID = {0}".format(processID)
-			query12 += " AND NodeEntryID >= {0} AND NodeExitID <= {1}".format(tid[0], tid[1])
-			print(query12)
-			df = pd.read_sql_query(query12, db)
-			print(df)
+			# query12 = "SELECT * FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraces, qGetChildrenWalltime)
+			query12 = "SELECT TraceTimeID, WallTime, ChildrenWalltime, TypeName FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraces, qGetChildrenWalltime)
+			cur.execute(query12)
+			rows = np.array(cur.fetchall())
+			# Set all to have same TraceTimeID, for easier grouping later
+			for i in range(len(rows)):
+				rows[i][0] = rows[0][0]
+			
+			if rows_all is None:
+				rows_all = rows
+			else:
+				rows_all = np.append(rows_all, rows, axis=0)
 
-			break
+		# Pack rows into a DataFrame for final analysis
+		fields = ["TraceTimeID", "WallTime", "ChildrenWalltime", "TypeName"]
+		columns = {}
+		columns["TraceTimeID"] = [r[0] for r in rows_all]
+		columns["WallTime"] = [r[1] for r in rows_all]
+		columns["ChildrenWallTime"] = [r[2] for r in rows_all]
+		columns["TypeName"] = [r[3] for r in rows_all]
+		df = pd.DataFrame(columns)
+
+		df.loc[df["ChildrenWallTime"].isna(), "ChildrenWallTime"] = 0.0
+		df["InclusiveTime"] = df["WallTime"] - df["ChildrenWallTime"]
+		if sum(df["InclusiveTime"] < 0.0) > 0:
+			print(df)
+			raise Exception("Negative inclusive times calculated for trace {0}!".format(tid))
+		df = df.drop(["WallTime", "ChildrenWallTime"], axis=1)
+		df["Type"] = ""
+		df.loc[df["TypeName"].isin(["MPICollectiveCall", "MPICommCall", "MPISyncCall"]), "Type"] = "MPI"
+		df.loc[df["TypeName"].isin(["Method", "Loop", "Compute"]), "Type"] = "Compute"
+		df = df.drop(["TypeName"], axis=1)
+		df = df.groupby(["TraceTimeID", "Type"]).sum().reset_index()
+		df2 = df.groupby("TraceTimeID").sum().reset_index().rename(columns={"InclusiveTime":"TotalTime"})
+		df = df.merge(df2)
+		df["InclusiveTime %"] = df["InclusiveTime"] / df["TotalTime"] * 100.0
+		df = df.drop("TotalTime", axis=1)
+		print(df)
 
 if __name__ == "__main__":
 	main()
