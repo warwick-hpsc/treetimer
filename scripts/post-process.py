@@ -82,6 +82,8 @@ def main():
 	df_all_raw = None
 	df_all_aggregated = None
 
+	traces_all_df = None
+
 	rank_ids = set()
 
 	## Group together rank call traces that have identical topology:
@@ -114,9 +116,6 @@ def main():
 				## But only load if access required.
 				dbm = None
 				
-				traceTimes_groupByNode(db, 1, 1, "ParticleSystemTimestep")
-				quit()
-
 				df_csv = os.path.join(cache_dp, f+".csv")
 				if os.path.isfile(df_csv):
 					df = pd.read_csv(df_csv)
@@ -152,7 +151,6 @@ def main():
 					with open(tree_fp, 'rb') as input:
 						t = pickle.load(input)
 				else:
-					#print(" - constructing call tree ...")
 					if dbm is None:
 						dbm = sqlite3.connect(':memory:')
 						db.backup(dbm)
@@ -171,6 +169,23 @@ def main():
 				# 			print(l)
 				# 	quit()
 
+
+				traces_fp = os.path.join(cache_dp, f+".traces.csv")
+				if os.path.isfile(traces_fp):
+					with open(traces_fp, 'rb') as input:
+						traces_df = pd.read_csv(traces_fp)
+				else:
+					if dbm is None:
+						dbm = sqlite3.connect(':memory:')
+						db.backup(dbm)
+					traces_df = traceTimes_groupByNode(dbm, 1, 1, "ParticleSystemTimestep")
+					traces_df.to_csv(traces_fp, index=False)
+				traces_df["Rank"] = rank
+				if traces_all_df is None:
+					traces_all_df = traces_df
+				else:
+					traces_all_df = traces_all_df.append(traces_df)
+
 				if not args.charts is None:
 					## Add tree to a group
 					if groupedCallTrees is None:
@@ -187,28 +202,12 @@ def main():
 
 					# Plot this call tree
 					if args.charts and (args.chart_ranks or rank==1):
-						print(" - drawing chart ...")
-						if args.charts == "polar":
-							plotType = PlotType.Polar
-						elif args.charts == "vertical":
-							plotType = PlotType.Vertical
-						else:
-							plotType = PlotType.Horizontal
-	
-						fig = plt.figure(figsize=fig_dims)
-						plotCallPath_root(t, plotType)
-	
-						fig.suptitle("Call stack times of rank " + str(rank))
-						chart_dirpath = os.path.join(tt_folder_dirpath, "charts", plotTypeToString[plotType])
-						if not os.path.isdir(chart_dirpath):
-							os.makedirs(chart_dirpath)
-						chart_filepath = os.path.join(chart_dirpath, "rank-{0}.png".format(rank))
-						plt.savefig(chart_filepath)
-						plt.close(fig)
+						print(" - drawing call-tree chart ...")
+						chartCallPath(t, "Call stack times of rank {0}".format(rank), "rank-{0}.png".format(rank))
 
 	if not args.charts is None:
 		## Aggregate together call trees within each group, and create plots:
-		print("Drawing group charts")
+		print("Drawing grouped call-tree charts")
 		aggregatedCallTrees = []
 		gn = 0
 		for g in groupedCallTrees:
@@ -220,25 +219,10 @@ def main():
 				else:
 					agg.appendNodeElementwise(t, rank)
 			aggSum = agg.sumElementwise()
+			chartCallPath(aggSum, "Call stack times summed across ranks "+sorted(agg.ranks).__str__(), "rankGroup{0}.png".format(gn))
 
-			if args.charts == "polar":
-				plotType = PlotType.Polar
-			elif args.charts == "vertical":
-				plotType = PlotType.Vertical
-			else:
-				plotType = PlotType.Horizontal
-
-			fig = plt.figure(figsize=fig_dims)
-			plotCallPath_root(aggSum, plotType)
-
-			fig.suptitle("Call stack times summed across ranks " + sorted(agg.ranks).__str__())
-			chart_dirpath = os.path.join(tt_folder_dirpath, "charts", plotTypeToString[plotType])
-			if not os.path.isdir(chart_dirpath):
-				os.makedirs(chart_dirpath)
-			chart_filepath = os.path.join(chart_dirpath, "rankGroup{0}.png".format(gn))
-			plt.savefig(chart_filepath)
-			plt.close(fig)
-
+	print("Drawing trace charts")
+	traceTimes_chartDynamicLoadBalance(traces_all_df)
 
 	print("Writing out collated CSVs")
 	df_all_raw["num_ranks"] = len(rank_ids)
@@ -477,6 +461,23 @@ def buildCallPathNodeTraversal(runID, processID, db, treeNode, nodeID, indentLev
 	if am_root:
 		return treeNode
 
+def chartCallPath(tree, title, filename):
+	if args.charts == "polar":
+		plotType = PlotType.Polar
+	elif args.charts == "vertical":
+		plotType = PlotType.Vertical
+	else:
+		plotType = PlotType.Horizontal
+	fig = plt.figure(figsize=fig_dims)
+	plotCallPath_root(tree, plotType)
+	fig.suptitle(title)
+	chart_dirpath = os.path.join(args.tt_results_dirpath, "charts", plotTypeToString[plotType])
+	if not os.path.isdir(chart_dirpath):
+		os.makedirs(chart_dirpath)
+	chart_filepath = os.path.join(chart_dirpath, filename)
+	plt.savefig(chart_filepath)
+	plt.close(fig)
+
 def plotCallPath_root(tree, plotType):
 	if plotType == PlotType.Polar:
 		root_total = np.pi * 2
@@ -685,11 +686,11 @@ def traceTimes_groupByNode(db, runID, processID, nodeName):
 	result = cur.fetchall()
 	traceIds = [(row['NodeEntryID'],row['NodeExitID']) for row in result]
 
-	if len(traceIds) > 0:
+	if len(traceIds) == 0:
+		return None
+	else:
 		rows_all = None
 		for tid in traceIds:
-		# for tid in [(33,46)]:
-			# print(tid)
 			## Query to get trace entries that occur between start and end if 'tid':
 			# qGetTraces = "SELECT * FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
 			# qGetTraces = "SELECT CallPathID, WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
@@ -739,7 +740,88 @@ def traceTimes_groupByNode(db, runID, processID, nodeName):
 		df = df.merge(df2)
 		df["InclusiveTime %"] = df["InclusiveTime"] / df["TotalTime"] * 100.0
 		df = df.drop("TotalTime", axis=1)
-		print(df)
+		return df
+
+def traceTimes_chartDynamicLoadBalance(traces_all_df):
+	# Restrict to MPI time %:
+	mpi_traces = traces_all_df[traces_all_df["Type"]=="MPI"].drop(["Type", "InclusiveTime"], axis=1)
+	mpi_traces = mpi_traces.rename(columns={"InclusiveTime %":"MPI %"})
+
+	## Add a unit-stride index column:
+	traceTimesIDs = mpi_traces["TraceTimeID"].unique()
+	traceTimesIDs.sort()
+	indices = np.arange(0,len(traceTimesIDs))
+	df_ids = pd.DataFrame({"TraceTimeID":traceTimesIDs, "TimestepIndex":indices})
+	mpi_traces = mpi_traces.merge(df_ids, validate="many_to_one")
+	## Can drop 'TraceTimeID', a SQL relic:
+	mpi_traces = mpi_traces.drop("TraceTimeID", axis=1)
+
+	## Evenly sample 100 timepoints, so that final chart is legible :
+	sample_size = 10
+	timestepIndices = mpi_traces["TimestepIndex"].unique()
+	timestepIndices.sort()
+	if sample_size < len(timestepIndices):
+		index_step = len(timestepIndices) / sample_size
+		# print("index_step = {0}".format(index_step))
+		traceTimesIDs_sampled = [timestepIndices[round(i*index_step)] for i in range(0, sample_size)]
+		# print(traceTimesIDs_sampled)
+		mpi_traces = mpi_traces[mpi_traces["TimestepIndex"].isin(traceTimesIDs_sampled)].reset_index(drop=True)
+		timestepIndices = mpi_traces["TimestepIndex"].unique()
+		timestepIndices.sort()
+
+	## Ensure table is sorted for calculation
+	mpi_traces = mpi_traces.sort_values(["TimestepIndex", "Rank"])
+	# print(mpi_traces)
+
+	## Finally! Calculate difference in MPI % over time:
+	col_ranks = None
+	col_index = None
+	col_diffs = None
+	s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[0]]
+	for s in range(1, len(timestepIndices)):
+		s1 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s]]
+
+		if s0.shape[0] == 0:
+			raise Exception("s0 is empty")
+		elif s1.shape[0] == 0:
+			raise Exception("s1 is empty (TimestepIndex={0})".format(timestepIndices[s]))
+
+		# print(s0)
+		# print(s1)
+
+		## Calculate diff, etc
+		if col_ranks is None:
+			col_ranks = s0["Rank"].values
+		else:
+			col_ranks = np.append(col_ranks, s0["Rank"].values)
+
+		if col_index is None:
+			col_index = s1["TimestepIndex"].values
+		else:
+			col_index = np.append(col_index, s1["TimestepIndex"].values)
+
+		diff = s1["MPI %"].values - s0["MPI %"].values
+		diff = np.absolute(diff)
+		if col_diffs is None:
+			col_diffs = diff
+		else:
+			col_diffs = np.append(col_diffs, diff)
+		s0 = s1
+		# break
+
+	# print(col_ranks)
+	# print(col_index)
+	# print(col_diffs)
+	diff_df = pd.DataFrame({"TimestepIndex":col_index, "Rank":col_ranks, "MPI % diff":col_diffs})
+	# print(diff_df)
+
+	diffSum_df = diff_df.drop("Rank", axis=1).groupby("TimestepIndex").sum().reset_index()
+	diffSum_df = diffSum_df.rename(columns={"MPI % diff":"Sum MPI % diff"})
+	# print(diffSum_df)
+
+	diffSum_stdev = diffSum_df["Sum MPI % diff"].std()
+	print("diffSum_stdev = {0:.1f}".format(diffSum_stdev))
+
 
 if __name__ == "__main__":
 	main()
