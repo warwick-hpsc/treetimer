@@ -677,7 +677,6 @@ def aggregateTimesByType(runID, processID, db):
 
 def traceTimes_groupByNode(db, runID, processID, nodeName):
 	cid = getNodeCallpathId(db, nodeName)
-	print(cid)
 
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
@@ -747,6 +746,13 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	mpi_traces = traces_all_df[traces_all_df["Type"]=="MPI"].drop(["Type", "InclusiveTime"], axis=1)
 	mpi_traces = mpi_traces.rename(columns={"InclusiveTime %":"MPI %"})
 
+	# Discard first N timesteps as warming-up:
+	N = 10
+	N = 100
+	traceTimesIDs = mpi_traces["TraceTimeID"].unique()
+	traceTimesIDs.sort()
+	mpi_traces = mpi_traces[mpi_traces["TraceTimeID"]>traceTimesIDs[N-1]].reset_index(drop=True)
+
 	## Add a unit-stride index column:
 	traceTimesIDs = mpi_traces["TraceTimeID"].unique()
 	traceTimesIDs.sort()
@@ -757,7 +763,7 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	mpi_traces = mpi_traces.drop("TraceTimeID", axis=1)
 
 	## Evenly sample 100 timepoints, so that final chart is legible :
-	sample_size = 10
+	sample_size = 100
 	timestepIndices = mpi_traces["TimestepIndex"].unique()
 	timestepIndices.sort()
 	if sample_size < len(timestepIndices):
@@ -771,7 +777,6 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 
 	## Ensure table is sorted for calculation
 	mpi_traces = mpi_traces.sort_values(["TimestepIndex", "Rank"])
-	# print(mpi_traces)
 
 	## Finally! Calculate difference in MPI % over time:
 	col_ranks = None
@@ -786,41 +791,35 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 		elif s1.shape[0] == 0:
 			raise Exception("s1 is empty (TimestepIndex={0})".format(timestepIndices[s]))
 
-		# print(s0)
-		# print(s1)
-
 		## Calculate diff, etc
-		if col_ranks is None:
-			col_ranks = s0["Rank"].values
-		else:
-			col_ranks = np.append(col_ranks, s0["Rank"].values)
-
-		if col_index is None:
-			col_index = s1["TimestepIndex"].values
-		else:
-			col_index = np.append(col_index, s1["TimestepIndex"].values)
-
-		diff = s1["MPI %"].values - s0["MPI %"].values
-		diff = np.absolute(diff)
-		if col_diffs is None:
-			col_diffs = diff
-		else:
-			col_diffs = np.append(col_diffs, diff)
+		col_ranks = s0["Rank"].values if (col_ranks is None) else np.append(col_ranks, s0["Rank"].values)
+		col_index = s1["TimestepIndex"].values if (col_index is None) else np.append(col_index, s1["TimestepIndex"].values)
+		diff = np.absolute(s1["MPI %"].values - s0["MPI %"].values)
+		col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
 		s0 = s1
-		# break
 
-	# print(col_ranks)
-	# print(col_index)
-	# print(col_diffs)
 	diff_df = pd.DataFrame({"TimestepIndex":col_index, "Rank":col_ranks, "MPI % diff":col_diffs})
-	# print(diff_df)
 
+	## Sum stdev across ranks
 	diffSum_df = diff_df.drop("Rank", axis=1).groupby("TimestepIndex").sum().reset_index()
 	diffSum_df = diffSum_df.rename(columns={"MPI % diff":"Sum MPI % diff"})
-	# print(diffSum_df)
 
 	diffSum_stdev = diffSum_df["Sum MPI % diff"].std()
 	print("diffSum_stdev = {0:.1f}".format(diffSum_stdev))
+
+	## Pivot for heatmap:
+	df2 = diff_df.pivot_table(index="Rank", columns="TimestepIndex", values="MPI % diff")
+	values = df2.values
+	## Scale 100% -> 255:
+	values = np.round(values*(255.0/100.0))
+	## Scale largest % to 255, for clearer heatmap:
+	values = np.round(values * 255.0/np.max(values))
+	fig = plt.figure(figsize=(20,10))
+	## Best colormap doc: https://matplotlib.org/stable/tutorials/colors/colormaps.html
+	plt.imshow(values, cmap='Reds')
+	fig.suptitle("title")
+	plt.savefig("heatmap.png")
+	plt.close(fig)
 
 
 if __name__ == "__main__":
