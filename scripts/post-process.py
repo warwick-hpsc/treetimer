@@ -83,6 +83,7 @@ def main():
 	df_all_aggregated = None
 
 	traces_all_df = None
+	traceGroupNode = None
 
 	rank_ids = set()
 
@@ -169,7 +170,16 @@ def main():
 				# 			print(l)
 				# 	quit()
 
-
+				## TODO: wrap in a 'if trace data exists':
+				n = findSolverNode(t, 1, t.time)
+				if n is None:
+					print("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+				if traceGroupNode is None:
+					traceGroupNode = n.name
+					print("- using node '{0}' for grouping trace data".format(traceGroupNode))
+				else:
+					if traceGroupNode != n.name:
+						raise Exception("Deducing top-most callpath node in solver loop, for two different ranks, returned two different nodes: '{0}'' vs '{1}'".format(traceGroupNode, n.name))
 				traces_fp = os.path.join(cache_dp, f+".traces.csv")
 				if os.path.isfile(traces_fp):
 					with open(traces_fp, 'rb') as input:
@@ -178,7 +188,7 @@ def main():
 					if dbm is None:
 						dbm = sqlite3.connect(':memory:')
 						db.backup(dbm)
-					traces_df = traceTimes_groupByNode(dbm, 1, 1, "ParticleSystemTimestep")
+					traces_df = traceTimes_groupByNode(dbm, 1, 1, traceGroupNode)
 					traces_df.to_csv(traces_fp, index=False)
 				traces_df["Rank"] = rank
 				if traces_all_df is None:
@@ -460,6 +470,19 @@ def buildCallPathNodeTraversal(runID, processID, db, treeNode, nodeID, indentLev
 
 	if am_root:
 		return treeNode
+
+def findSolverNode(tree, parentCalls, walltime):
+	con1 = tree.time > (0.8*walltime)
+	con2 = tree.calls > (50*parentCalls)
+	if con1 and con2:
+		return tree
+	elif len(tree.leaves) > 0:
+		for l in tree.leaves:
+			r = findSolverNode(l, tree.calls, walltime)
+			if not r is None:
+				return r
+	return None
+
 
 def chartCallPath(tree, title, filename):
 	if args.charts == "polar":
