@@ -834,6 +834,15 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 		mpi_traces = mpi_traces[mpi_traces["TimestepIndex"].isin(traceTimesIDs_sampled)].reset_index(drop=True)
 		timestepIndices = mpi_traces["TimestepIndex"].unique()
 		timestepIndices.sort()
+	elif sample_size > len(timestepIndices):
+		## For consistent chart X-axis, re-calculate indices to scale 0->100
+		index_step = sample_size / len(timestepIndices)
+		traceTimesIDs_scaled = [round(index_step*i) for i in range(0, len(timestepIndices))]
+		df_ids = pd.DataFrame({"TimestepIndex":timestepIndices, "TimestepIndexNew":traceTimesIDs_scaled})
+		mpi_traces = mpi_traces.merge(df_ids, validate="many_to_one")
+		mpi_traces = mpi_traces.drop("TimestepIndex", axis=1).rename(columns={"TimestepIndexNew":"TimestepIndex"})
+		timestepIndices = mpi_traces["TimestepIndex"].unique()
+		timestepIndices.sort()
 
 	## Ensure table is sorted for calculation
 	mpi_traces = mpi_traces.sort_values(["TimestepIndex", "Rank"])
@@ -867,17 +876,27 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	diffSum_stdev = diffSum_df["Sum MPI % diff"].std()
 	print("diffSum_stdev = {0:.1f}".format(diffSum_stdev))
 
-	## Pivot for heatmap:
+	## Construct heatmap:
 	df2 = diff_df.pivot_table(index="Rank", columns="TimestepIndex", values="MPI % diff")
 	values = df2.values
 	## Scale 100% -> 255:
 	values = np.round(values*(255.0/100.0))
 	## Scale largest % to 255, for clearer heatmap:
 	values = np.round(values * 255.0/np.max(values))
-	fig = plt.figure(figsize=(20,10))
+
+	fig = plt.figure(figsize=(20,4))
+	fig.suptitle("Change in MPI% from 10 timesteps prior")
+	ax = fig.add_subplot(1,1,1)
+	ax.set_xlabel("Solver timestep progress %")
+	ax.set_ylabel("Rank")
 	## Best colormap doc: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-	plt.imshow(values, cmap='Reds')
-	fig.suptitle("title")
+	# plt.imshow(values, cmap='Reds')
+	plt.imshow(values, cmap='Reds', extent=[0,99, 0,3])
+	# plt.pcolor(values, cmap='Reds')
+	# ax.set_xticks(df2.columns.values)
+	# ax.set_xticklabels(df2.columns.values)
+	ax.set_yticks([0,3])
+	plt.colorbar(aspect=5)
 	plt.savefig("heatmap.png")
 	plt.close(fig)
 
