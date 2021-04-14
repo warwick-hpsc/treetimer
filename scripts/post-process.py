@@ -891,11 +891,11 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	ax.set_ylabel("Rank")
 	## Best colormap doc: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 	# plt.imshow(values, cmap='Reds')
-	plt.imshow(values, cmap='Reds', extent=[0,99, 0,3])
+	plt.imshow(values, cmap='Reds', extent=[0,99, 0,diff_df["Rank"].max()])
 	# plt.pcolor(values, cmap='Reds')
 	# ax.set_xticks(df2.columns.values)
 	# ax.set_xticklabels(df2.columns.values)
-	ax.set_yticks([0,3])
+	ax.set_yticks([0,diff_df["Rank"].max()])
 	plt.colorbar(aspect=5)
 	plt.savefig("heatmap.png")
 	plt.close(fig)
