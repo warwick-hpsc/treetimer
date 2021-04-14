@@ -29,11 +29,14 @@ if sys.version_info[0] < 3:
 	raise Exception("Script requires Python 3+")
 
 import os, re
-import pickle
 from pprint import pprint
 from copy import deepcopy
 
 import sqlite3
+
+import pickle
+cache = True
+#cache = False
 
 import pandas as pd
 import numpy as np
@@ -109,7 +112,7 @@ def main():
 				rank_ids.add(rank)
 
 				cache_dp = os.path.join(tt_folder_dirpath, "_tt_cache")
-				if not os.path.isdir(cache_dp):
+				if cache and not os.path.isdir(cache_dp):
 					os.mkdir(cache_dp)
 
 				db = sqlite3.connect(db_fp)
@@ -126,7 +129,8 @@ def main():
 						db.backup(dbm)
 					df = aggregatedTimes_calculateHotspots(1, 1, dbm)
 					df["rank"] = rank
-					df.to_csv(df_csv, index=False)
+					if cache:
+						df.to_csv(df_csv, index=False)
 				if df_all_raw is None:
 					df_all_raw = df
 				else:
@@ -141,7 +145,8 @@ def main():
 						db.backup(dbm)
 					df_agg = aggregateTimesByType(1, 1, dbm)
 					df_agg["rank"] = rank
-					df_agg.to_csv(df_agg_fp, index=False)
+					if cache:
+						df_agg.to_csv(df_agg_fp, index=False)
 				if df_all_aggregated is None:
 					df_all_aggregated = df_agg
 				else:
@@ -156,8 +161,9 @@ def main():
 						dbm = sqlite3.connect(':memory:')
 						db.backup(dbm)
 					t = buildCallPathTree(1, 1, dbm)
-					with open(tree_fp, 'wb') as output:
-						pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
+					if cache:
+						with open(tree_fp, 'wb') as output:
+							pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
 
 				# if rank == 0:
 				# 	# print(t)
@@ -189,7 +195,8 @@ def main():
 						dbm = sqlite3.connect(':memory:')
 						db.backup(dbm)
 					traces_df = traceTimes_groupByNode(dbm, 1, 1, traceGroupNode)
-					traces_df.to_csv(traces_fp, index=False)
+					if cache:
+						traces_df.to_csv(traces_fp, index=False)
 				traces_df["Rank"] = rank
 				if traces_all_df is None:
 					traces_all_df = traces_df
@@ -362,15 +369,18 @@ class CallTreeNode:
 			return False
 		return self.leaves == other.leaves
 
-	def __str__(self, indent=0):
+	def toString(self, maxdepth=0):
+		return self.__str__(maxdepth=maxdepth)
+
+	def __str__(self, maxdepth=0, depth=0):
 		nodeStr = ""
-		if indent > 0:
-			#nodeStr += "  :"*(indent-1) + "  |" + "-"
-			nodeStr += " :"*(indent-1) + " |" + "-"
+		if depth > 0:
+			#nodeStr += "  :"*(depth-1) + "  |" + "-"
+			nodeStr += " :"*(depth-1) + " |" + "-"
 		else:
 			nodeStr += " "
 		#nodeStr += "{0} [{1}] - {2:.2f} seconds\n".format(self.name, self.typeName, self.time)
-		detailsStr = self.name.ljust(60-indent*2)
+		detailsStr = self.name.ljust(60-depth*2)
 		detailsStr += " - {0:.2f}s".format(self.time)
 		#detailsStr += " {0} calls".format(self.calls)
 		if self.calls == 1:
@@ -379,9 +389,11 @@ class CallTreeNode:
 			detailsStr += ", x{0} calls".format(self.calls)
 		detailsStr += " [{0}]".format(self.typeName).ljust(12)
 		nodeStr += detailsStr + "\n"
-		for c in self.leaves:
-			cStr = c.__str__(indent+1)
-			nodeStr += cStr
+
+		if maxdepth > 0 and depth < maxdepth-1:
+			for c in self.leaves:
+				cStr = c.__str__(maxdepth, depth+1)
+				nodeStr += cStr
 		return nodeStr
 
 	def __add__(self, other):
@@ -472,7 +484,7 @@ def buildCallPathNodeTraversal(runID, processID, db, treeNode, nodeID, indentLev
 		return treeNode
 
 def findSolverNode(tree, parentCalls, walltime):
-	con1 = tree.time > (0.8*walltime)
+	con1 = tree.time > (0.7*walltime)
 	con2 = tree.calls > (50*parentCalls)
 	if con1 and con2:
 		return tree
@@ -712,14 +724,19 @@ def traceTimes_groupByNode(db, runID, processID, nodeName):
 		return None
 	else:
 		rows_all = None
-		for tid in traceIds:
-			## Query to get trace entries that occur between start and end if 'tid':
+		# TODO: run these queries in parallel
+		#for tid in traceIds:
+		for i in range(len(traceIds)):
+			#if i % (len(traceIds)//20) == 0:
+			#	print("- {0}/{1}".format(i, len(traceIds)))
+			tid = traceIds[i]
+			## Query to get trace entries that occur between start and end of 'tid':
 			# qGetTraces = "SELECT * FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
 			# qGetTraces = "SELECT CallPathID, WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
 			## Update: need to sum within CallPathID
 			qGetTraces = "SELECT TraceTimeID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY CallPathID".format(runID, processID, tid[0], tid[1])
 
-			## Query to, for each trace entry, sum walltimes of its children (i.e. grouped by ParentNodeID)
+			## Query to, for each trace entry in range, sum walltimes of its immediate children
 			# qGetChildrenWalltime = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
 			# qGetChildrenWalltime = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
 			qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
@@ -755,7 +772,10 @@ def traceTimes_groupByNode(db, runID, processID, nodeName):
 		df = df.drop(["WallTime", "ChildrenWallTime"], axis=1)
 		df["Type"] = ""
 		df.loc[df["TypeName"].isin(["MPICollectiveCall", "MPICommCall", "MPISyncCall"]), "Type"] = "MPI"
-		df.loc[df["TypeName"].isin(["Method", "Loop", "Compute"]), "Type"] = "Compute"
+		df.loc[df["TypeName"].isin(["Method", "Loop", "Compute", "Block"]), "Type"] = "Compute"
+		if sum(df["Type"]=="") > 0:
+			print(df["TypeName"].unique())
+			raise Exception("Unhandled TypeName values, investigate")
 		df = df.drop(["TypeName"], axis=1)
 		df = df.groupby(["TraceTimeID", "Type"]).sum().reset_index()
 		df2 = df.groupby("TraceTimeID").sum().reset_index().rename(columns={"InclusiveTime":"TotalTime"})
@@ -769,18 +789,35 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	mpi_traces = traces_all_df[traces_all_df["Type"]=="MPI"].drop(["Type", "InclusiveTime"], axis=1)
 	mpi_traces = mpi_traces.rename(columns={"InclusiveTime %":"MPI %"})
 
+	r_root = mpi_traces["Rank"].min()
+	num_ts_root = mpi_traces[mpi_traces["Rank"]==r_root].shape[0]
+	for r in mpi_traces["Rank"].unique():
+		num_ts = mpi_traces[mpi_traces["Rank"]==r].shape[0]
+		if num_ts != num_ts_root:
+			raise Exception("Ranks {0} and {1} performed different number of solver timesteps - {2} vs {3}".format(r_root, r, num_ts_root, num_ts))
+
 	# Discard first N timesteps as warming-up:
 	N = 10
-	N = 100
 	traceTimesIDs = mpi_traces["TraceTimeID"].unique()
 	traceTimesIDs.sort()
-	mpi_traces = mpi_traces[mpi_traces["TraceTimeID"]>traceTimesIDs[N-1]].reset_index(drop=True)
+	if N > len(traceTimesIDs):
+		mpi_traces = mpi_traces[mpi_traces["TraceTimeID"]>traceTimesIDs[N-1]].reset_index(drop=True)
 
 	## Add a unit-stride index column:
-	traceTimesIDs = mpi_traces["TraceTimeID"].unique()
-	traceTimesIDs.sort()
-	indices = np.arange(0,len(traceTimesIDs))
-	df_ids = pd.DataFrame({"TraceTimeID":traceTimesIDs, "TimestepIndex":indices})
+	## Note: different ranks can have different TraceTimeID for same solver timestep. So, 
+	##       need to process each rank individually.
+	col_ranks = []
+	col_ids = []
+	col_indices = []
+	for r in mpi_traces["Rank"].unique():
+		traceTimesIDs = mpi_traces.loc[mpi_traces["Rank"]==r, "TraceTimeID"].unique()
+		traceTimesIDs.sort()
+		n = len(traceTimesIDs)
+		indices = np.arange(0,n)
+		col_ranks += [r]*n
+		col_ids += traceTimesIDs.tolist()
+		col_indices += indices.tolist()
+	df_ids = pd.DataFrame({"Rank":col_ranks, "TraceTimeID":col_ids, "TimestepIndex":col_indices})
 	mpi_traces = mpi_traces.merge(df_ids, validate="many_to_one")
 	## Can drop 'TraceTimeID', a SQL relic:
 	mpi_traces = mpi_traces.drop("TraceTimeID", axis=1)
@@ -805,8 +842,9 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	col_ranks = None
 	col_index = None
 	col_diffs = None
-	s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[0]]
+	s1 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[0]]
 	for s in range(1, len(timestepIndices)):
+		s0 = s1
 		s1 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s]]
 
 		if s0.shape[0] == 0:
@@ -819,7 +857,6 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 		col_index = s1["TimestepIndex"].values if (col_index is None) else np.append(col_index, s1["TimestepIndex"].values)
 		diff = np.absolute(s1["MPI %"].values - s0["MPI %"].values)
 		col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
-		s0 = s1
 
 	diff_df = pd.DataFrame({"TimestepIndex":col_index, "Rank":col_ranks, "MPI % diff":col_diffs})
 
