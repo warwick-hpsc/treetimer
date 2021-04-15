@@ -43,6 +43,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
+from multiprocessing import Lock, Process, Queue, current_process, cpu_count
+import queue # imported for using queue.Empty exception
+
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--tt-results-dirpath', required=True, help="Dirpath to 'tt_results' folder")
@@ -77,6 +80,84 @@ methodTypeToColour["MPISyncCall"] = "orange"
 methodTypeToColour["MPICollectiveCall"] = "red"
 methodTypeToColour["LibraryCall"] = "yellowgreen"
 
+def preprocess_db(db_fp, ctr, num_dbs):
+	print("Processing: {0} ({1}/{2})".format(db_fp, ctr, num_dbs))
+	db = sqlite3.connect(db_fp)
+	## Loading DB into memory roughly halves query times. 
+	## But only load if access required.
+	dbm = None
+
+	f = os.path.basename(db_fp)
+	m = re.match("^results\.([0-9]+)\.db$", f)
+	rank = int(m.groups()[0])
+
+	cache_dp = os.path.join(args.tt_results_dirpath, "_tt_cache")
+	df_csv = os.path.join(cache_dp, f+".csv")
+	if not os.path.isfile(df_csv):
+		if dbm is None:
+			dbm = sqlite3.connect(':memory:')
+			db.backup(dbm)
+		df = aggregatedTimes_calculateHotspots(1, 1, dbm)
+		df["rank"] = rank
+		if cache:
+			df.to_csv(df_csv, index=False)
+
+	df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
+	if not os.path.isfile(df_agg_fp):
+		if dbm is None:
+			dbm = sqlite3.connect(':memory:')
+			db.backup(dbm)
+		df_agg = aggregateTimesByType(1, 1, dbm)
+		df_agg["rank"] = rank
+		if cache:
+			df_agg.to_csv(df_agg_fp, index=False)
+
+	tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
+	if not os.path.isfile(tree_fp):
+		if dbm is None:
+			dbm = sqlite3.connect(':memory:')
+			db.backup(dbm)
+		t = buildCallPathTree(1, 1, dbm)
+		if cache:
+			with open(tree_fp, 'wb') as output:
+				pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
+
+	## TODO: wrap in a 'if trace data exists':
+	n = findSolverNode(t, 1, t.time)
+	if n is None:
+		print("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+	if traceGroupNode is None:
+		traceGroupNode = n.name
+		print("- using node '{0}' for grouping trace data".format(traceGroupNode))
+	else:
+		if traceGroupNode != n.name:
+			raise Exception("Deducing top-most callpath node in solver loop, for two different ranks, returned two different nodes: '{0}'' vs '{1}'".format(traceGroupNode, n.name))
+	# traceGroupNode = "ParticleSystemTimestep"
+	traces_fp = os.path.join(cache_dp, f+".traces.csv")
+	if not os.path.isfile(traces_fp):
+		if dbm is None:
+			dbm = sqlite3.connect(':memory:')
+			db.backup(dbm)
+		traces_df = traceTimes_groupByNode(dbm, 1, 1, traceGroupNode)
+		traces_df["Rank"] = rank
+		if cache:
+			traces_df.to_csv(traces_fp, index=False)
+
+	return True
+
+def preprocess_db_job(dbs_pending, v):
+	while True:
+		try:
+			task = dbs_pending.get_nowait()
+		except queue.Empty:
+			break
+		else:
+			db_fp = task[0]
+			i = task[1]
+			n = task[2]
+			preprocess_db(db_fp, i, n)
+	return True
+
 def main():
 	tt_folder_dirpath = args.tt_results_dirpath
 	if not os.path.isdir(tt_folder_dirpath):
@@ -100,6 +181,10 @@ def main():
 			if m:
 				num_dbs += 1
 
+	cache_dp = os.path.join(tt_folder_dirpath, "_tt_cache")
+	if cache and not os.path.isdir(cache_dp):
+		os.mkdir(cache_dp)
+	db_fps = []
 	ctr = 0
 	for run_root, run_dirnames, run_filenames in os.walk(tt_folder_dirpath):
 		for f in run_filenames:
@@ -107,7 +192,29 @@ def main():
 			if m:
 				ctr += 1
 				db_fp = os.path.join(tt_folder_dirpath, f)
-				print("Processing: {0} ({1}/{2})".format(db_fp, ctr, num_dbs))
+				db_fps.append(db_fp)
+
+	dbs_pending = Queue()
+	for i in range(0, len(db_fps)):
+		db_fp = db_fps[i]
+		dbs_pending.put((db_fp, i, len(db_fps)))
+	processes = []
+	nprocs = cpu_count() - 1
+	for w in range(nprocs):
+		p = Process(target=preprocess_db_job, args=(dbs_pending, None))
+		processes.append(p)
+		p.start()
+	for i in processes:
+		p.join()
+	print("All DBs pre-processed, outputs cached")
+
+	for run_root, run_dirnames, run_filenames in os.walk(tt_folder_dirpath):
+		for f in run_filenames:
+			m = re.match("^results\.([0-9]+)\.db$", f)
+			if m:
+				ctr += 1
+				db_fp = os.path.join(tt_folder_dirpath, f)
+				# print("Processing: {0} ({1}/{2})".format(db_fp, ctr, num_dbs))
 				rank = int(m.groups()[0])
 				rank_ids.add(rank)
 
@@ -121,83 +228,77 @@ def main():
 				dbm = None
 				
 				df_csv = os.path.join(cache_dp, f+".csv")
-				if os.path.isfile(df_csv):
-					df = pd.read_csv(df_csv)
-				else:
-					if dbm is None:
-						dbm = sqlite3.connect(':memory:')
-						db.backup(dbm)
-					df = aggregatedTimes_calculateHotspots(1, 1, dbm)
-					df["rank"] = rank
-					if cache:
-						df.to_csv(df_csv, index=False)
+				# if os.path.isfile(df_csv):
+				# 	df = pd.read_csv(df_csv)
+				# else:
+				# 	if dbm is None:
+				# 		dbm = sqlite3.connect(':memory:')
+				# 		db.backup(dbm)
+				# 	df = aggregatedTimes_calculateHotspots(1, 1, dbm)
+				# 	df["rank"] = rank
+				# 	if cache:
+				# 		df.to_csv(df_csv, index=False)
+				df = pd.read_csv(df_csv)
 				if df_all_raw is None:
 					df_all_raw = df
 				else:
 					df_all_raw = df_all_raw.append(df)
 
 				df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
-				if os.path.isfile(df_agg_fp):
-					df_agg = pd.read_csv(df_agg_fp)
-				else:
-					if dbm is None:
-						dbm = sqlite3.connect(':memory:')
-						db.backup(dbm)
-					df_agg = aggregateTimesByType(1, 1, dbm)
-					df_agg["rank"] = rank
-					if cache:
-						df_agg.to_csv(df_agg_fp, index=False)
+				# if os.path.isfile(df_agg_fp):
+				# 	df_agg = pd.read_csv(df_agg_fp)
+				# else:
+				# 	if dbm is None:
+				# 		dbm = sqlite3.connect(':memory:')
+				# 		db.backup(dbm)
+				# 	df_agg = aggregateTimesByType(1, 1, dbm)
+				# 	df_agg["rank"] = rank
+				# 	if cache:
+				# 		df_agg.to_csv(df_agg_fp, index=False)
+				df_agg = pd.read_csv(df_agg_fp)
 				if df_all_aggregated is None:
 					df_all_aggregated = df_agg
 				else:
 					df_all_aggregated = df_all_aggregated.append(df_agg)
 
 				tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
-				if os.path.isfile(tree_fp):
-					with open(tree_fp, 'rb') as input:
-						t = pickle.load(input)
-				else:
-					if dbm is None:
-						dbm = sqlite3.connect(':memory:')
-						db.backup(dbm)
-					t = buildCallPathTree(1, 1, dbm)
-					if cache:
-						with open(tree_fp, 'wb') as output:
-							pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
-
-				# if rank == 0:
-				# 	# print(t)
-				# 	particlesLoopTree = None
-				# 	particlesLoopTree = buildCallPathNodeTraversal(1, 1, db, particlesLoopTree, 3, 0)
-				# 	print(particlesLoopTree)
-				# 	quit()
-				# 	for l in t.leaves:
-				# 		if l.name == "presol":
-				# 			print(l)
-				# 	quit()
+				# if os.path.isfile(tree_fp):
+				# 	with open(tree_fp, 'rb') as input:
+				# 		t = pickle.load(input)
+				# else:
+				# 	if dbm is None:
+				# 		dbm = sqlite3.connect(':memory:')
+				# 		db.backup(dbm)
+				# 	t = buildCallPathTree(1, 1, dbm)
+				# 	if cache:
+				# 		with open(tree_fp, 'wb') as output:
+				# 			pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
+				with open(tree_fp, 'rb') as input:
+					t = pickle.load(input)
 
 				## TODO: wrap in a 'if trace data exists':
-				n = findSolverNode(t, 1, t.time)
-				if n is None:
-					print("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
-				if traceGroupNode is None:
-					traceGroupNode = n.name
-					print("- using node '{0}' for grouping trace data".format(traceGroupNode))
-				else:
-					if traceGroupNode != n.name:
-						raise Exception("Deducing top-most callpath node in solver loop, for two different ranks, returned two different nodes: '{0}'' vs '{1}'".format(traceGroupNode, n.name))
+				# n = findSolverNode(t, 1, t.time)
+				# if n is None:
+				# 	print("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+				# if traceGroupNode is None:
+				# 	traceGroupNode = n.name
+				# 	print("- using node '{0}' for grouping trace data".format(traceGroupNode))
+				# else:
+				# 	if traceGroupNode != n.name:
+				# 		raise Exception("Deducing top-most callpath node in solver loop, for two different ranks, returned two different nodes: '{0}'' vs '{1}'".format(traceGroupNode, n.name))
+				# traceGroupNode = "ParticleSystemTimestep"
 				traces_fp = os.path.join(cache_dp, f+".traces.csv")
-				if os.path.isfile(traces_fp):
-					with open(traces_fp, 'rb') as input:
-						traces_df = pd.read_csv(traces_fp)
-				else:
-					if dbm is None:
-						dbm = sqlite3.connect(':memory:')
-						db.backup(dbm)
-					traces_df = traceTimes_groupByNode(dbm, 1, 1, traceGroupNode)
-					if cache:
-						traces_df.to_csv(traces_fp, index=False)
-				traces_df["Rank"] = rank
+				# if os.path.isfile(traces_fp):
+				# 	traces_df = pd.read_csv(traces_fp)
+				# else:
+				# 	if dbm is None:
+				# 		dbm = sqlite3.connect(':memory:')
+				# 		db.backup(dbm)
+				# 	traces_df = traceTimes_groupByNode(dbm, 1, 1, traceGroupNode)
+				# 	traces_df["Rank"] = rank
+				# 	if cache:
+				# 		traces_df.to_csv(traces_fp, index=False)
+				traces_df = pd.read_csv(traces_fp)
 				if traces_all_df is None:
 					traces_all_df = traces_df
 				else:
@@ -710,6 +811,31 @@ def aggregateTimesByType(runID, processID, db):
 
 	return(df_sum)
 
+def traceTimes_getNodeEntryTimes(db, runID, processID, tid):
+
+	cur = db.cursor()
+
+	## Query to get trace entries that occur between start and end of 'tid':
+	# qGetTraces = "SELECT * FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
+	# qGetTraces = "SELECT CallPathID, WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
+	## Update: need to sum within CallPathID
+	qGetTraces = "SELECT TraceTimeID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY CallPathID".format(runID, processID, tid[0], tid[1])
+
+	## Query to, for each trace entry in range, sum walltimes of its immediate children
+	# qGetChildrenWalltime = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
+	# qGetChildrenWalltime = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
+	qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
+
+	## Query to join the above two queries into one. Seems to work.
+	# query12 = "SELECT * FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraces, qGetChildrenWalltime)
+	query12 = "SELECT TraceTimeID, WallTime, ChildrenWalltime, TypeName FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraces, qGetChildrenWalltime)
+	cur.execute(query12)
+	rows = np.array(cur.fetchall())
+	# Set all to have same TraceTimeID, for easier grouping later
+	for i in range(len(rows)):
+		rows[i][0] = rows[0][0]
+	return rows
+
 def traceTimes_groupByNode(db, runID, processID, nodeName):
 	cid = getNodeCallpathId(db, nodeName)
 
@@ -724,32 +850,8 @@ def traceTimes_groupByNode(db, runID, processID, nodeName):
 		return None
 	else:
 		rows_all = None
-		# TODO: run these queries in parallel
-		#for tid in traceIds:
-		for i in range(len(traceIds)):
-			#if i % (len(traceIds)//20) == 0:
-			#	print("- {0}/{1}".format(i, len(traceIds)))
-			tid = traceIds[i]
-			## Query to get trace entries that occur between start and end of 'tid':
-			# qGetTraces = "SELECT * FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
-			# qGetTraces = "SELECT CallPathID, WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
-			## Update: need to sum within CallPathID
-			qGetTraces = "SELECT TraceTimeID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY CallPathID".format(runID, processID, tid[0], tid[1])
-
-			## Query to, for each trace entry in range, sum walltimes of its immediate children
-			# qGetChildrenWalltime = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
-			# qGetChildrenWalltime = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
-			qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
-
-			## Query to join the above two queries into one. Seems to work.
-			# query12 = "SELECT * FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraces, qGetChildrenWalltime)
-			query12 = "SELECT TraceTimeID, WallTime, ChildrenWalltime, TypeName FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraces, qGetChildrenWalltime)
-			cur.execute(query12)
-			rows = np.array(cur.fetchall())
-			# Set all to have same TraceTimeID, for easier grouping later
-			for i in range(len(rows)):
-				rows[i][0] = rows[0][0]
-			
+		for tid in traceIds:
+			rows = traceTimes_getNodeEntryTimes(db, runID, processID, tid)
 			if rows_all is None:
 				rows_all = rows
 			else:
