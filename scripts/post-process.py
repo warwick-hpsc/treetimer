@@ -28,7 +28,7 @@ import sys
 if sys.version_info[0] < 3:
 	raise Exception("Script requires Python 3+")
 
-import os, re
+import os, re, math
 from pprint import pprint
 from copy import deepcopy
 
@@ -37,6 +37,8 @@ import sqlite3
 import pickle
 cache = True
 #cache = False
+parallel_process = True
+# parallel_process = False
 
 import pandas as pd
 import numpy as np
@@ -99,8 +101,7 @@ def preprocess_db(db_fp, ctr, num_dbs):
 			db.backup(dbm)
 		df = aggregatedTimes_calculateHotspots(1, 1, dbm)
 		df["rank"] = rank
-		if cache:
-			df.to_csv(df_csv, index=False)
+		df.to_csv(df_csv, index=False)
 
 	df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
 	if not os.path.isfile(df_agg_fp):
@@ -109,38 +110,34 @@ def preprocess_db(db_fp, ctr, num_dbs):
 			db.backup(dbm)
 		df_agg = aggregateTimesByType(1, 1, dbm)
 		df_agg["rank"] = rank
-		if cache:
-			df_agg.to_csv(df_agg_fp, index=False)
+		df_agg.to_csv(df_agg_fp, index=False)
 
 	tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
+	t = None
 	if not os.path.isfile(tree_fp):
 		if dbm is None:
 			dbm = sqlite3.connect(':memory:')
 			db.backup(dbm)
 		t = buildCallPathTree(1, 1, dbm)
-		if cache:
-			with open(tree_fp, 'wb') as output:
-				pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
+		with open(tree_fp, 'wb') as output:
+			pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
 
 	## TODO: wrap in a 'if trace data exists':
-	n = findSolverNode(t, 1, t.time)
-	if n is None:
-		print("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
-	if traceGroupNode is None:
-		traceGroupNode = n.name
-		print("- using node '{0}' for grouping trace data".format(traceGroupNode))
-	else:
-		if traceGroupNode != n.name:
-			raise Exception("Deducing top-most callpath node in solver loop, for two different ranks, returned two different nodes: '{0}'' vs '{1}'".format(traceGroupNode, n.name))
-	# traceGroupNode = "ParticleSystemTimestep"
 	traces_fp = os.path.join(cache_dp, f+".traces.csv")
 	if not os.path.isfile(traces_fp):
-		if dbm is None:
-			dbm = sqlite3.connect(':memory:')
-			db.backup(dbm)
-		traces_df = traceTimes_groupByNode(dbm, 1, 1, traceGroupNode)
-		traces_df["Rank"] = rank
-		if cache:
+		if t is None:
+			with open(tree_fp, 'rb') as input:
+				t = pickle.load(input)
+		n = findSolverNode(t, 1, t.time)
+		if n is None:
+			raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+		else:
+			traceGroupNode = n.name
+			if dbm is None:
+				dbm = sqlite3.connect(':memory:')
+				db.backup(dbm)
+			traces_df = traceTimes_groupByNode(dbm, 1, 1, traceGroupNode)
+			traces_df["Rank"] = rank
 			traces_df.to_csv(traces_fp, index=False)
 
 	return True
@@ -174,154 +171,94 @@ def main():
 	## Group together rank call traces that have identical topology:
 	groupedCallTrees = None
 
-	num_dbs = 0
-	for run_root, run_dirnames, run_filenames in os.walk(tt_folder_dirpath):
-		for f in run_filenames:
-			m = re.match("^results\.([0-9]+)\.db$", f)
-			if m:
-				num_dbs += 1
-
 	cache_dp = os.path.join(tt_folder_dirpath, "_tt_cache")
 	if cache and not os.path.isdir(cache_dp):
 		os.mkdir(cache_dp)
 	db_fps = []
-	ctr = 0
 	for run_root, run_dirnames, run_filenames in os.walk(tt_folder_dirpath):
 		for f in run_filenames:
-			m = re.match("^results\.([0-9]+)\.db$", f)
-			if m:
-				ctr += 1
-				db_fp = os.path.join(tt_folder_dirpath, f)
-				db_fps.append(db_fp)
+			if re.match("^results\.([0-9]+)\.db$", f):
+				db_fps.append(os.path.join(tt_folder_dirpath, f))
 
-	dbs_pending = Queue()
-	for i in range(0, len(db_fps)):
-		db_fp = db_fps[i]
-		dbs_pending.put((db_fp, i, len(db_fps)))
-	processes = []
-	nprocs = cpu_count() - 1
-	for w in range(nprocs):
-		p = Process(target=preprocess_db_job, args=(dbs_pending, None))
-		processes.append(p)
-		p.start()
-	for i in processes:
-		p.join()
+	if parallel_process:
+		dbs_pending = Queue()
+		for i in range(0, len(db_fps)):
+			db_fp = db_fps[i]
+			dbs_pending.put((db_fp, i+1, len(db_fps)))
+		processes = []
+		nprocs = cpu_count() - 1
+		for w in range(nprocs):
+			p = Process(target=preprocess_db_job, args=(dbs_pending, None))
+			processes.append(p)
+			p.start()
+		for i in processes:
+			p.join()
+	else:
+		for i in range(0, len(db_fps)):
+			preprocess_db(db_fps[i], i+1, len(db_fps))
 	print("All DBs pre-processed, outputs cached")
 
-	for run_root, run_dirnames, run_filenames in os.walk(tt_folder_dirpath):
-		for f in run_filenames:
-			m = re.match("^results\.([0-9]+)\.db$", f)
-			if m:
-				ctr += 1
-				db_fp = os.path.join(tt_folder_dirpath, f)
-				# print("Processing: {0} ({1}/{2})".format(db_fp, ctr, num_dbs))
-				rank = int(m.groups()[0])
-				rank_ids.add(rank)
+	ctr = 0
+	for db_fp in db_fps:
+		f = os.path.basename(db_fp)
+		m = re.match("^results\.([0-9]+)\.db$", f)
+		if m:
+			ctr += 1
+			rank = int(m.groups()[0])
+			rank_ids.add(rank)
 
-				cache_dp = os.path.join(tt_folder_dirpath, "_tt_cache")
-				if cache and not os.path.isdir(cache_dp):
-					os.mkdir(cache_dp)
+			db = sqlite3.connect(db_fp)
+			## Loading DB into memory roughly halves query times. 
+			## But only load if access required.
+			dbm = None
+			
+			df_csv = os.path.join(cache_dp, f+".csv")
+			if not os.path.isfile(df_csv):
+				print("Processing: {0} ({1}/{2})".format(db_fp, ctr, len(db_fps)))
+				preprocess_db(db_fp, ctr, len(db_fps))
+			df = pd.read_csv(df_csv)
+			if df_all_raw is None:
+				df_all_raw = df
+			else:
+				df_all_raw = df_all_raw.append(df)
 
-				db = sqlite3.connect(db_fp)
-				## Loading DB into memory roughly halves query times. 
-				## But only load if access required.
-				dbm = None
-				
-				df_csv = os.path.join(cache_dp, f+".csv")
-				# if os.path.isfile(df_csv):
-				# 	df = pd.read_csv(df_csv)
-				# else:
-				# 	if dbm is None:
-				# 		dbm = sqlite3.connect(':memory:')
-				# 		db.backup(dbm)
-				# 	df = aggregatedTimes_calculateHotspots(1, 1, dbm)
-				# 	df["rank"] = rank
-				# 	if cache:
-				# 		df.to_csv(df_csv, index=False)
-				df = pd.read_csv(df_csv)
-				if df_all_raw is None:
-					df_all_raw = df
+			df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
+			df_agg = pd.read_csv(df_agg_fp)
+			if df_all_aggregated is None:
+				df_all_aggregated = df_agg
+			else:
+				df_all_aggregated = df_all_aggregated.append(df_agg)
+
+			tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
+			with open(tree_fp, 'rb') as input:
+				t = pickle.load(input)
+
+			## TODO: wrap in a 'if trace data exists':
+			traces_fp = os.path.join(cache_dp, f+".traces.csv")
+			traces_df = pd.read_csv(traces_fp)
+			if traces_all_df is None:
+				traces_all_df = traces_df
+			else:
+				traces_all_df = traces_all_df.append(traces_df)
+
+			if not args.charts is None:
+				## Add tree to a group
+				if groupedCallTrees is None:
+					groupedCallTrees = [ {rank:t} ]
 				else:
-					df_all_raw = df_all_raw.append(df)
+					found_group = False
+					for treeGroup in groupedCallTrees:
+						tOther = next(iter(treeGroup.values()))
+						if t == tOther:
+							treeGroup[rank] = t
+							found_group = True
+					if not found_group:
+						groupedCallTrees.append({rank:t})
 
-				df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
-				# if os.path.isfile(df_agg_fp):
-				# 	df_agg = pd.read_csv(df_agg_fp)
-				# else:
-				# 	if dbm is None:
-				# 		dbm = sqlite3.connect(':memory:')
-				# 		db.backup(dbm)
-				# 	df_agg = aggregateTimesByType(1, 1, dbm)
-				# 	df_agg["rank"] = rank
-				# 	if cache:
-				# 		df_agg.to_csv(df_agg_fp, index=False)
-				df_agg = pd.read_csv(df_agg_fp)
-				if df_all_aggregated is None:
-					df_all_aggregated = df_agg
-				else:
-					df_all_aggregated = df_all_aggregated.append(df_agg)
-
-				tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
-				# if os.path.isfile(tree_fp):
-				# 	with open(tree_fp, 'rb') as input:
-				# 		t = pickle.load(input)
-				# else:
-				# 	if dbm is None:
-				# 		dbm = sqlite3.connect(':memory:')
-				# 		db.backup(dbm)
-				# 	t = buildCallPathTree(1, 1, dbm)
-				# 	if cache:
-				# 		with open(tree_fp, 'wb') as output:
-				# 			pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
-				with open(tree_fp, 'rb') as input:
-					t = pickle.load(input)
-
-				## TODO: wrap in a 'if trace data exists':
-				# n = findSolverNode(t, 1, t.time)
-				# if n is None:
-				# 	print("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
-				# if traceGroupNode is None:
-				# 	traceGroupNode = n.name
-				# 	print("- using node '{0}' for grouping trace data".format(traceGroupNode))
-				# else:
-				# 	if traceGroupNode != n.name:
-				# 		raise Exception("Deducing top-most callpath node in solver loop, for two different ranks, returned two different nodes: '{0}'' vs '{1}'".format(traceGroupNode, n.name))
-				# traceGroupNode = "ParticleSystemTimestep"
-				traces_fp = os.path.join(cache_dp, f+".traces.csv")
-				# if os.path.isfile(traces_fp):
-				# 	traces_df = pd.read_csv(traces_fp)
-				# else:
-				# 	if dbm is None:
-				# 		dbm = sqlite3.connect(':memory:')
-				# 		db.backup(dbm)
-				# 	traces_df = traceTimes_groupByNode(dbm, 1, 1, traceGroupNode)
-				# 	traces_df["Rank"] = rank
-				# 	if cache:
-				# 		traces_df.to_csv(traces_fp, index=False)
-				traces_df = pd.read_csv(traces_fp)
-				if traces_all_df is None:
-					traces_all_df = traces_df
-				else:
-					traces_all_df = traces_all_df.append(traces_df)
-
-				if not args.charts is None:
-					## Add tree to a group
-					if groupedCallTrees is None:
-						groupedCallTrees = [ {rank:t} ]
-					else:
-						found_group = False
-						for treeGroup in groupedCallTrees:
-							tOther = next(iter(treeGroup.values()))
-							if t == tOther:
-								treeGroup[rank] = t
-								found_group = True
-						if not found_group:
-							groupedCallTrees.append({rank:t})
-
-					# Plot this call tree
-					if args.charts and (args.chart_ranks or rank==1):
-						print(" - drawing call-tree chart ...")
-						chartCallPath(t, "Call stack times of rank {0}".format(rank), "rank-{0}.png".format(rank))
+				# Plot this call tree
+				if args.charts and (args.chart_ranks or rank==1):
+					print(" - drawing call-tree chart ...")
+					chartCallPath(t, "Call stack times of rank {0}".format(rank), "rank-{0}.png".format(rank))
 
 	if not args.charts is None:
 		## Aggregate together call trees within each group, and create plots:
@@ -898,13 +835,6 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 		if num_ts != num_ts_root:
 			raise Exception("Ranks {0} and {1} performed different number of solver timesteps - {2} vs {3}".format(r_root, r, num_ts_root, num_ts))
 
-	# Discard first N timesteps as warming-up:
-	N = 10
-	traceTimesIDs = mpi_traces["TraceTimeID"].unique()
-	traceTimesIDs.sort()
-	if N > len(traceTimesIDs):
-		mpi_traces = mpi_traces[mpi_traces["TraceTimeID"]>traceTimesIDs[N-1]].reset_index(drop=True)
-
 	## Add a unit-stride index column:
 	## Note: different ranks can have different TraceTimeID for same solver timestep. So, 
 	##       need to process each rank individually.
@@ -924,15 +854,19 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	## Can drop 'TraceTimeID', a SQL relic:
 	mpi_traces = mpi_traces.drop("TraceTimeID", axis=1)
 
+	# Discard first N timesteps as warming-up:
+	N = 2
+	if N < mpi_traces["TimestepIndex"].max():
+		mpi_traces = mpi_traces[mpi_traces["TimestepIndex"]>N].reset_index(drop=True)
+		mpi_traces["TimestepIndex"] -= N
+
 	## Evenly sample 100 timepoints, so that final chart is legible :
 	sample_size = 100
 	timestepIndices = mpi_traces["TimestepIndex"].unique()
 	timestepIndices.sort()
 	if sample_size < len(timestepIndices):
 		index_step = len(timestepIndices) / sample_size
-		# print("index_step = {0}".format(index_step))
 		traceTimesIDs_sampled = [timestepIndices[round(i*index_step)] for i in range(0, sample_size)]
-		# print(traceTimesIDs_sampled)
 		mpi_traces = mpi_traces[mpi_traces["TimestepIndex"].isin(traceTimesIDs_sampled)].reset_index(drop=True)
 		timestepIndices = mpi_traces["TimestepIndex"].unique()
 		timestepIndices.sort()
@@ -949,13 +883,45 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	## Ensure table is sorted for calculation
 	mpi_traces = mpi_traces.sort_values(["TimestepIndex", "Rank"])
 
+	## Construct heatmap, of MPI % during simulation:
+	df2 = mpi_traces.pivot_table(index="Rank", columns="TimestepIndex", values="MPI %")
+	rank_max = mpi_traces["Rank"].max()
+	height = math.ceil((rank_max+1)*0.2)
+	fs = height*2
+	fs2 = round(fs*0.75)
+	fig = plt.figure(figsize=(40,height))
+	fig.suptitle("MPI%", fontsize=fs)
+	ax = fig.add_subplot(1,1,1)
+	ax.set_xlabel("Solver timestep progress %", fontsize=fs)
+	ax.set_ylabel("Rank", fontsize=fs)
+	## Best colormap doc: https://matplotlib.org/stable/tutorials/colors/colormaps.html
+	plt.imshow(df2.values, cmap='Reds')
+	# plt.imshow(df2.values, cmap='Reds', extent=[0,99, 0,diff_df["Rank"].max()])
+	# plt.pcolor(df2.values, cmap='Reds')
+	# ax.set_xticks(df2.columns.values)
+	# ax.set_xticklabels(df2.columns.values)
+	# ax.set_yticks([0,diff_df["Rank"].max()])
+	cb = plt.colorbar(aspect=5)
+	cb.ax.tick_params(labelsize=fs2)
+	ax.tick_params(labelsize=fs2)
+	plt.savefig("mpi-pct-heatmap.png")
+	plt.close(fig)
+
 	## Finally! Calculate difference in MPI % over time:
 	col_ranks = None
 	col_index = None
 	col_diffs = None
-	s1 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[0]]
-	for s in range(1, len(timestepIndices)):
-		s0 = s1
+	# step = 1
+	step = 10
+	# step = 50
+	for s in range(0, step):
+		s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s]]
+		col_ranks = s0["Rank"].values if (col_ranks is None) else np.append(col_ranks, s0["Rank"].values)
+		col_index = s0["TimestepIndex"].values if (col_index is None) else np.append(col_index, s0["TimestepIndex"].values)
+		diff = [0.0]*s0["Rank"].shape[0]
+		col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
+	s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[0]]
+	for s in range(step, len(timestepIndices)):
 		s1 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s]]
 
 		if s0.shape[0] == 0:
@@ -964,10 +930,12 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 			raise Exception("s1 is empty (TimestepIndex={0})".format(timestepIndices[s]))
 
 		## Calculate diff, etc
-		col_ranks = s0["Rank"].values if (col_ranks is None) else np.append(col_ranks, s0["Rank"].values)
+		col_ranks = s1["Rank"].values if (col_ranks is None) else np.append(col_ranks, s1["Rank"].values)
 		col_index = s1["TimestepIndex"].values if (col_index is None) else np.append(col_index, s1["TimestepIndex"].values)
 		diff = np.absolute(s1["MPI %"].values - s0["MPI %"].values)
 		col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
+
+		s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s-step]]
 
 	diff_df = pd.DataFrame({"TimestepIndex":col_index, "Rank":col_ranks, "MPI % diff":col_diffs})
 
@@ -976,30 +944,32 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	diffSum_df = diffSum_df.rename(columns={"MPI % diff":"Sum MPI % diff"})
 
 	diffSum_stdev = diffSum_df["Sum MPI % diff"].std()
-	print("diffSum_stdev = {0:.1f}".format(diffSum_stdev))
+	diffSum_mean = diffSum_df["Sum MPI % diff"].mean()
+	print("diffSum_stdev % mean = {0:.1f}".format(diffSum_stdev/diffSum_mean*100.0))
 
-	## Construct heatmap:
+	## Construct heatmap, of MPI % CHANGING during simulation:
 	df2 = diff_df.pivot_table(index="Rank", columns="TimestepIndex", values="MPI % diff")
-	values = df2.values
-	## Scale 100% -> 255:
-	values = np.round(values*(255.0/100.0))
-	## Scale largest % to 255, for clearer heatmap:
-	values = np.round(values * 255.0/np.max(values))
 
-	fig = plt.figure(figsize=(20,4))
-	fig.suptitle("Change in MPI% from 10 timesteps prior")
+	rank_max = diff_df["Rank"].max()
+	height = math.ceil((rank_max+1)*0.2)
+	fs = height*2
+	fs2 = round(fs*0.75)
+	fig = plt.figure(figsize=(40,height))
+	fig.suptitle("Change in MPI% over {0} timesteps".format(step), fontsize=fs)
 	ax = fig.add_subplot(1,1,1)
-	ax.set_xlabel("Solver timestep progress %")
-	ax.set_ylabel("Rank")
+	ax.set_xlabel("Solver timestep progress %", fontsize=fs)
+	ax.set_ylabel("Rank", fontsize=fs)
 	## Best colormap doc: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-	# plt.imshow(values, cmap='Reds')
-	plt.imshow(values, cmap='Reds', extent=[0,99, 0,diff_df["Rank"].max()])
-	# plt.pcolor(values, cmap='Reds')
+	plt.imshow(df2.values, cmap='Reds')
+	# plt.imshow(df2.values, cmap='Reds', extent=[0,99, 0,diff_df["Rank"].max()])
+	# plt.pcolor(df2.values, cmap='Reds')
 	# ax.set_xticks(df2.columns.values)
 	# ax.set_xticklabels(df2.columns.values)
-	ax.set_yticks([0,diff_df["Rank"].max()])
-	plt.colorbar(aspect=5)
-	plt.savefig("heatmap.png")
+	# ax.set_yticks([0,diff_df["Rank"].max()])
+	cb = plt.colorbar(aspect=5)
+	cb.ax.tick_params(labelsize=fs2)
+	ax.tick_params(labelsize=fs2)
+	plt.savefig("mpi-pct-change-heatmap.png")
 	plt.close(fig)
 
 
