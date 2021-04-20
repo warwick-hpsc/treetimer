@@ -43,6 +43,10 @@ namespace treetimer
 				std::unordered_map<std::string, treetimer::parameters::Parameter<bool> *>   		boolParameters;
 				std::unordered_map<std::string, treetimer::parameters::Parameter<std::string> *>   	stringParameters;
 
+				// Trace collection management
+				bool isConductor = false;
+				int traceCallInterval = 0;
+
 				// PAPI
 		};
 

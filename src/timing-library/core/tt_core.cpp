@@ -32,7 +32,8 @@ extern const std::string codeBlockNames[TT_CODE_BLOCK_COUNT] = {std::string("Pro
 																std::string("MPISyncCall"),
 																std::string("MPICollectiveCall"),
 																std::string("MPIIOCall"),
-																std::string("LibraryCall")};
+																std::string("LibraryCall"),
+																std::string("TraceConductor")};
 																// std::string("MPINonCommMethodCall"),
 																// std::string("NonMPIMethodCall"),
 																// std::string("Unspecified"),
@@ -102,23 +103,71 @@ namespace treetimer
 			    delete(treetimer::core::instrumState);
 			}
 
+			void TreeTimerEnterTraceConductor(std::string blockName, int traceCallInterval)
+			{
+				if (instrumState->config->eTTimers) {
+					if (instrumState->traceConductorNodeName == "") {
+						// Initialise
+						instrumState->traceConductorNodeName = blockName;
+						instrumState->traceCallInterval = traceCallInterval;
+						instrumState->traceCallIntervalCounter = traceCallInterval;
+					}
+					if (instrumState->traceConductorNodeName != blockName) {
+						printf("Attempting to set node '%s' as conductor, but another already is (%s)\n", blockName.c_str(), instrumState->traceConductorNodeName.c_str());
+						exit(EXIT_FAILURE);
+					}
+
+					// Handle trace call interval:
+					instrumState->traceCallIntervalCounter--;
+					if (instrumState->traceCallIntervalCounter == 0) {
+						// Enable trace collection
+						instrumState->traceCallCollectionEnabled = true;
+						instrumState->traceCallIntervalCounter = instrumState->traceCallInterval;
+					}
+					else {
+						// Disable trace collection
+						instrumState->traceCallCollectionEnabled = false;
+					}
+				}
+				
+				TreeTimerEnterBlock(blockName, TT_NODE_TYPE_TRACE_CONDUCTOR);
+			}
+
+			void TreeTimerExitTraceConductor(std::string blockName) {
+				if (!instrumState->traceCallCollectionEnabled) {
+					return;
+				}
+
+				TreeTimerExitBlock(blockName);
+			}
+
 			void TreeTimerEnterBlock(std::string blockName, CodeBlockType blockType)
 			{
+				if (instrumState->config->eTTimers && !instrumState->traceCallCollectionEnabled) {
+					return;
+				}
+
 				// Move position in callpath tree
 				instrumState->callTree->moveToChild(blockName);
 
 				// Ensure that code block data is set (would be undefined for new nodes)
 				instrumState->callTree->pos->nodeData.blockType = blockType;
 
-				// Start instrumentation on data node
-				treetimer::measurement::drivers::startInstrumentation(instrumState->callTree->pos->nodeData,
-												  					  instrumState->config->eATimers,
-																	  instrumState->config->eTTimers,
-																	  instrumState->callTree->nodeEntryCount);
+				if (instrumState->traceCallCollectionEnabled) {
+					// Start instrumentation on data node
+					treetimer::measurement::drivers::startInstrumentation(instrumState->callTree->pos->nodeData,
+													  					  instrumState->config->eATimers,
+																		  instrumState->config->eTTimers,
+																		  instrumState->callTree->nodeEntryCount);
+				}
 			}
 
 			void TreeTimerExitBlock(std::string blockName)
 			{
+				if (instrumState->config->eTTimers && !instrumState->traceCallCollectionEnabled) {
+					return;
+				}
+
 				// Debug/Error Check: Ensure that the block we are stopping is the same as the one we are in.
 				if(blockName != instrumState->callTree->pos->key)
 				{
@@ -126,11 +175,13 @@ namespace treetimer
 					std::cout << instrumState->callTree->pos->key << " - recorded data will be invalid\n";
 				}
 
-				// Stop instrumentation on current data node
-				treetimer::measurement::drivers::stopInstrumentation(instrumState->callTree->pos->nodeData,
-																	 instrumState->config->eATimers,
-																	 instrumState->config->eTTimers,
-																	 instrumState->callTree->nodeExitCount);
+				if (instrumState->traceCallCollectionEnabled) {
+					// Stop instrumentation on current data node
+					treetimer::measurement::drivers::stopInstrumentation(instrumState->callTree->pos->nodeData,
+																		 instrumState->config->eATimers,
+																		 instrumState->config->eTTimers,
+																		 instrumState->callTree->nodeExitCount);
+				}
 				// Move position in tree
 				instrumState->callTree->moveToParent();
 			}

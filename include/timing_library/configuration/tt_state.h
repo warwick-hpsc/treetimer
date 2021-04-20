@@ -30,6 +30,11 @@ namespace treetimer
 
 				Config * config;
 				treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData> * callTree;
+
+				std::string traceConductorNodeName;
+				int traceCallInterval;
+				int traceCallIntervalCounter;
+				bool traceCallCollectionEnabled;
 		};
 
 		namespace drivers

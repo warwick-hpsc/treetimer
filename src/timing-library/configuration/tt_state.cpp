@@ -21,6 +21,11 @@ namespace treetimer
 		{
 			this->config = new Config();
 			this->callTree = new treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>();
+
+			this->traceConductorNodeName = std::string("");
+			this->traceCallInterval = 0;
+			this->traceCallIntervalCounter = 0;
+			this->traceCallCollectionEnabled = true;
 		}
 
 		State::~State()

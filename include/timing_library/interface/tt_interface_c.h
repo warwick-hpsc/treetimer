@@ -20,6 +20,9 @@ extern "C" {
 void TreeTimerInit();
 void TreeTimerFinalize();
 
+void TreeTimerEnterTraceConductor(const char * name, int traceCallInterval);
+void TreeTimerExitTraceConductor(const char * name);
+
 void TreeTimerLogParameterInt(const char * paramName, int value);
 void TreeTimerLogParameterDouble(const char * paramName, double value);
 void TreeTimerLogParameterBool(const char * paramName, int value);

@@ -25,6 +25,21 @@ int F2C(c_tree_timer_finalize, C_TREE_TIMER_FINALIZE)()
 	return 0;
 }
 
+int F2C(c_tree_timer_enter_trace_conductor, C_TREE_TIMER_ENTER_TRACE_CONDUCTOR)(const char * name, int * text_len,  int * traceCallInterval)
+{
+	char c_name[*text_len + 1];
+	F2C_strcpy(c_name, name, *text_len);
+	TreeTimerEnterTraceConductor(c_name, *traceCallInterval);
+	return 0;
+}
+int F2C(c_tree_timer_exit_trace_conductor, C_TREE_TIMER_EXIT_TRACE_CONDUCTOR)(const char * name, int * text_len)
+{
+	char c_name[*text_len + 1];
+	F2C_strcpy(c_name, name, *text_len);
+	TreeTimerExitTraceConductor(c_name);
+	return 0;
+}
+
 int F2C(c_tree_timer_log_parameter_int, C_TREE_TIMER_LOG_PARAMETER_INT)(const char * name, int * text_len, int * value)
 {
 	char c_name[*text_len + 1];
