@@ -128,7 +128,11 @@ def preprocess_db(db_fp, ctr, num_dbs):
 		if t is None:
 			with open(tree_fp, 'rb') as input:
 				t = pickle.load(input)
-		n = findSolverNode(t, 1, t.time)
+
+		try:
+			n = findTraceConductorNode(t)
+		except:
+			n = findSolverNode(t, 1, t.time)
 		if n is None:
 			raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
 		else:
@@ -533,6 +537,15 @@ def findSolverNode(tree, parentCalls, walltime):
 				return r
 	return None
 
+def findTraceConductorNode(tree):
+	if tree.typeName == "TraceConductor":
+		return tree
+	else:
+		for l in tree.leaves:
+			r = findTraceConductorNode(l)
+			if not r is None:
+				return r
+	return None
 
 def chartCallPath(tree, title, filename):
 	if args.charts == "polar":
@@ -811,7 +824,7 @@ def traceTimes_groupByNode(db, runID, processID, nodeName):
 		df = df.drop(["WallTime", "ChildrenWallTime"], axis=1)
 		df["Type"] = ""
 		df.loc[df["TypeName"].isin(["MPICollectiveCall", "MPICommCall", "MPISyncCall"]), "Type"] = "MPI"
-		df.loc[df["TypeName"].isin(["Method", "Loop", "Compute", "Block"]), "Type"] = "Compute"
+		df.loc[df["TypeName"].isin(["Method", "Loop", "Compute", "Block", "TraceConductor"]), "Type"] = "Compute"
 		if sum(df["Type"]=="") > 0:
 			print(df["TypeName"].unique())
 			raise Exception("Unhandled TypeName values, investigate")
@@ -912,30 +925,35 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	col_index = None
 	col_diffs = None
 	# step = 1
-	step = 10
+	# step = 10
+	step = mpi_traces[mpi_traces["Rank"]==mpi_traces["Rank"].min()].shape[0]//2
 	# step = 50
-	for s in range(0, step):
-		s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s]]
-		col_ranks = s0["Rank"].values if (col_ranks is None) else np.append(col_ranks, s0["Rank"].values)
-		col_index = s0["TimestepIndex"].values if (col_index is None) else np.append(col_index, s0["TimestepIndex"].values)
-		diff = [0.0]*s0["Rank"].shape[0]
-		col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
-	s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[0]]
-	for s in range(step, len(timestepIndices)):
+    # # Zero up until step kicks in
+	# for s in range(0, step):
+	# 	s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s]]
+	# 	col_ranks = s0["Rank"].values if (col_ranks is None) else np.append(col_ranks, s0["Rank"].values)
+	# 	col_index = s0["TimestepIndex"].values if (col_index is None) else np.append(col_index, s0["TimestepIndex"].values)
+	# 	diff = [0.0]*s0["Rank"].shape[0]
+	# 	col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
+	# s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[0]]
+	# for s in range(step, len(timestepIndices)):
+	# 	s1 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s]]
+	# 	## Calculate diff, etc
+	# 	col_ranks = s1["Rank"].values if (col_ranks is None) else np.append(col_ranks, s1["Rank"].values)
+	# 	col_index = s1["TimestepIndex"].values if (col_index is None) else np.append(col_index, s1["TimestepIndex"].values)
+	# 	diff = np.absolute(s1["MPI %"].values - s0["MPI %"].values)
+	# 	col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
+	# 	s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s-step]]
+
+	## Calculate difference against last:
+	sLast = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[-1]]
+	for s in range(0, len(timestepIndices)):
 		s1 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s]]
-
-		if s0.shape[0] == 0:
-			raise Exception("s0 is empty")
-		elif s1.shape[0] == 0:
-			raise Exception("s1 is empty (TimestepIndex={0})".format(timestepIndices[s]))
-
 		## Calculate diff, etc
 		col_ranks = s1["Rank"].values if (col_ranks is None) else np.append(col_ranks, s1["Rank"].values)
 		col_index = s1["TimestepIndex"].values if (col_index is None) else np.append(col_index, s1["TimestepIndex"].values)
-		diff = np.absolute(s1["MPI %"].values - s0["MPI %"].values)
+		diff = np.absolute(sLast["MPI %"].values - s1["MPI %"].values)
 		col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
-
-		s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s-step]]
 
 	diff_df = pd.DataFrame({"TimestepIndex":col_index, "Rank":col_ranks, "MPI % diff":col_diffs})
 
@@ -954,7 +972,7 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	height = math.ceil((rank_max+1)*0.2)
 	fs = height*2
 	fs2 = round(fs*0.75)
-	fig = plt.figure(figsize=(40,height))
+	fig = plt.figure(figsize=(40, height))
 	fig.suptitle("Change in MPI% over {0} timesteps".format(step), fontsize=fs)
 	ax = fig.add_subplot(1,1,1)
 	ax.set_xlabel("Solver timestep progress %", fontsize=fs)
