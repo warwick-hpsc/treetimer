@@ -25,8 +25,9 @@ namespace treetimer
 			this->root = nullptr;
 			this->pos = nullptr;
 			this->uniqueNodeCount = 0;
-			this->nodeEntryCount = 0;
-			this->nodeExitCount = 0;
+			this->nodeEntryCounter = 0;
+			this->nodeExitCounter = 0;
+			this->nodeVisitCounter = 0;
 		}
 
 		template<class K, class T>
@@ -42,7 +43,8 @@ namespace treetimer
 			// If it does not exist, create it, add to the current position and then move to it
 
 			// Update node entry counter
-			this->nodeEntryCount++;
+			this->nodeVisitCounter++;
+			this->nodeEntryCounter = this->nodeVisitCounter;
 
 
 			// If root does not exist
@@ -86,7 +88,8 @@ namespace treetimer
 
 			// Update Exit Counter (we will do this even if we don't move due to being at root,
 			// since this effectively signifies the end of the graph)
-			this->nodeExitCount++;
+			this->nodeVisitCounter++;
+			this->nodeExitCounter = this->nodeVisitCounter;
 
 			if(this->pos->parent == nullptr)
 			{

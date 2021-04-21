@@ -39,7 +39,7 @@ namespace treetimer
 		namespace drivers
 		{
 			template <class T>
-			void addValue(Parameter<T>& param, T value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit)
+			void addValue(Parameter<T>& param, T value, bool eAparam, bool eTParam, long nodeCallEntry)
 			{
 				// Update the aggregate parameter statistics
 				if(eAparam)
@@ -51,13 +51,13 @@ namespace treetimer
 				if(eTParam)
 				{
 					// We're going to make a copy of this object, so create it on the stack
-					TraceParameter<T> tmp(value, nodeCallEntry, nodeCallExit);
+					TraceParameter<T> tmp(value, nodeCallEntry);
 					param.traceParams.add(tmp);
 				}
 			}
 
 			template <>
-			void addValue(Parameter<std::string>& param, std::string value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit)
+			void addValue(Parameter<std::string>& param, std::string value, bool eAparam, bool eTParam, long nodeCallEntry)
 			{
 				// String Parameters do not have aggregate values, only traces
 
@@ -65,7 +65,7 @@ namespace treetimer
 				if(eTParam)
 				{
 					// We're going to make a copy of this object, so create it on the stack
-					TraceParameter<std::string> tmp(value, nodeCallEntry, nodeCallExit);
+					TraceParameter<std::string> tmp(value, nodeCallEntry);
 					param.traceParams.add(tmp);
 				}
 			}
@@ -80,7 +80,8 @@ template class treetimer::parameters::Parameter<double>;
 template class treetimer::parameters::Parameter<bool>;
 template class treetimer::parameters::Parameter<std::string>;
 // Drivers
-template void treetimer::parameters::drivers::addValue<int>(Parameter<int>& param, int value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
-template void treetimer::parameters::drivers::addValue<double>(Parameter<double>& param, double value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
-template void treetimer::parameters::drivers::addValue<bool>(Parameter<bool>& param, bool value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
-template void treetimer::parameters::drivers::addValue<>(Parameter<std::string>& param, std::string value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
+template void treetimer::parameters::drivers::addValue<int>(Parameter<int>& param, int value, bool eAparam, bool eTParam, long nodeCallEntry);
+template void treetimer::parameters::drivers::addValue<double>(Parameter<double>& param, double value, bool eAparam, bool eTParam, long nodeCallEntry);
+template void treetimer::parameters::drivers::addValue<bool>(Parameter<bool>& param, bool value, bool eAparam, bool eTParam, long nodeCallEntry);
+template void treetimer::parameters::drivers::addValue<>(Parameter<std::string>& param, std::string value, bool eAparam, bool eTParam, long nodeCallEntry);
+

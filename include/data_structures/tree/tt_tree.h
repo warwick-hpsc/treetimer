@@ -29,8 +29,9 @@ namespace treetimer
 				TreeNode<K,T> * pos;		// Pointer to current position within the tree
 
 				int uniqueNodeCount;	// Track the number of nodes in the tree
-				long nodeEntryCount;	// Track the number of times we have entered a node globally (used for trace information)
-				long nodeExitCount;		// Track the number of times we have exited a node globally (used for trace information)
+				long nodeEntryCounter;	// Track the number of times we have entered a node globally (used for trace information)
+				long nodeExitCounter;		// Track the number of times we have exited a node globally (used for trace information)
+				long nodeVisitCounter;
 
 				void moveToChild(K key);
 				void moveToParent();

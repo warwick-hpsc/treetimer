@@ -149,7 +149,8 @@ namespace treetimer
 					instrumState->callTree->pos->nodeData,
 					instrumState->config->eATimers,
 					instrumState->config->eTTimers && instrumState->traceCallCollectionEnabled,
-					instrumState->callTree->nodeEntryCount);
+					// instrumState->config->eTTimers,
+					instrumState->callTree->nodeEntryCounter);
 			}
 
 			void TreeTimerExitBlock(std::string blockName)
@@ -163,11 +164,14 @@ namespace treetimer
 				}
 
 				// Stop instrumentation on current data node
+				// Note: nodeVisitCounter not updated until moveToParent() called, so need to 
+				//       pre-emptively increment
 				treetimer::measurement::drivers::stopInstrumentation(
 					instrumState->callTree->pos->nodeData,
 					instrumState->config->eATimers,
 					instrumState->config->eTTimers && instrumState->traceCallCollectionEnabled,
-					instrumState->callTree->nodeExitCount);
+					// instrumState->config->eTTimers,
+					instrumState->callTree->nodeVisitCounter+1);
 
 				// Move position in tree
 				instrumState->callTree->moveToParent();
@@ -179,8 +183,7 @@ namespace treetimer
 				treetimer::measurement::drivers::logParameterValue(instrumState->callTree->pos->nodeData, paramName, val,
 															 	   instrumState->config->eAParam,
 																   instrumState->config->eTParam,
-																   instrumState->callTree->nodeEntryCount,
-																   instrumState->callTree->nodeExitCount);
+																   instrumState->callTree->nodeEntryCounter);
 			}
 
 			void TreeTimerLogParameter(std::string paramName, double val)
@@ -189,8 +192,7 @@ namespace treetimer
 				treetimer::measurement::drivers::logParameterValue(instrumState->callTree->pos->nodeData, paramName, val,
 															 	   instrumState->config->eAParam,
 																   instrumState->config->eTParam,
-																   instrumState->callTree->nodeEntryCount,
-																   instrumState->callTree->nodeExitCount);
+																   instrumState->callTree->nodeEntryCounter);
 			}
 
 			void TreeTimerLogParameter(std::string paramName, bool val)
@@ -199,8 +201,7 @@ namespace treetimer
 				treetimer::measurement::drivers::logParameterValue(instrumState->callTree->pos->nodeData, paramName, val,
 															 	   instrumState->config->eAParam,
 																   instrumState->config->eTParam,
-																   instrumState->callTree->nodeEntryCount,
-																   instrumState->callTree->nodeExitCount);
+																   instrumState->callTree->nodeEntryCounter);
 			}
 
 			void TreeTimerLogParameter(std::string paramName, std::string val)
@@ -209,8 +210,7 @@ namespace treetimer
 				treetimer::measurement::drivers::logParameterValue(instrumState->callTree->pos->nodeData, paramName, val,
 															 	   instrumState->config->eAParam,
 																   instrumState->config->eTParam,
-																   instrumState->callTree->nodeEntryCount,
-																   instrumState->callTree->nodeExitCount);
+																   instrumState->callTree->nodeEntryCounter);
 			}
 
 			void TreeTimerFlushTraceData()

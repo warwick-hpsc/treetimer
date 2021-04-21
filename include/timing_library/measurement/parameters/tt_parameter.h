@@ -43,7 +43,7 @@ namespace treetimer
 		namespace drivers
 		{
 			template <class T>
-			void addValue(Parameter<T>& param, T value, bool eAparam, bool eTParam, long nodeCallEntry, long nodeCallExit);
+			void addValue(Parameter<T>& param, T value, bool eAparam, bool eTParam, long nodeCallEntry);
 		}
 	}
 }

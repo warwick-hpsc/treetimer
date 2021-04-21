@@ -24,15 +24,13 @@ namespace treetimer
 			// Val is undefined - can't set default without knowing type
 			// Make specific type constructors?
 			this->nodeCallEntry = 0;
-			this->nodeCallExit = 0;
 		}
 
 		template <class T>
-		TraceParameter<T>::TraceParameter(T val, long nodeCallEntry, long nodeCallExit)
+		TraceParameter<T>::TraceParameter(T val, long nodeCallEntry)
 		{
 			this->val = val;
 			this->nodeCallEntry = nodeCallEntry;
-			this->nodeCallExit = nodeCallExit;
 		}
 
 		template <class T>

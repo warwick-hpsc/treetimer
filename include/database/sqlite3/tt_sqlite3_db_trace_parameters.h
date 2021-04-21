@@ -28,43 +28,43 @@ namespace treetimer
 				void writeSchemaTraceParameterData(TTSQLite3& dataAccess);
 
 				void findTraceParameterIntDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID,
+												 int runID, int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamIntID);
 
 
 				void findTraceParameterFloatDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID,
+												 int runID, int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, double paramValue,
 												 int * traceParamDoubleID);
 
 				void findTraceParameterBoolDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID,
+												 int runID, int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamBoolID);
 
 				void findTraceParameterStringDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID,
+												 int runID, int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, std::string paramValue,
 												 int * traceParamStringID);
 
 				void writeTraceParameterIntData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID,
+												 int runID, int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamIntID);
 
 				void writeTraceParameterFloatData(TTSQLite3& dataAccess,
-											 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID,
+											 int runID, int processID, int callPathID, int nodeEntryID, 
 											 std::string paramName, double paramValue,
 											 int * traceParamFloatID);
 
 				void writeTraceParameterBoolData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID,
+												 int runID, int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamBoolID);
 
 				void writeTraceParameterStringData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID,
+												 int runID, int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, std::string paramValue,
 												 int * traceParamStringID);
 			}

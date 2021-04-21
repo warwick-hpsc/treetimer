@@ -25,12 +25,11 @@ namespace treetimer
 			public:
 				// Constructors/Deconstructors
 				TraceParameter();
-				TraceParameter(T val, long nodeCallEntry, long nodeCallExit);
+				TraceParameter(T val, long nodeCallEntry);
 				~TraceParameter();
 
 				T val;
 				long nodeCallEntry;	// Track which callpath node entry/exit this value is tied to
-				long nodeCallExit;	// Trace which callpath node entry/exit this value is tied to
 		};
 	}
 }

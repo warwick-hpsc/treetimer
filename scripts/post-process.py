@@ -31,6 +31,7 @@ if sys.version_info[0] < 3:
 import os, re, math
 from pprint import pprint
 from copy import deepcopy
+from time import sleep
 
 import sqlite3
 
@@ -51,6 +52,7 @@ import queue # imported for using queue.Empty exception
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--tt-results-dirpath', required=True, help="Dirpath to 'tt_results' folder")
+parser.add_argument('-t', '--trace-group-focus', help='When grouping traces by loop iterator, can filter by a block within loop')
 parser.add_argument('-c', '--charts', choices=["polar", "horizontal", "vertical"], help="Chart the call stack runtime breakdown across ranks")
 parser.add_argument('-r', '--chart-ranks', action='store_true', help="If charting, also draw call stack chart for each rank. Expensive!")
 parser.add_argument('-l', '--label', action='store_true', help="Add labels to chart elements. Optional because can create clutter")
@@ -130,7 +132,7 @@ def preprocess_db(db_fp, ctr, num_dbs):
 				t = pickle.load(input)
 
 		try:
-			n = findTraceConductorNode(t)
+			n = findTreeNodeByType(t, "TraceConductor")
 		except:
 			n = findSolverNode(t, 1, t.time)
 		if n is None:
@@ -140,9 +142,30 @@ def preprocess_db(db_fp, ctr, num_dbs):
 			if dbm is None:
 				dbm = sqlite3.connect(':memory:')
 				db.backup(dbm)
-			traces_df = traceTimes_groupByNode(dbm, 1, 1, traceGroupNode)
+			traces_df = traceTimes_aggregateByNode(dbm, 1, 1, t, traceGroupNode)
 			traces_df["Rank"] = rank
 			traces_df.to_csv(traces_fp, index=False)
+
+	if args.trace_group_focus:
+		traces_focused_fp = os.path.join(cache_dp, f+".traces.focused-on-{0}.csv".format(args.trace_group_focus))
+		if not os.path.isfile(traces_focused_fp):
+			if t is None:
+				with open(tree_fp, 'rb') as input:
+					t = pickle.load(input)
+			try:
+				n = findTreeNodeByType(t, "TraceConductor")
+			except:
+				n = findSolverNode(t, 1, t.time)
+			if n is None:
+				raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+			else:
+				traceGroupNode = n.name
+				if dbm is None:
+					dbm = sqlite3.connect(':memory:')
+					db.backup(dbm)
+				traces_df = traceTimes_aggregateByNode(dbm, 1, 1, t, traceGroupNode, args.trace_group_focus)
+				traces_df["Rank"] = rank
+				traces_df.to_csv(traces_focused_fp, index=False)
 
 	return True
 
@@ -168,7 +191,7 @@ def main():
 	df_all_aggregated = None
 
 	traces_all_df = None
-	traceGroupNode = None
+	traces_focused_all_df = None
 
 	rank_ids = set()
 
@@ -200,6 +223,8 @@ def main():
 	else:
 		for i in range(0, len(db_fps)):
 			preprocess_db(db_fps[i], i+1, len(db_fps))
+	os.sync()
+	sleep(1) ## Give time for file writes to complete
 	print("All DBs pre-processed, outputs cached")
 
 	ctr = 0
@@ -210,6 +235,8 @@ def main():
 			ctr += 1
 			rank = int(m.groups()[0])
 			rank_ids.add(rank)
+
+			print("Collating rank {0} data".format(rank))
 
 			db = sqlite3.connect(db_fp)
 			## Loading DB into memory roughly halves query times. 
@@ -233,10 +260,6 @@ def main():
 			else:
 				df_all_aggregated = df_all_aggregated.append(df_agg)
 
-			tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
-			with open(tree_fp, 'rb') as input:
-				t = pickle.load(input)
-
 			## TODO: wrap in a 'if trace data exists':
 			traces_fp = os.path.join(cache_dp, f+".traces.csv")
 			traces_df = pd.read_csv(traces_fp)
@@ -244,6 +267,17 @@ def main():
 				traces_all_df = traces_df
 			else:
 				traces_all_df = traces_all_df.append(traces_df)
+			if args.trace_group_focus:
+				traces_focused_fp = os.path.join(cache_dp, f+".traces.focused-on-{0}.csv".format(args.trace_group_focus))
+				traces_focused_df = pd.read_csv(traces_focused_fp)
+				if traces_focused_all_df is None:
+					traces_focused_all_df = traces_focused_df
+				else:
+					traces_focused_all_df = traces_focused_all_df.append(traces_focused_df)
+
+			tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
+			with open(tree_fp, 'rb') as input:
+				t = pickle.load(input)
 
 			if not args.charts is None:
 				## Add tree to a group
@@ -282,6 +316,8 @@ def main():
 
 	print("Drawing trace charts")
 	traceTimes_chartDynamicLoadBalance(traces_all_df)
+	if not traces_focused_all_df is None:
+		traceTimes_chartDynamicLoadBalance(traces_focused_all_df, "focused-on-"+args.trace_group_focus)
 
 	print("Writing out collated CSVs")
 	df_all_raw["num_ranks"] = len(rank_ids)
@@ -411,10 +447,10 @@ class CallTreeNode:
 			return False
 		return self.leaves == other.leaves
 
-	def toString(self, maxdepth=0):
+	def toString(self, maxdepth=99):
 		return self.__str__(maxdepth=maxdepth)
 
-	def __str__(self, maxdepth=0, depth=0):
+	def __str__(self, maxdepth=99, depth=0):
 		nodeStr = ""
 		if depth > 0:
 			#nodeStr += "  :"*(depth-1) + "  |" + "-"
@@ -537,12 +573,22 @@ def findSolverNode(tree, parentCalls, walltime):
 				return r
 	return None
 
-def findTraceConductorNode(tree):
-	if tree.typeName == "TraceConductor":
+def findTreeNodeByType(tree, typeName):
+	if tree.typeName == typeName:
 		return tree
 	else:
 		for l in tree.leaves:
-			r = findTraceConductorNode(l)
+			r = findTreeNodeByType(l, typeName)
+			if not r is None:
+				return r
+	return None
+
+def findTreeNodeByName(tree, name):
+	if tree.name == name:
+		return tree
+	else:
+		for l in tree.leaves:
+			r = findTreeNodeByName(l, name)
 			if not r is None:
 				return r
 	return None
@@ -761,24 +807,17 @@ def aggregateTimesByType(runID, processID, db):
 
 	return(df_sum)
 
-def traceTimes_getNodeEntryTimes(db, runID, processID, tid):
-
+def traceTimes_aggregateTraceRange(db, runID, processID, nodeEntryId, nodeExitId):
 	cur = db.cursor()
 
-	## Query to get trace entries that occur between start and end of 'tid':
-	# qGetTraces = "SELECT * FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
-	# qGetTraces = "SELECT CallPathID, WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3}".format(runID, processID, tid[0], tid[1])
-	## Update: need to sum within CallPathID
-	qGetTraces = "SELECT TraceTimeID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY CallPathID".format(runID, processID, tid[0], tid[1])
+	## Query to get trace entries that occur between nodeEntryId and nodeExitId, summing by CallPathId:
+	qGetTraceWalltime = "SELECT TraceTimeID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY CallPathID".format(runID, processID, nodeEntryId, nodeExitId)
 
 	## Query to, for each trace entry in range, sum walltimes of its immediate children
-	# qGetChildrenWalltime = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
-	# qGetChildrenWalltime = "SELECT ParentNodeID AS CallPathID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
-	qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, tid[0], tid[1])
+	qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, nodeEntryId, nodeExitId)
 
-	## Query to join the above two queries into one. Seems to work.
-	# query12 = "SELECT * FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraces, qGetChildrenWalltime)
-	query12 = "SELECT TraceTimeID, WallTime, ChildrenWalltime, TypeName FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraces, qGetChildrenWalltime)
+	## Query to join the above two queries into one, bringing together inclusive waltims of each node and its children. Seems to work.
+	query12 = "SELECT TraceTimeID, WallTime, ChildrenWalltime, TypeName FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraceWalltime, qGetChildrenWalltime)
 	cur.execute(query12)
 	rows = np.array(cur.fetchall())
 	# Set all to have same TraceTimeID, for easier grouping later
@@ -786,59 +825,131 @@ def traceTimes_getNodeEntryTimes(db, runID, processID, tid):
 		rows[i][0] = rows[0][0]
 	return rows
 
-def traceTimes_groupByNode(db, runID, processID, nodeName):
-	cid = getNodeCallpathId(db, nodeName)
+def traceTimes_aggregateTraceSubRanges(db, runID, processID, nodeEntryId, nodeExitId, subnodeEntryIds, subnodeExitIds):
+	cur = db.cursor()
 
+	## Query to get trace entries that occur between nodeEntryId and nodeExitId, summing by CallPathId:
+	# qGetTraceWalltime = "SELECT TraceTimeID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY CallPathID".format(runID, processID, nodeEntryId, nodeExitId)
+	qGetTraceWalltime = "SELECT MIN(TraceTimeID) AS TraceTimeID, MIN(NodeEntryID) AS NodeEntryID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY CallPathID".format(runID, processID, nodeEntryId, nodeExitId)
+
+	## Query to, for each trace entry in range, sum walltimes of its immediate children
+	qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, nodeEntryId, nodeExitId)
+
+	## Query to join the above two queries into one, bringing together inclusive waltims of each node and its children. Seems to work.
+	query12 = "SELECT NodeEntryID, TraceTimeID, WallTime, ChildrenWalltime, TypeName FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraceWalltime, qGetChildrenWalltime)
+	cur.execute(query12)
+	rows = np.array(cur.fetchall())
+
+	## Finally: filter rows to retain those that occur between pairs of subnodeEntryIds and subnodeExitIds.
+	## It should only be necessary to filter against the first pair, because 'qGetTraceWalltime' query only retains MIN(NodeEntryID); but to be safe, will check against all pairs.
+	rows_filtered = None
+	for r in rows:
+		nid = r[0]
+		for i in range(len(subnodeEntryIds)):
+			if nid >= subnodeEntryIds[i] and nid <= subnodeExitIds[i]:
+				## Append, dropping the NodeEntryID
+				if rows_filtered is None:
+					rows_filtered = np.array([r[1:]])
+				else:
+					rows_filtered = np.append(rows_filtered, [r[1:]], axis=0)
+				break
+
+	# Set all to have same TraceTimeID, for easier grouping later
+	for i in range(len(rows_filtered)):
+		rows_filtered[i][0] = rows_filtered[0][0]
+
+	return rows_filtered
+
+def traceTimes_aggregateByNode(db, runID, processID, tree, nodeName, nodeOfInterestName=None):
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
+	cid = getNodeCallpathId(db, nodeName)
 	query = "SELECT NodeEntryID, NodeExitID FROM TraceTimeData WHERE RunID = {0} AND ProcessID = {1} AND CallPathID = {2};".format(runID, processID, cid)
 	cur.execute(query)
 	result = cur.fetchall()
-	traceIds = [(row['NodeEntryID'],row['NodeExitID']) for row in result]
+	nodeEntryIds = [row['NodeEntryID'] for row in result]
+	nodeExitIds  = [row['NodeExitID'] for row in result]
 
-	if len(traceIds) == 0:
+	if len(nodeEntryIds) == 0:
 		return None
-	else:
+
+	if not nodeOfInterestName is None:
+		## ONLY aggregate across 'nodeOfInterestName', but still aggregating by 'nodeName'.
+		## The scenario is a solver loop 'nodeName', where only part of it is of interest ('nodeOfInterestName')
+
+		## First, confirm that 'nodeOfInterest' is child of 'nodeName':
+		t = findTreeNodeByName(tree, nodeName)
+		if t is None:
+			raise Exception("'{0}' not in call tree".format(nodeName))
+		t = findTreeNodeByName(tree, nodeOfInterestName)
+		if t is None:
+			raise Exception("'{0}' not in call tree".format(nodeOfInterestName))
+		t = findTreeNodeByName(findTreeNodeByName(tree, nodeName), nodeOfInterestName)
+		if t is None:
+			raise Exception("'{0}' not child of '{1}'".format(nodeOfInterestName, nodeName))
+
+		# print("nodeOfInterestName = {0}".format(nodeOfInterestName))
+		cid = getNodeCallpathId(db, nodeOfInterestName)
+		query = "SELECT NodeEntryID, NodeExitID FROM TraceTimeData WHERE RunID = {0} AND ProcessID = {1} AND CallPathID = {2};".format(runID, processID, cid)
+		cur.execute(query)
+		result = cur.fetchall()
+		subnodeEntryIds = [row['NodeEntryID'] for row in result]
+		subnodeExitIds  = [row['NodeExitID'] for row in result]
+
 		rows_all = None
-		for tid in traceIds:
-			rows = traceTimes_getNodeEntryTimes(db, runID, processID, tid)
+		for i in range(len(nodeEntryIds)):
+			entryID = nodeEntryIds[i]
+			exitID = nodeExitIds[i]
+			subnodeEntryIdsInRange = [i for i in subnodeEntryIds if (i >= entryID and i <= exitID)]
+			subnodeExitIdsInRange = [i for i in subnodeExitIds if (i >= entryID and i <= exitID)]
+			rows = traceTimes_aggregateTraceSubRanges(db, runID, processID, entryID, exitID, subnodeEntryIdsInRange, subnodeExitIdsInRange)
 			if rows_all is None:
 				rows_all = rows
 			else:
 				rows_all = np.append(rows_all, rows, axis=0)
 
-		# Pack rows into a DataFrame for final analysis
-		fields = ["TraceTimeID", "WallTime", "ChildrenWalltime", "TypeName"]
-		columns = {}
-		columns["TraceTimeID"] = [r[0] for r in rows_all]
-		columns["WallTime"] = [r[1] for r in rows_all]
-		columns["ChildrenWallTime"] = [r[2] for r in rows_all]
-		columns["TypeName"] = [r[3] for r in rows_all]
-		df = pd.DataFrame(columns)
+	else:
+		rows_all = None
+		for i in range(len(nodeEntryIds)):
+			rows = traceTimes_aggregateTraceRange(db, runID, processID, nodeEntryIds[i], nodeExitIds[i])
+			if rows_all is None:
+				rows_all = rows
+			else:
+				rows_all = np.append(rows_all, rows, axis=0)
 
-		df.loc[df["ChildrenWallTime"].isna(), "ChildrenWallTime"] = 0.0
-		df["InclusiveTime"] = df["WallTime"] - df["ChildrenWallTime"]
-		if sum(df["InclusiveTime"] < 0.0) > 0:
-			print(df)
-			raise Exception("Negative inclusive times calculated for trace {0}!".format(tid))
-		df = df.drop(["WallTime", "ChildrenWallTime"], axis=1)
-		df["Type"] = ""
-		df.loc[df["TypeName"].isin(["MPICollectiveCall", "MPICommCall", "MPISyncCall"]), "Type"] = "MPI"
-		df.loc[df["TypeName"].isin(["Method", "Loop", "Compute", "Block", "TraceConductor"]), "Type"] = "Compute"
-		if sum(df["Type"]=="") > 0:
-			print(df["TypeName"].unique())
-			raise Exception("Unhandled TypeName values, investigate")
-		df = df.drop(["TypeName"], axis=1)
-		df = df.groupby(["TraceTimeID", "Type"]).sum().reset_index()
-		df2 = df.groupby("TraceTimeID").sum().reset_index().rename(columns={"InclusiveTime":"TotalTime"})
-		df = df.merge(df2)
-		df["InclusiveTime %"] = df["InclusiveTime"] / df["TotalTime"] * 100.0
-		df = df.drop("TotalTime", axis=1)
-		return df
+	# Pack rows into a DataFrame for final analysis
+	fields = ["TraceTimeID", "WallTime", "ChildrenWalltime", "TypeName"]
+	columns = {}
+	columns["TraceTimeID"] = [r[0] for r in rows_all]
+	columns["WallTime"] = [r[1] for r in rows_all]
+	columns["ChildrenWallTime"] = [r[2] for r in rows_all]
+	columns["TypeName"] = [r[3] for r in rows_all]
+	df = pd.DataFrame(columns)
 
-def traceTimes_chartDynamicLoadBalance(traces_all_df):
+	df.loc[df["ChildrenWallTime"].isna(), "ChildrenWallTime"] = 0.0
+	df["InclusiveTime"] = df["WallTime"] - df["ChildrenWallTime"]
+	if sum(df["InclusiveTime"] < 0.0) > 0:
+		print(df)
+		raise Exception("Negative inclusive times calculated for trace {0}!".format(tid))
+	df = df.drop(["WallTime", "ChildrenWallTime"], axis=1)
+	df["Type"] = ""
+	df.loc[df["TypeName"].isin(["MPICollectiveCall", "MPICommCall", "MPISyncCall"]), "Type"] = "MPI"
+	df.loc[df["TypeName"].isin(["Method", "Loop", "Compute", "Block", "TraceConductor"]), "Type"] = "Compute"
+	if sum(df["Type"]=="") > 0:
+		print(df["TypeName"].unique())
+		raise Exception("Unhandled TypeName values, investigate")
+	df = df.drop(["TypeName"], axis=1)
+	df = df.groupby(["TraceTimeID", "Type"]).sum().reset_index()
+	df2 = df.groupby("TraceTimeID").sum().reset_index().rename(columns={"InclusiveTime":"TotalTime"})
+	df = df.merge(df2)
+	df["InclusiveTime %"] = df["InclusiveTime"] / df["TotalTime"] * 100.0
+	df = df.drop("TotalTime", axis=1)
+
+	return df
+
+def traceTimes_chartDynamicLoadBalance(traces_df, filename_suffix=None):
 	# Restrict to MPI time %:
-	mpi_traces = traces_all_df[traces_all_df["Type"]=="MPI"].drop(["Type", "InclusiveTime"], axis=1)
+	mpi_traces = traces_df[traces_df["Type"]=="MPI"].drop(["Type", "InclusiveTime"], axis=1)
 	mpi_traces = mpi_traces.rename(columns={"InclusiveTime %":"MPI %"})
 
 	r_root = mpi_traces["Rank"].min()
@@ -917,7 +1028,11 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	cb = plt.colorbar(aspect=5)
 	cb.ax.tick_params(labelsize=fs2)
 	ax.tick_params(labelsize=fs2)
-	plt.savefig("mpi-pct-heatmap.png")
+	if not filename_suffix is None:
+		fig_filename = "mpi-pct-heatmap.{0}.png".format(filename_suffix)
+	else:
+		fig_filename = "mpi-pct-heatmap.png"
+	plt.savefig(os.path.join(args.tt_results_dirpath, fig_filename))
 	plt.close(fig)
 
 	## Finally! Calculate difference in MPI % over time:
@@ -987,7 +1102,11 @@ def traceTimes_chartDynamicLoadBalance(traces_all_df):
 	cb = plt.colorbar(aspect=5)
 	cb.ax.tick_params(labelsize=fs2)
 	ax.tick_params(labelsize=fs2)
-	plt.savefig("mpi-pct-change-heatmap.png")
+	if not filename_suffix is None:
+		fig_filename = "mpi-pct-change-heatmap.{0}.png".format(filename_suffix)
+	else:
+		fig_filename = "mpi-pct-change-heatmap.png"
+	plt.savefig(os.path.join(args.tt_results_dirpath, fig_filename))
 	plt.close(fig)
 
 
