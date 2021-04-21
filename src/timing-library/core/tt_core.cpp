@@ -75,6 +75,9 @@ namespace treetimer
 			    // (1) Read in configuration from environment into global state
 			    treetimer::config::drivers::setConfigFromEnv(*(treetimer::core::instrumState->config));
 
+			    // Configure 'Trace Conductor'
+			    treetimer::core::instrumState->traceCallCollectionEnabled = treetimer::core::instrumState->config->eTTimers;
+
 			    // (2) Start 'Root' Block and return to program
 			    treetimer::core::libInit = true;
 			    treetimer::core::instrumState->config->inLibrary = false;
@@ -117,9 +120,9 @@ namespace treetimer
 						exit(EXIT_FAILURE);
 					}
 
-					// Handle trace call interval:
+					// Decide whether to enable/block trace collection during this call:
 					instrumState->traceCallIntervalCounter--;
-					if (instrumState->traceCallIntervalCounter == 0) {
+					if (instrumState->traceCallIntervalCounter <= 0) {
 						// Enable trace collection
 						instrumState->traceCallCollectionEnabled = true;
 						instrumState->traceCallIntervalCounter = instrumState->traceCallInterval;
@@ -134,39 +137,27 @@ namespace treetimer
 			}
 
 			void TreeTimerExitTraceConductor(std::string blockName) {
-				if (!instrumState->traceCallCollectionEnabled) {
-					return;
-				}
-
 				TreeTimerExitBlock(blockName);
 			}
 
 			void TreeTimerEnterBlock(std::string blockName, CodeBlockType blockType)
 			{
-				if (instrumState->config->eTTimers && !instrumState->traceCallCollectionEnabled) {
-					return;
-				}
-
 				// Move position in callpath tree
 				instrumState->callTree->moveToChild(blockName);
 
 				// Ensure that code block data is set (would be undefined for new nodes)
 				instrumState->callTree->pos->nodeData.blockType = blockType;
 
-				if (instrumState->traceCallCollectionEnabled) {
-					// Start instrumentation on data node
-					treetimer::measurement::drivers::startInstrumentation(instrumState->callTree->pos->nodeData,
-													  					  instrumState->config->eATimers,
-																		  instrumState->config->eTTimers,
-																		  instrumState->callTree->nodeEntryCount);
-				}
+				// Start instrumentation on data node
+				treetimer::measurement::drivers::startInstrumentation(
+					instrumState->callTree->pos->nodeData,
+					instrumState->config->eATimers,
+					instrumState->config->eTTimers && instrumState->traceCallCollectionEnabled,
+					instrumState->callTree->nodeEntryCount);
 			}
 
 			void TreeTimerExitBlock(std::string blockName)
 			{
-				if (instrumState->config->eTTimers && !instrumState->traceCallCollectionEnabled) {
-					return;
-				}
 
 				// Debug/Error Check: Ensure that the block we are stopping is the same as the one we are in.
 				if(blockName != instrumState->callTree->pos->key)
@@ -175,13 +166,13 @@ namespace treetimer
 					std::cout << instrumState->callTree->pos->key << " - recorded data will be invalid\n";
 				}
 
-				if (instrumState->traceCallCollectionEnabled) {
-					// Stop instrumentation on current data node
-					treetimer::measurement::drivers::stopInstrumentation(instrumState->callTree->pos->nodeData,
-																		 instrumState->config->eATimers,
-																		 instrumState->config->eTTimers,
-																		 instrumState->callTree->nodeExitCount);
-				}
+				// Stop instrumentation on current data node
+				treetimer::measurement::drivers::stopInstrumentation(
+					instrumState->callTree->pos->nodeData,
+					instrumState->config->eATimers,
+					instrumState->config->eTTimers && instrumState->traceCallCollectionEnabled,
+					instrumState->callTree->nodeExitCount);
+
 				// Move position in tree
 				instrumState->callTree->moveToParent();
 			}

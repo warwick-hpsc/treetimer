@@ -25,7 +25,7 @@ namespace treetimer
 			this->traceConductorNodeName = std::string("");
 			this->traceCallInterval = 0;
 			this->traceCallIntervalCounter = 0;
-			this->traceCallCollectionEnabled = true;
+			this->traceCallCollectionEnabled = false;
 		}
 
 		State::~State()
