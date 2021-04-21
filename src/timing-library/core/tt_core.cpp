@@ -113,7 +113,7 @@ namespace treetimer
 						// Initialise
 						instrumState->traceConductorNodeName = blockName;
 						instrumState->traceCallInterval = traceCallInterval;
-						instrumState->traceCallIntervalCounter = traceCallInterval;
+						instrumState->traceCallIntervalCounter = 0;
 					}
 					if (instrumState->traceConductorNodeName != blockName) {
 						printf("Attempting to set node '%s' as conductor, but another already is (%s)\n", blockName.c_str(), instrumState->traceConductorNodeName.c_str());
@@ -134,10 +134,6 @@ namespace treetimer
 				}
 				
 				TreeTimerEnterBlock(blockName, TT_NODE_TYPE_TRACE_CONDUCTOR);
-			}
-
-			void TreeTimerExitTraceConductor(std::string blockName) {
-				TreeTimerExitBlock(blockName);
 			}
 
 			void TreeTimerEnterBlock(std::string blockName, CodeBlockType blockType)

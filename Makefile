@@ -149,6 +149,9 @@ lib-shared: ${OBJECTS}
 lib-static: ${OBJECTS}
 	$(AR) rv lib${LIB_NAME}.a ${OBJECTS}
 
+f90_module: src/timing-library/interface/tt_wrapper_f90.f90
+	$(FC) -c $^ 
+
 testing-c: lib-static
 	${MPICC} -O2 -c examples/c_interface/main.c ${INCLUDE}
 	${MPICC} main.o -o ./test_c_interface -L. -l${LIB_NAME} ${SQLITE_LIB} -lm -lc ${FSTDLIBS}
