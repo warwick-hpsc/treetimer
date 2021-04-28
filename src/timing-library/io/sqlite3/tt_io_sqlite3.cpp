@@ -513,7 +513,7 @@ namespace treetimer
 								int traceParamID;
 								treetimer::database::tt_sqlite3::drivers::writeTraceParameterIntData(dataAccess,
 										 runID, processID, *callPathID,
-										 ptr->data.nodeCallEntry,
+										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
 										 it_int->first,
 										 ptr->data.val,
 										 &traceParamID);
@@ -536,7 +536,7 @@ namespace treetimer
 								int traceParamID;
 								treetimer::database::tt_sqlite3::drivers::writeTraceParameterFloatData(dataAccess,
 										 runID, processID, *callPathID,
-										 ptr->data.nodeCallEntry,
+										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
 										 it_double->first,
 										 ptr->data.val,
 										 &traceParamID);
@@ -558,7 +558,7 @@ namespace treetimer
 								int traceParamID;
 								treetimer::database::tt_sqlite3::drivers::writeTraceParameterBoolData(dataAccess,
 										 runID, processID, *callPathID,
-										 ptr->data.nodeCallEntry,
+										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
 										 it_bool->first,
 										 ptr->data.val,
 										 &traceParamID);
@@ -580,7 +580,7 @@ namespace treetimer
 								int traceParamID;
 								treetimer::database::tt_sqlite3::drivers::writeTraceParameterStringData(dataAccess,
 										 runID, processID, *callPathID,
-										 ptr->data.nodeCallEntry,
+										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
 										 it_string->first,
 										 ptr->data.val,
 										 &traceParamID);

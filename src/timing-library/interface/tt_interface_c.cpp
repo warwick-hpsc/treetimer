@@ -96,6 +96,11 @@ void TreeTimerLogParameterInt(const char * paramName, int value)
 	std::string strName(paramName);
 	treetimer::core::drivers::TreeTimerLogParameter(strName, value);
 }
+void TreeTimerLogParameterLong(const char * paramName, long value)
+{
+	std::string strName(paramName);
+	treetimer::core::drivers::TreeTimerLogParameter(strName, value);
+}
 
 void TreeTimerLogParameterDouble(const char * paramName, double value)
 {

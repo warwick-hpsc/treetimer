@@ -21,6 +21,7 @@ void TreeTimerInit();
 void TreeTimerFinalize();
 
 void TreeTimerLogParameterInt(const char * paramName, int value);
+void TreeTimerLogParameterLong(const char * paramName, long value);
 void TreeTimerLogParameterDouble(const char * paramName, double value);
 void TreeTimerLogParameterBool(const char * paramName, int value);
 

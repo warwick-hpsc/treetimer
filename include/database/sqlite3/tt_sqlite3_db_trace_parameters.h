@@ -49,24 +49,28 @@ namespace treetimer
 												 int * traceParamStringID);
 
 				void writeTraceParameterIntData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, 
-												 std::string paramName, int paramValue,
-												 int * traceParamIntID);
+												int runID, int processID, int callPathID, 
+												int nodeEntryID, int nodeExitID, 
+												std::string paramName, int paramValue,
+												int * traceParamIntID);
 
 				void writeTraceParameterFloatData(TTSQLite3& dataAccess,
-											 int runID, int processID, int callPathID, int nodeEntryID, 
-											 std::string paramName, double paramValue,
-											 int * traceParamFloatID);
+												int runID, int processID, int callPathID, 
+												int nodeEntryID, int nodeExitID, 
+												std::string paramName, double paramValue,
+												int * traceParamFloatID);
 
 				void writeTraceParameterBoolData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, 
-												 std::string paramName, int paramValue,
-												 int * traceParamBoolID);
+												int runID, int processID, int callPathID, 
+												int nodeEntryID, int nodeExitID, 
+												std::string paramName, int paramValue,
+												int * traceParamBoolID);
 
 				void writeTraceParameterStringData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, 
-												 std::string paramName, std::string paramValue,
-												 int * traceParamStringID);
+												int runID, int processID, int callPathID, 
+												int nodeEntryID, int nodeExitID, 
+												std::string paramName, std::string paramValue,
+												int * traceParamStringID);
 			}
 		}
 	}

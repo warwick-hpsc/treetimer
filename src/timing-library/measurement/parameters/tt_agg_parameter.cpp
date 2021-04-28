@@ -31,6 +31,17 @@ namespace treetimer
 		}
 
 		template <>
+		AggParameter<long>::AggParameter()
+		{
+			this->minVal = LONG_MAX;
+			this->maxVal = LONG_MIN;
+			this->avgVal = 0.0;
+			//this->stdDev = 0.0;
+			this->variance = 0.0;
+			this->count = 0;
+		}
+
+		template <>
 		AggParameter<double>::AggParameter()
 		{
 			this->minVal = DBL_MAX;
@@ -158,11 +169,13 @@ namespace treetimer
 // Explicit Instantiation
 // Classes
 template class treetimer::parameters::AggParameter<int>;
+template class treetimer::parameters::AggParameter<long>;
 template class treetimer::parameters::AggParameter<double>;
 template class treetimer::parameters::AggParameter<bool>;
 template class treetimer::parameters::AggParameter<std::string>;
 
 template void treetimer::parameters::drivers::updateValue<int>(AggParameter<int>& param, int value);
+template void treetimer::parameters::drivers::updateValue<long>(AggParameter<long>& param, long value);
 template void treetimer::parameters::drivers::updateValue<double>(AggParameter<double>& param, double value);
 template void treetimer::parameters::drivers::updateValue<>(AggParameter<bool>& param, bool value);
 template void treetimer::parameters::drivers::updateValue<>(AggParameter<std::string>& param, std::string value);
