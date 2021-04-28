@@ -39,7 +39,7 @@ import pickle
 cache = True
 #cache = False
 parallel_process = True
-# parallel_process = False
+parallel_process = False
 
 import pandas as pd
 import numpy as np
@@ -53,6 +53,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--tt-results-dirpath', required=True, help="Dirpath to 'tt_results' folder")
 parser.add_argument('-t', '--trace-group-focus', help='When grouping traces by loop iterator, can filter by a block within loop')
+parser.add_argument('-p', '--parameter', help='Which trace parameter to process')
 parser.add_argument('-c', '--charts', choices=["polar", "horizontal", "vertical"], help="Chart the call stack runtime breakdown across ranks")
 parser.add_argument('-r', '--chart-ranks', action='store_true', help="If charting, also draw call stack chart for each rank. Expensive!")
 parser.add_argument('-l', '--label', action='store_true', help="Add labels to chart elements. Optional because can create clutter")
@@ -125,8 +126,8 @@ def preprocess_db(db_fp, ctr, num_dbs):
 			pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
 
 	## TODO: wrap in a 'if trace data exists':
-	traces_fp = os.path.join(cache_dp, f+".traces.csv")
-	if not os.path.isfile(traces_fp):
+	traceTimes_fp = os.path.join(cache_dp, f+".traceTimes.csv")
+	if not os.path.isfile(traceTimes_fp):
 		if t is None:
 			with open(tree_fp, 'rb') as input:
 				t = pickle.load(input)
@@ -144,11 +145,32 @@ def preprocess_db(db_fp, ctr, num_dbs):
 				db.backup(dbm)
 			traces_df = traceTimes_aggregateByNode(dbm, 1, 1, t, traceGroupNode)
 			traces_df["Rank"] = rank
-			traces_df.to_csv(traces_fp, index=False)
+			traces_df.to_csv(traceTimes_fp, index=False)
+
+	traceParameters_fp = os.path.join(cache_dp, f+".parameter-traces.csv")
+	if not os.path.isfile(traceParameters_fp) and not args.parameter is None:
+		if t is None:
+			with open(tree_fp, 'rb') as input:
+				t = pickle.load(input)
+
+		try:
+			n = findTreeNodeByType(t, "TraceConductor")
+		except:
+			n = None
+		if n is None:
+			raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+		else:
+			traceGroupNode = n.name
+			if dbm is None:
+				dbm = sqlite3.connect(':memory:')
+				db.backup(dbm)
+			traces_df = traceParameter_aggregateByNode(dbm, 1, 1, t, traceGroupNode, args.parameter)
+			traces_df["Rank"] = rank
+			traces_df.to_csv(traceParameters_fp, index=False)
 
 	if args.trace_group_focus:
-		traces_focused_fp = os.path.join(cache_dp, f+".traces.focused-on-{0}.csv".format(args.trace_group_focus))
-		if not os.path.isfile(traces_focused_fp):
+		traceTimes_focused_fp = os.path.join(cache_dp, f+".time-traces.focused-on-{0}.csv".format(args.trace_group_focus))
+		if not os.path.isfile(traceTimes_focused_fp):
 			if t is None:
 				with open(tree_fp, 'rb') as input:
 					t = pickle.load(input)
@@ -165,7 +187,7 @@ def preprocess_db(db_fp, ctr, num_dbs):
 					db.backup(dbm)
 				traces_df = traceTimes_aggregateByNode(dbm, 1, 1, t, traceGroupNode, args.trace_group_focus)
 				traces_df["Rank"] = rank
-				traces_df.to_csv(traces_focused_fp, index=False)
+				traces_df.to_csv(traceTimes_focused_fp, index=False)
 
 	return True
 
@@ -190,8 +212,8 @@ def main():
 	df_all_raw = None
 	df_all_aggregated = None
 
-	traces_all_df = None
-	traces_focused_all_df = None
+	traceTimes_all_df = None
+	traceTimes_focused_all_df = None
 
 	rank_ids = set()
 
@@ -261,19 +283,21 @@ def main():
 				df_all_aggregated = df_all_aggregated.append(df_agg)
 
 			## TODO: wrap in a 'if trace data exists':
-			traces_fp = os.path.join(cache_dp, f+".traces.csv")
-			traces_df = pd.read_csv(traces_fp)
-			if traces_all_df is None:
-				traces_all_df = traces_df
+			traceTimes_fp = os.path.join(cache_dp, f+".traceTimes.csv")
+			traceTimes_df = pd.read_csv(traceTimes_fp)
+			if traceTimes_all_df is None:
+				traceTimes_all_df = traceTimes_df
 			else:
-				traces_all_df = traces_all_df.append(traces_df)
+				traceTimes_all_df = traceTimes_all_df.append(traceTimes_df)
 			if args.trace_group_focus:
-				traces_focused_fp = os.path.join(cache_dp, f+".traces.focused-on-{0}.csv".format(args.trace_group_focus))
-				traces_focused_df = pd.read_csv(traces_focused_fp)
-				if traces_focused_all_df is None:
-					traces_focused_all_df = traces_focused_df
+				traceTimes_focused_fp = os.path.join(cache_dp, f+".traces.focused-on-{0}.csv".format(args.trace_group_focus))
+				traceTimes_focused_df = pd.read_csv(traceTimes_focused_fp)
+				if traceTimes_focused_all_df is None:
+					traceTimes_focused_all_df = traceTimes_focused_df
 				else:
-					traces_focused_all_df = traces_focused_all_df.append(traces_focused_df)
+					traceTimes_focused_all_df = traceTimes_focused_all_df.append(traceTimes_focused_df)
+
+			## TODO: read in TraceParameter data
 
 			tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
 			with open(tree_fp, 'rb') as input:
@@ -315,9 +339,10 @@ def main():
 			chartCallPath(aggSum, "Call stack times summed across ranks "+sorted(agg.ranks).__str__(), "rankGroup{0}.png".format(gn))
 
 	print("Drawing trace charts")
-	traceTimes_chartDynamicLoadBalance(traces_all_df)
-	if not traces_focused_all_df is None:
+	traceTimes_chartDynamicLoadBalance(traceTimes_all_df)
+	if not traceTimes_focused_all_df is None:
 		traceTimes_chartDynamicLoadBalance(traces_focused_all_df, "focused-on-"+args.trace_group_focus)
+	## TODO: chart TraceParameter data
 
 	print("Writing out collated CSVs")
 	df_all_raw["num_ranks"] = len(rank_ids)
@@ -888,7 +913,6 @@ def traceTimes_aggregateByNode(db, runID, processID, tree, nodeName, nodeOfInter
 		if t is None:
 			raise Exception("'{0}' not child of '{1}'".format(nodeOfInterestName, nodeName))
 
-		# print("nodeOfInterestName = {0}".format(nodeOfInterestName))
 		cid = getNodeCallpathId(db, nodeOfInterestName)
 		query = "SELECT NodeEntryID, NodeExitID FROM TraceTimeData WHERE RunID = {0} AND ProcessID = {1} AND CallPathID = {2};".format(runID, processID, cid)
 		cur.execute(query)
@@ -945,6 +969,80 @@ def traceTimes_aggregateByNode(db, runID, processID, tree, nodeName, nodeOfInter
 	df["InclusiveTime %"] = df["InclusiveTime"] / df["TotalTime"] * 100.0
 	df = df.drop("TotalTime", axis=1)
 
+	return df
+
+def traceParameter_aggregateTraceRange(db, runID, processID, paramTable, paramName, nodeEntryId, nodeExitId):
+	cur = db.cursor()
+
+	traceParamIdColMap = {}
+	traceParamIdColMap["TraceParameterBoolData"] = "TraceParamBoolID"
+	traceParamIdColMap["TraceParameterIntData"] = "TraceParamIntID"
+	traceParamIdColMap["TraceParameterLongData"] = "TraceParamLongID"
+	traceParamIdColMap["TraceParameterDoubleData"] = "TraceParamDoubleID"
+
+	## To reduce code development time, check that parameter only has one value in specified nodeID range.
+	## If this is not the case, then need to think about what statistics to report (average? max and min? variance?). 
+	## Multiple parameter values cannot be handled like runtimes (which can be summed).
+	qCountQuery = "SELECT COUNT(*) FROM {0} NATURAL JOIN CallPathData WHERE ParamName = \"{1}\" AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(paramTable, paramName, nodeEntryId, nodeExitId)
+	cur.execute(qCountQuery)
+	count = cur.fetchone()[0]
+	if count > 1:
+		raise Exception("Parameter '{0}' recorded multiple values between a specific nodeID range. This situation has not been coded in TreeTimer, contact developers to request average, variance, or some other aggregating function.")
+
+	query = "SELECT {0} AS TraceParamId, ParamValue FROM {1} NATURAL JOIN CallPathData WHERE ParamName = \"{2}\" AND NodeEntryID >= {3} AND NodeExitID <= {4} GROUP BY ParentNodeID".format(traceParamIdColMap[paramTable], paramTable, paramName, nodeEntryId, nodeExitId)
+	cur.execute(query)
+	res = cur.fetchone()
+	row = [res["TraceParamId"], res["ParamValue"]]
+	return [row]
+
+def traceParameter_aggregateByNode(db, runID, processID, tree, nodeName, paramName, nodeOfInterestName=None):
+	db.row_factory = sqlite3.Row
+	cur = db.cursor()
+
+	## First, determine parameter type:
+	paramTable = None
+	for t in ["TraceParameterBoolData", "TraceParameterIntData", "TraceParameterFloatData"]:
+		query = "SELECT COUNT(*) FROM {0} WHERE RunID = {1} and ProcessID = {2} AND ParamName = \"{3}\" ;".format(t, runID, processID, paramName)
+		cur.execute(query)
+		count = cur.fetchone()[0]
+		if count > 0:
+			if not paramTable is None:
+				raise Exception("ParamName {0} is present in multiple tables: {1} and {2}".format(paramName, paramTable, t))
+			paramTable = t
+	if paramTable is None:
+		raise Exception("ParamName {0} not found in any TraceParameter* tablw".format(paramName))
+
+	query = "SELECT COUNT(*) FROM TraceParameterBoolData WHERE ParamName = \"TraceConductorEnabled?\";"
+	cur.execute(query)
+	count = cur.fetchone()[0]
+	if count == 0:
+		raise Exception("TreeTimer has not written parameter 'TraceConductorEnabled?' to table TraceParameterBoolData, which is necessary for grouping trace parameter by ")
+
+	cid = getNodeCallpathId(db, nodeName)
+	query = "SELECT NodeEntryID, NodeExitID FROM TraceParameterBoolData WHERE RunID = {0} AND ProcessID = {1} AND CallPathID = {2} AND ParamName = \"TraceConductorEnabled?\";".format(runID, processID, cid)
+	cur.execute(query)
+	result = cur.fetchall()
+	nodeEntryIds = [row['NodeEntryID'] for row in result]
+	nodeExitIds  = [row['NodeExitID'] for row in result]
+
+	if len(nodeEntryIds) == 0:
+		return None
+
+	rows_all = None
+	for i in range(len(nodeEntryIds)):
+		rows = traceParameter_aggregateTraceRange(db, runID, processID, paramTable, paramName, nodeEntryIds[i], nodeExitIds[i])
+		if rows_all is None:
+			rows_all = rows
+		else:
+			rows_all = np.append(rows_all, rows, axis=0)
+
+	# Pack rows into a DataFrame for final analysis
+	fields = ["TraceParamID", "ParamName", "Value"]
+	columns = {}
+	columns["TraceParamID"] = [r[0] for r in rows_all]
+	columns["ParamName"] = [paramName]*len(rows_all)
+	columns["Value"] = [r[1] for r in rows_all]
+	df = pd.DataFrame(columns)
 	return df
 
 def traceTimes_chartDynamicLoadBalance(traces_df, filename_suffix=None):
