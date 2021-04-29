@@ -40,6 +40,8 @@ import pickle
 import imp
 imp.load_source("PostProcessDbUtils", os.path.join(os.path.dirname(os.path.realpath(__file__)), "post-process-db-utils.py"))
 from PostProcessDbUtils import *
+imp.load_source("PostProcessPlotUtils", os.path.join(os.path.dirname(os.path.realpath(__file__)), "post-process-plot-utils.py"))
+from PostProcessPlotUtils import *
 
 parallel_process = True
 parallel_process = False
@@ -166,25 +168,25 @@ def preprocess_db(db_fp, ctr, num_dbs):
 					traces_df["Rank"] = rank
 					traces_df.to_csv(traceTimes_focused_fp, index=False)
 
-	traceParameters_fp = os.path.join(cache_dp, f+".traceParameters.csv")
-	if (not args.parameter is None) and (not os.path.isfile(traceParameters_fp)):
-		if t is None:
-			with open(tree_fp, 'rb') as input:
-				t = pickle.load(input)
-
-		try:
-			n = findTreeNodeByType(t, "TraceConductor")
-		except:
-			n = None
-		if n is None:
-			raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
-		else:
-			traceGroupNode = n.name
-			if dbm is None:
-				dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
-			traces_df = traceParameter_aggregateByNode(dbm, 1, 1, t, traceGroupNode, args.parameter)
-			traces_df["Rank"] = rank
-			traces_df.to_csv(traceParameters_fp, index=False)
+	if (not args.parameter is None):
+		traceParameter_fp = os.path.join(cache_dp, f+".traceParameter-{0}.csv".format(args.parameter))
+		if not os.path.isfile(traceParameter_fp):
+			if t is None:
+				with open(tree_fp, 'rb') as input:
+					t = pickle.load(input)
+			try:
+				n = findTreeNodeByType(t, "TraceConductor")
+			except:
+				n = None
+			if n is None:
+				raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+			else:
+				traceGroupNode = n.name
+				if dbm is None:
+					dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+				traces_df = traceParameter_aggregateByNode(dbm, 1, 1, t, traceGroupNode, args.parameter)
+				traces_df["Rank"] = rank
+				traces_df.to_csv(traceParameter_fp, index=False)
 
 	return True
 
@@ -211,6 +213,7 @@ def main():
 
 	traceTimes_all_df = None
 	traceTimes_focused_all_df = None
+	traceParameter_all_df = None
 
 	rank_ids = set()
 
@@ -257,11 +260,6 @@ def main():
 
 			print("Collating rank {0} data".format(rank))
 
-			db = sqlite3.connect(db_fp)
-			## Loading DB into memory roughly halves query times. 
-			## But only load if access required.
-			dbm = None
-			
 			df_csv = os.path.join(cache_dp, f+".csv")
 			if not os.path.isfile(df_csv):
 				print("Processing: {0} ({1}/{2})".format(db_fp, ctr, len(db_fps)))
@@ -279,22 +277,30 @@ def main():
 			else:
 				df_all_aggregated = df_all_aggregated.append(df_agg)
 
-			## TODO: wrap in a 'if trace data exists':
 			traceTimes_fp = os.path.join(cache_dp, f+".traceTimes.csv")
-			traceTimes_df = pd.read_csv(traceTimes_fp)
-			if traceTimes_all_df is None:
-				traceTimes_all_df = traceTimes_df
-			else:
-				traceTimes_all_df = traceTimes_all_df.append(traceTimes_df)
-			if args.trace_group_focus:
-				traceTimes_focused_fp = os.path.join(cache_dp, f+".traces.focused-on-{0}.csv".format(args.trace_group_focus))
-				traceTimes_focused_df = pd.read_csv(traceTimes_focused_fp)
-				if traceTimes_focused_all_df is None:
-					traceTimes_focused_all_df = traceTimes_focused_df
+			if os.path.isfile(traceTimes_fp):
+				df = pd.read_csv(traceTimes_fp)
+				if traceTimes_all_df is None:
+					traceTimes_all_df = df
 				else:
-					traceTimes_focused_all_df = traceTimes_focused_all_df.append(traceTimes_focused_df)
+					traceTimes_all_df = traceTimes_all_df.append(df)
+				if args.trace_group_focus:
+					traceTimes_focused_fp = os.path.join(cache_dp, f+".traces.focused-on-{0}.csv".format(args.trace_group_focus))
+					df = pd.read_csv(traceTimes_focused_fp)
+					if traceTimes_focused_all_df is None:
+						traceTimes_focused_all_df = df
+					else:
+						traceTimes_focused_all_df = traceTimes_focused_all_df.append(df)
 
 			## TODO: read in TraceParameter data
+			if not args.parameter is None:
+				traceParameter_fp = os.path.join(cache_dp, f+".traceParameter-{0}.csv".format(args.parameter))
+				if os.path.isfile(traceParameter_fp):
+					df = pd.read_csv(traceParameter_fp)
+					if traceParameter_all_df is None:
+						traceParameter_all_df = df
+					else:
+						traceParameter_all_df = traceParameter_all_df.append(df)
 
 			tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
 			with open(tree_fp, 'rb') as input:
@@ -340,6 +346,8 @@ def main():
 	if not traceTimes_focused_all_df is None:
 		traceTimes_chartDynamicLoadBalance(traces_focused_all_df, "focused-on-"+args.trace_group_focus)
 	## TODO: chart TraceParameter data
+	if not traceParameter_all_df is None:
+		traceParameter_chart(traceParameter_all_df, args.parameter)
 
 	print("Writing out collated CSVs")
 	df_all_raw["num_ranks"] = len(rank_ids)
@@ -1055,81 +1063,31 @@ def traceTimes_chartDynamicLoadBalance(traces_df, filename_suffix=None):
 			raise Exception("Ranks {0} and {1} performed different number of solver timesteps - {2} vs {3}".format(r_root, r, num_ts_root, num_ts))
 
 	## Add a unit-stride index column:
-	## Note: different ranks can have different TraceTimeID for same solver timestep. So, 
-	##       need to process each rank individually.
-	col_ranks = []
-	col_ids = []
-	col_indices = []
-	for r in mpi_traces["Rank"].unique():
-		traceTimesIDs = mpi_traces.loc[mpi_traces["Rank"]==r, "TraceTimeID"].unique()
-		traceTimesIDs.sort()
-		n = len(traceTimesIDs)
-		indices = np.arange(0,n)
-		col_ranks += [r]*n
-		col_ids += traceTimesIDs.tolist()
-		col_indices += indices.tolist()
-	df_ids = pd.DataFrame({"Rank":col_ranks, "TraceTimeID":col_ids, "TimestepIndex":col_indices})
-	mpi_traces = mpi_traces.merge(df_ids, validate="many_to_one")
+	mpi_traces = add_unit_stride_index_column(mpi_traces, "TraceTimeID")
 	## Can drop 'TraceTimeID', a SQL relic:
 	mpi_traces = mpi_traces.drop("TraceTimeID", axis=1)
 
-	# Discard first N timesteps as warming-up:
-	N = 2
-	if N < mpi_traces["TimestepIndex"].max():
-		mpi_traces = mpi_traces[mpi_traces["TimestepIndex"]>N].reset_index(drop=True)
-		mpi_traces["TimestepIndex"] -= N
+	# # Discard first N timesteps as warming-up:
+	# N = 2
+	# if N < mpi_traces["TimestepIndex"].max():
+	# 	mpi_traces = mpi_traces[mpi_traces["TimestepIndex"]>N].reset_index(drop=True)
+	# 	mpi_traces["TimestepIndex"] -= N
 
-	## Evenly sample 100 timepoints, so that final chart is legible :
-	sample_size = 100
+	## Evenly sample 100 timepoints, so that final chart is legible:
+	mpi_traces = sample_n_timesteps(mpi_traces, 100, "TimestepIndex")
 	timestepIndices = mpi_traces["TimestepIndex"].unique()
 	timestepIndices.sort()
-	if sample_size < len(timestepIndices):
-		index_step = len(timestepIndices) / sample_size
-		traceTimesIDs_sampled = [timestepIndices[round(i*index_step)] for i in range(0, sample_size)]
-		mpi_traces = mpi_traces[mpi_traces["TimestepIndex"].isin(traceTimesIDs_sampled)].reset_index(drop=True)
-		timestepIndices = mpi_traces["TimestepIndex"].unique()
-		timestepIndices.sort()
-	elif sample_size > len(timestepIndices):
-		## For consistent chart X-axis, re-calculate indices to scale 0->100
-		index_step = sample_size / len(timestepIndices)
-		traceTimesIDs_scaled = [round(index_step*i) for i in range(0, len(timestepIndices))]
-		df_ids = pd.DataFrame({"TimestepIndex":timestepIndices, "TimestepIndexNew":traceTimesIDs_scaled})
-		mpi_traces = mpi_traces.merge(df_ids, validate="many_to_one")
-		mpi_traces = mpi_traces.drop("TimestepIndex", axis=1).rename(columns={"TimestepIndexNew":"TimestepIndex"})
-		timestepIndices = mpi_traces["TimestepIndex"].unique()
-		timestepIndices.sort()
 
 	## Ensure table is sorted for calculation
 	mpi_traces = mpi_traces.sort_values(["TimestepIndex", "Rank"])
 
 	## Construct heatmap, of MPI % during simulation:
-	df2 = mpi_traces.pivot_table(index="Rank", columns="TimestepIndex", values="MPI %")
-	rank_max = mpi_traces["Rank"].max()
-	width = max(10, math.ceil((df2.shape[1])*0.4))
-	height = max(10, math.ceil((rank_max+1)*0.2))
-	fs = height*2
-	fs2 = round(fs*0.75)
-	fig = plt.figure(figsize=(width,height))
-	fig.suptitle("MPI%", fontsize=fs)
-	ax = fig.add_subplot(1,1,1)
-	ax.set_xlabel("Solver timestep progress %", fontsize=fs)
-	ax.set_ylabel("Rank", fontsize=fs)
-	## Best colormap doc: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-	#plt.imshow(df2.values, cmap='Reds')
-	plt.imshow(df2.values, cmap='Reds', extent=[0,99, 0,mpi_traces["Rank"].max()])
-	# plt.pcolor(df2.values, cmap='Reds')
-	#ax.set_xticks(df2.columns.values)
-	#ax.set_xticklabels(df2.columns.values)
-	# ax.set_yticks([0,diff_df["Rank"].max()])
-	cb = plt.colorbar(aspect=5)
-	cb.ax.tick_params(labelsize=fs2)
-	ax.tick_params(labelsize=fs2)
 	if not filename_suffix is None:
 		fig_filename = "mpi-pct-heatmap.{0}.png".format(filename_suffix)
 	else:
 		fig_filename = "mpi-pct-heatmap.png"
-	plt.savefig(os.path.join(args.tt_results_dirpath, fig_filename))
-	plt.close(fig)
+	fig_filepath = os.path.join(args.tt_results_dirpath, fig_filename)
+	plot_heatmap(mpi_traces, "TimestepIndex", "MPI %", fig_filepath)
 
 	## Finally! Calculate difference in MPI % over time:
 	col_ranks = None
@@ -1140,70 +1098,91 @@ def traceTimes_chartDynamicLoadBalance(traces_df, filename_suffix=None):
 	step = mpi_traces[mpi_traces["Rank"]==mpi_traces["Rank"].min()].shape[0]//2
 	# step = 50
     # # Zero up until step kicks in
-	# for s in range(0, step):
-	# 	s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s]]
-	# 	col_ranks = s0["Rank"].values if (col_ranks is None) else np.append(col_ranks, s0["Rank"].values)
-	# 	col_index = s0["TimestepIndex"].values if (col_index is None) else np.append(col_index, s0["TimestepIndex"].values)
-	# 	diff = [0.0]*s0["Rank"].shape[0]
+	# for ts in range(0, step):
+	# 	ts0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[ts]]
+	# 	col_ranks = ts0["Rank"].values if (col_ranks is None) else np.append(col_ranks, ts0["Rank"].values)
+	# 	col_index = ts0["TimestepIndex"].values if (col_index is None) else np.append(col_index, ts0["TimestepIndex"].values)
+	# 	diff = [0.0]*ts0["Rank"].shape[0]
 	# 	col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
-	# s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[0]]
-	# for s in range(step, len(timestepIndices)):
-	# 	s1 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s]]
+	# ts0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[0]]
+	# for ts in range(step, len(timestepIndices)):
+	# 	ts1 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[ts]]
 	# 	## Calculate diff, etc
-	# 	col_ranks = s1["Rank"].values if (col_ranks is None) else np.append(col_ranks, s1["Rank"].values)
-	# 	col_index = s1["TimestepIndex"].values if (col_index is None) else np.append(col_index, s1["TimestepIndex"].values)
-	# 	diff = np.absolute(s1["MPI %"].values - s0["MPI %"].values)
+	# 	col_ranks = ts1["Rank"].values if (col_ranks is None) else np.append(col_ranks, ts1["Rank"].values)
+	# 	col_index = ts1["TimestepIndex"].values if (col_index is None) else np.append(col_index, ts1["TimestepIndex"].values)
+	# 	diff = np.absolute(ts1["MPI %"].values - ts0["MPI %"].values)
 	# 	col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
-	# 	s0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s-step]]
-
+	# 	ts0 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[ts-step]]
 	## Calculate difference against last:
-	sLast = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[-1]]
-	for s in range(0, len(timestepIndices)):
-		s1 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[s]]
+	tsLast = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[-1]]
+	for ts in range(0, len(timestepIndices)):
+		ts1 = mpi_traces[mpi_traces["TimestepIndex"]==timestepIndices[ts]]
 		## Calculate diff, etc
-		col_ranks = s1["Rank"].values if (col_ranks is None) else np.append(col_ranks, s1["Rank"].values)
-		col_index = s1["TimestepIndex"].values if (col_index is None) else np.append(col_index, s1["TimestepIndex"].values)
-		diff = np.absolute(sLast["MPI %"].values - s1["MPI %"].values)
+		col_ranks = ts1["Rank"].values if (col_ranks is None) else np.append(col_ranks, ts1["Rank"].values)
+		col_index = ts1["TimestepIndex"].values if (col_index is None) else np.append(col_index, ts1["TimestepIndex"].values)
+		diff = np.absolute(tsLast["MPI %"].values - ts1["MPI %"].values)
 		col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
-
 	diff_df = pd.DataFrame({"TimestepIndex":col_index, "Rank":col_ranks, "MPI % diff":col_diffs})
+
+	if not filename_suffix is None:
+		fig_filename = "mpi-pct-change-heatmap.{0}.png".format(filename_suffix)
+	else:
+		fig_filename = "mpi-pct-change-heatmap.png"
+	fig_filepath = os.path.join(args.tt_results_dirpath, fig_filename)
+	plot_heatmap(diff_df, "TimestepIndex", "MPI % diff", fig_filepath)
 
 	## Sum stdev across ranks
 	diffSum_df = diff_df.drop("Rank", axis=1).groupby("TimestepIndex").sum().reset_index()
 	diffSum_df = diffSum_df.rename(columns={"MPI % diff":"Sum MPI % diff"})
-
 	diffSum_stdev = diffSum_df["Sum MPI % diff"].std()
 	diffSum_mean = diffSum_df["Sum MPI % diff"].mean()
 	diffSum_stdev_pct = 0.0 if diffSum_mean == 0.0 else diffSum_stdev/diffSum_mean*100.0
 	print("diffSum_stdev % mean = {0:.1f}".format(diffSum_stdev_pct))
 
-	## Construct heatmap, of MPI % CHANGING during simulation:
-	df2 = diff_df.pivot_table(index="Rank", columns="TimestepIndex", values="MPI % diff")
+def traceParameter_chart(traceParam_df, paramName):
+	r_root = traceParam_df["Rank"].min()
+	num_ts_root = traceParam_df[traceParam_df["Rank"]==r_root].shape[0]
+	for r in traceParam_df["Rank"].unique():
+		num_ts = traceParam_df[traceParam_df["Rank"]==r].shape[0]
+		if num_ts != num_ts_root:
+			raise Exception("Ranks {0} and {1} performed different number of solver timesteps - {2} vs {3}".format(r_root, r, num_ts_root, num_ts))
 
-	rank_max = diff_df["Rank"].max()
+	# ## Add a unit-stride index column:
+	traceParam_df = add_unit_stride_index_column(traceParam_df, "TraceParamID")
+	## Can drop 'TraceParamID', a SQL relic:
+	traceParam_df = traceParam_df.drop("TraceParamID", axis=1)
+
+	## Evenly sample 100 timepoints, so that final chart is legible:
+	traceParam_df = sample_n_timesteps(traceParam_df, 100, "TimestepIndex")
+	timestepIndices = traceParam_df["TimestepIndex"].unique()
+	timestepIndices.sort()
+
+	## Ensure table is sorted for calculation
+	traceParam_df = traceParam_df.sort_values(["TimestepIndex", "Rank"])
+
+	## Construct heatmap, of MPI % during simulation:
+	df2 = traceParam_df.pivot_table(index="Rank", columns="TimestepIndex", values="Value")
+	rank_max = traceParam_df["Rank"].max()
 	width = max(10, math.ceil((df2.shape[1])*0.4))
 	height = max(10, math.ceil((rank_max+1)*0.2))
 	fs = height*2
 	fs2 = round(fs*0.75)
-	fig = plt.figure(figsize=(width, height))
-	fig.suptitle("Change in MPI% over {0} timesteps".format(step), fontsize=fs)
+	fig = plt.figure(figsize=(width,height))
+	fig.suptitle("TraceParameter '{0}'".format(paramName), fontsize=fs)
 	ax = fig.add_subplot(1,1,1)
 	ax.set_xlabel("Solver timestep progress %", fontsize=fs)
 	ax.set_ylabel("Rank", fontsize=fs)
 	## Best colormap doc: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 	#plt.imshow(df2.values, cmap='Reds')
-	plt.imshow(df2.values, cmap='Reds', extent=[0,99, 0,rank_max])
+	plt.imshow(df2.values, cmap='Reds', extent=[0,99, 0,traceParam_df["Rank"].max()])
 	# plt.pcolor(df2.values, cmap='Reds')
-	# ax.set_xticks(df2.columns.values)
-	# ax.set_xticklabels(df2.columns.values)
+	#ax.set_xticks(df2.columns.values)
+	#ax.set_xticklabels(df2.columns.values)
 	# ax.set_yticks([0,diff_df["Rank"].max()])
 	cb = plt.colorbar(aspect=5)
 	cb.ax.tick_params(labelsize=fs2)
 	ax.tick_params(labelsize=fs2)
-	if not filename_suffix is None:
-		fig_filename = "mpi-pct-change-heatmap.{0}.png".format(filename_suffix)
-	else:
-		fig_filename = "mpi-pct-change-heatmap.png"
+	fig_filename = "traceParameter-{0}-heatmap.png".format(paramName)
 	plt.savefig(os.path.join(args.tt_results_dirpath, fig_filename))
 	plt.close(fig)
 
