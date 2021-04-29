@@ -40,7 +40,7 @@ def sample_n_timesteps(df, n, indexColname):
 		df = df.merge(df_ids, validate="many_to_one")
 		df = df.drop(indexColname, axis=1).rename(columns={indexColname+"new":indexColname})
 
-		return df
+	return df
 
 def plot_heatmap(df, index_colname, value_colname, fig_filepath):
 	df2 = df.pivot_table(index="Rank", columns=index_colname, values=value_colname)
