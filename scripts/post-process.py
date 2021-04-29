@@ -36,8 +36,11 @@ from time import sleep
 import sqlite3
 
 import pickle
-cache = True
-#cache = False
+
+import imp
+imp.load_source("PostProcessDbUtils", os.path.join(os.path.dirname(os.path.realpath(__file__)), "post-process-db-utils.py"))
+from PostProcessDbUtils import *
+
 parallel_process = True
 parallel_process = False
 
@@ -100,8 +103,7 @@ def preprocess_db(db_fp, ctr, num_dbs):
 	df_csv = os.path.join(cache_dp, f+".csv")
 	if not os.path.isfile(df_csv):
 		if dbm is None:
-			dbm = sqlite3.connect(':memory:')
-			db.backup(dbm)
+			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 		df = aggregatedTimes_calculateHotspots(1, 1, dbm)
 		df["rank"] = rank
 		df.to_csv(df_csv, index=False)
@@ -109,8 +111,7 @@ def preprocess_db(db_fp, ctr, num_dbs):
 	df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
 	if not os.path.isfile(df_agg_fp):
 		if dbm is None:
-			dbm = sqlite3.connect(':memory:')
-			db.backup(dbm)
+			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 		df_agg = aggregateTimesByType(1, 1, dbm)
 		df_agg["rank"] = rank
 		df_agg.to_csv(df_agg_fp, index=False)
@@ -119,36 +120,54 @@ def preprocess_db(db_fp, ctr, num_dbs):
 	t = None
 	if not os.path.isfile(tree_fp):
 		if dbm is None:
-			dbm = sqlite3.connect(':memory:')
-			db.backup(dbm)
+			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 		t = buildCallPathTree(1, 1, dbm)
 		with open(tree_fp, 'wb') as output:
 			pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
 
-	## TODO: wrap in a 'if trace data exists':
-	traceTimes_fp = os.path.join(cache_dp, f+".traceTimes.csv")
-	if not os.path.isfile(traceTimes_fp):
-		if t is None:
-			with open(tree_fp, 'rb') as input:
-				t = pickle.load(input)
+	if get_table_count(db, "TraceTimeData") > 0:
+		traceTimes_fp = os.path.join(cache_dp, f+".traceTimes.csv")
+		if not os.path.isfile(traceTimes_fp):
+			if t is None:
+				with open(tree_fp, 'rb') as input:
+					t = pickle.load(input)
 
-		try:
-			n = findTreeNodeByType(t, "TraceConductor")
-		except:
-			n = findSolverNode(t, 1, t.time)
-		if n is None:
-			raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
-		else:
-			traceGroupNode = n.name
-			if dbm is None:
-				dbm = sqlite3.connect(':memory:')
-				db.backup(dbm)
-			traces_df = traceTimes_aggregateByNode(dbm, 1, 1, t, traceGroupNode)
-			traces_df["Rank"] = rank
-			traces_df.to_csv(traceTimes_fp, index=False)
+			try:
+				n = findTreeNodeByType(t, "TraceConductor")
+			except:
+				n = findSolverNode(t, 1, t.time)
+			if n is None:
+				raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+			else:
+				traceGroupNode = n.name
+				if dbm is None:
+					dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+				traces_df = traceTimes_aggregateByNode(dbm, 1, 1, t, traceGroupNode)
+				traces_df["Rank"] = rank
+				traces_df.to_csv(traceTimes_fp, index=False)
 
-	traceParameters_fp = os.path.join(cache_dp, f+".parameter-traces.csv")
-	if not os.path.isfile(traceParameters_fp) and not args.parameter is None:
+		if args.trace_group_focus:
+			traceTimes_focused_fp = os.path.join(cache_dp, f+".time-traces.focused-on-{0}.csv".format(args.trace_group_focus))
+			if not os.path.isfile(traceTimes_focused_fp):
+				if t is None:
+					with open(tree_fp, 'rb') as input:
+						t = pickle.load(input)
+				try:
+					n = findTreeNodeByType(t, "TraceConductor")
+				except:
+					n = findSolverNode(t, 1, t.time)
+				if n is None:
+					raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+				else:
+					traceGroupNode = n.name
+					if dbm is None:
+						dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+					traces_df = traceTimes_aggregateByNode(dbm, 1, 1, t, traceGroupNode, args.trace_group_focus)
+					traces_df["Rank"] = rank
+					traces_df.to_csv(traceTimes_focused_fp, index=False)
+
+	traceParameters_fp = os.path.join(cache_dp, f+".traceParameters.csv")
+	if (not args.parameter is None) and (not os.path.isfile(traceParameters_fp)):
 		if t is None:
 			with open(tree_fp, 'rb') as input:
 				t = pickle.load(input)
@@ -162,32 +181,10 @@ def preprocess_db(db_fp, ctr, num_dbs):
 		else:
 			traceGroupNode = n.name
 			if dbm is None:
-				dbm = sqlite3.connect(':memory:')
-				db.backup(dbm)
+				dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 			traces_df = traceParameter_aggregateByNode(dbm, 1, 1, t, traceGroupNode, args.parameter)
 			traces_df["Rank"] = rank
 			traces_df.to_csv(traceParameters_fp, index=False)
-
-	if args.trace_group_focus:
-		traceTimes_focused_fp = os.path.join(cache_dp, f+".time-traces.focused-on-{0}.csv".format(args.trace_group_focus))
-		if not os.path.isfile(traceTimes_focused_fp):
-			if t is None:
-				with open(tree_fp, 'rb') as input:
-					t = pickle.load(input)
-			try:
-				n = findTreeNodeByType(t, "TraceConductor")
-			except:
-				n = findSolverNode(t, 1, t.time)
-			if n is None:
-				raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
-			else:
-				traceGroupNode = n.name
-				if dbm is None:
-					dbm = sqlite3.connect(':memory:')
-					db.backup(dbm)
-				traces_df = traceTimes_aggregateByNode(dbm, 1, 1, t, traceGroupNode, args.trace_group_focus)
-				traces_df["Rank"] = rank
-				traces_df.to_csv(traceTimes_focused_fp, index=False)
 
 	return True
 
@@ -221,7 +218,7 @@ def main():
 	groupedCallTrees = None
 
 	cache_dp = os.path.join(tt_folder_dirpath, "_tt_cache")
-	if cache and not os.path.isdir(cache_dp):
+	if not os.path.isdir(cache_dp):
 		os.mkdir(cache_dp)
 	db_fps = []
 	for run_root, run_dirnames, run_filenames in os.walk(tt_folder_dirpath):
@@ -1108,10 +1105,11 @@ def traceTimes_chartDynamicLoadBalance(traces_df, filename_suffix=None):
 	## Construct heatmap, of MPI % during simulation:
 	df2 = mpi_traces.pivot_table(index="Rank", columns="TimestepIndex", values="MPI %")
 	rank_max = mpi_traces["Rank"].max()
-	height = math.ceil((rank_max+1)*0.2)
+	width = max(10, math.ceil((df2.shape[1])*0.4))
+	height = max(10, math.ceil((rank_max+1)*0.2))
 	fs = height*2
 	fs2 = round(fs*0.75)
-	fig = plt.figure(figsize=(40,height))
+	fig = plt.figure(figsize=(width,height))
 	fig.suptitle("MPI%", fontsize=fs)
 	ax = fig.add_subplot(1,1,1)
 	ax.set_xlabel("Solver timestep progress %", fontsize=fs)
@@ -1176,16 +1174,18 @@ def traceTimes_chartDynamicLoadBalance(traces_df, filename_suffix=None):
 
 	diffSum_stdev = diffSum_df["Sum MPI % diff"].std()
 	diffSum_mean = diffSum_df["Sum MPI % diff"].mean()
-	print("diffSum_stdev % mean = {0:.1f}".format(diffSum_stdev/diffSum_mean*100.0))
+	diffSum_stdev_pct = 0.0 if diffSum_mean == 0.0 else diffSum_stdev/diffSum_mean*100.0
+	print("diffSum_stdev % mean = {0:.1f}".format(diffSum_stdev_pct))
 
 	## Construct heatmap, of MPI % CHANGING during simulation:
 	df2 = diff_df.pivot_table(index="Rank", columns="TimestepIndex", values="MPI % diff")
 
 	rank_max = diff_df["Rank"].max()
-	height = math.ceil((rank_max+1)*0.2)
+	width = max(10, math.ceil((df2.shape[1])*0.4))
+	height = max(10, math.ceil((rank_max+1)*0.2))
 	fs = height*2
 	fs2 = round(fs*0.75)
-	fig = plt.figure(figsize=(40, height))
+	fig = plt.figure(figsize=(width, height))
 	fig.suptitle("Change in MPI% over {0} timesteps".format(step), fontsize=fs)
 	ax = fig.add_subplot(1,1,1)
 	ax.set_xlabel("Solver timestep progress %", fontsize=fs)
