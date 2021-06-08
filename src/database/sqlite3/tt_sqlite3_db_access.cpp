@@ -91,8 +91,16 @@ namespace treetimer
 
 					db_backup = sqlite3_backup_init(db_file, "main", dataAccess.db, "main");
 					if (db_backup) {
-						sqlite3_backup_step(db_backup, -1);
-						sqlite3_backup_finish(db_backup);
+						err = sqlite3_backup_step(db_backup, -1);
+						if ((err != SQLITE_OK) && (err != SQLITE_DONE)) {
+							printf("TreeTimer error: sqlite3_backup_step() of mem->file failed\n"); fflush(stdout);
+							exit(EXIT_FAILURE);
+						}
+						err = sqlite3_backup_finish(db_backup);
+						if (err != SQLITE_OK) {
+							printf("TreeTimer error: sqlite3_backup_finish() of mem->file failed\n"); fflush(stdout);
+							exit(EXIT_FAILURE);
+						}
 					}
 
 					err = sqlite3_close(db_file);

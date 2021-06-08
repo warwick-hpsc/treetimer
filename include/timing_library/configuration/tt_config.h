@@ -50,6 +50,8 @@ namespace treetimer
 				bool eMPIHooks;		// Global enable or disable instrumentation hooks for MPI (will still be affected by timing and parameter capture options)
 									// N.B. Developers: due to the nature of the hooks, internal calls will still be made, but if disabled then no nodes will be
 									// generated for MPI calls
+				bool eMPIHooksTParam; // Enabling eTParam and eMPIHooks generates ENORMOUS trace logs. Require this new
+									  // bool to enable tracing of parameters in MPI blocks
 
 				// Storage for global parameters that are expected to influence program configuration
 				// Can only hold one value per parameter name
@@ -95,6 +97,7 @@ namespace treetimer
 			void setAggParamFromEnv(Config& config);
 			void setTraceParamFromEnv(Config& config);
 			void setMPIHooksFromEnv(Config& config);
+			void setMPIHooksTParamFromEnv(Config& config);
 
 			void setGlobalParamFromEnv(Config& config);
 
@@ -106,7 +109,10 @@ namespace treetimer
 
 			void setConfig(Config& config, std::string appName, std::string appVersion, std::string machineName, std::string outputFolder,
 						   int processCount,
-						   bool eATimers, bool eTTimers, bool eAPAPI, bool eTPAPI, bool eAParam, bool eTParam, bool eMPIHooks, bool inLibrary);
+						   bool eATimers, bool eTTimers, 
+						   bool eAPAPI, bool eTPAPI, 
+						   bool eAParam, bool eTParam, 
+						   bool eMPIHooks, bool eMPIHooksTParam, bool inLibrary);
 		}
 	}
 }

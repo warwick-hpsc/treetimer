@@ -37,6 +37,12 @@ namespace treetimer
 			void startInstrumentation(InstrumentationData& node, bool eATimer, bool eTTimer, long callEntryID)
 			{
 				treetimer::timers::drivers::startTimer(*(node.blockTimer), eATimer, eTTimer, callEntryID);
+
+				node.intParametersCached.clear();
+				node.longParametersCached.clear();
+				node.doubleParametersCached.clear();
+				node.boolParametersCached.clear();
+				node.stringParametersCached.clear();
 			}
 
 			void stopInstrumentation(InstrumentationData& node, bool eATimer, bool eTTimer, long callExitID)
