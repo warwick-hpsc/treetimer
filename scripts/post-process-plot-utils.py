@@ -65,3 +65,5 @@ def plot_heatmap(df, index_colname, value_colname, fig_filepath):
 	ax.tick_params(labelsize=fs2)
 	plt.savefig(fig_filepath)
 	plt.close(fig)
+
+	print("Heatmap written to: " + fig_filepath)

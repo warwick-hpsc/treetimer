@@ -44,25 +44,36 @@ imp.load_source("PostProcessPlotUtils", os.path.join(os.path.dirname(os.path.rea
 from PostProcessPlotUtils import *
 
 parallel_process = True
-parallel_process = False
+#parallel_process = False
+
+verbose = False
+#verbose = True
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-from multiprocessing import Lock, Process, Queue, current_process, cpu_count
-import queue # imported for using queue.Empty exception
+from multiprocessing import Pool, current_process, cpu_count
+import tqdm
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--tt-results-dirpath', required=True, help="Dirpath to 'tt_results' folder")
+parser.add_argument('-d', '--tt-results-dirpath', help="Dirpath to 'tt_results' folder")
+parser.add_argument('-b', '--db-filepath', help="Analyse this specific database file")
 parser.add_argument('-t', '--trace-group-focus', help='When grouping traces by loop iterator, can filter by a block within loop')
 parser.add_argument('-p', '--parameter', help='Which trace parameter to process')
 parser.add_argument('-c', '--charts', choices=["polar", "horizontal", "vertical"], help="Chart the call stack runtime breakdown across ranks")
 parser.add_argument('-r', '--chart-ranks', action='store_true', help="If charting, also draw call stack chart for each rank. Expensive!")
 parser.add_argument('-l', '--label', action='store_true', help="Add labels to chart elements. Optional because can create clutter")
 args = parser.parse_args()
+
+tt_folder_dirpath = args.tt_results_dirpath
+tt_db_filepath = args.db_filepath
+if (tt_folder_dirpath is None) and (tt_db_filepath is None):
+	raise Exception("Must specify either folder or DB file to analyse.")
+if (not tt_folder_dirpath is None) and (not tt_db_filepath is None):
+	raise Exception("Don't specify folder and DB file. Just one.")
 
 
 import enum
@@ -78,6 +89,7 @@ fig_dims = (8,8)
 
 methodTypeToColour = {}
 methodTypeToColour["Program"] = "silver"
+methodTypeToColour["TraceConductor"] = "silver"
 methodTypeToColour["Method"] = "silver"
 methodTypeToColour["Block"] = "silver"
 methodTypeToColour["Compute"] = "fuchsia"
@@ -90,8 +102,9 @@ methodTypeToColour["MPISyncCall"] = "orange"
 methodTypeToColour["MPICollectiveCall"] = "red"
 methodTypeToColour["LibraryCall"] = "yellowgreen"
 
-def preprocess_db(db_fp, ctr, num_dbs):
-	print("Processing: {0} ({1}/{2})".format(db_fp, ctr, num_dbs))
+def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
+	if verbose:
+		print("Processing: {0} ({1}/{2})".format(db_fp, ctr, num_dbs))
 	db = sqlite3.connect(db_fp)
 	## Loading DB into memory roughly halves query times. 
 	## But only load if access required.
@@ -101,9 +114,10 @@ def preprocess_db(db_fp, ctr, num_dbs):
 	m = re.match("^results\.([0-9]+)\.db$", f)
 	rank = int(m.groups()[0])
 
-	cache_dp = os.path.join(args.tt_results_dirpath, "_tt_cache")
 	df_csv = os.path.join(cache_dp, f+".csv")
 	if not os.path.isfile(df_csv):
+		if verbose:
+			print("- generating: " + df_csv)
 		if dbm is None:
 			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 		df = aggregatedTimes_calculateHotspots(1, 1, dbm)
@@ -112,6 +126,8 @@ def preprocess_db(db_fp, ctr, num_dbs):
 
 	df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
 	if not os.path.isfile(df_agg_fp):
+		if verbose:
+			print("- generating: " + df_agg_fp)
 		if dbm is None:
 			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 		df_agg = aggregateTimesByType(1, 1, dbm)
@@ -121,22 +137,25 @@ def preprocess_db(db_fp, ctr, num_dbs):
 	tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
 	t = None
 	if not os.path.isfile(tree_fp):
+		if verbose:
+			print("- generating: " + tree_fp)
 		if dbm is None:
 			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 		t = buildCallPathTree(1, 1, dbm)
 		with open(tree_fp, 'wb') as output:
 			pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
 
-	if get_table_count(db, "TraceTimeData") > 0:
+	if not table_empty(db, "TraceTimeData"):
 		traceTimes_fp = os.path.join(cache_dp, f+".traceTimes.csv")
 		if not os.path.isfile(traceTimes_fp):
+			if verbose:
+				print("- generating: " + traceTimes_fp)
 			if t is None:
 				with open(tree_fp, 'rb') as input:
 					t = pickle.load(input)
 
-			try:
-				n = findTreeNodeByType(t, "TraceConductor")
-			except:
+			n = findTreeNodeByType(t, "TraceConductor")
+			if n is None:
 				n = findSolverNode(t, 1, t.time)
 			if n is None:
 				raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
@@ -151,12 +170,13 @@ def preprocess_db(db_fp, ctr, num_dbs):
 		if args.trace_group_focus:
 			traceTimes_focused_fp = os.path.join(cache_dp, f+".time-traces.focused-on-{0}.csv".format(args.trace_group_focus))
 			if not os.path.isfile(traceTimes_focused_fp):
+				if verbose:
+					print("- generating: " + traceTimes_focused_fp)
 				if t is None:
 					with open(tree_fp, 'rb') as input:
 						t = pickle.load(input)
-				try:
-					n = findTreeNodeByType(t, "TraceConductor")
-				except:
+				n = findTreeNodeByType(t, "TraceConductor")
+				if n is None:
 					n = findSolverNode(t, 1, t.time)
 				if n is None:
 					raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
@@ -171,6 +191,8 @@ def preprocess_db(db_fp, ctr, num_dbs):
 	if (not args.parameter is None):
 		traceParameter_fp = os.path.join(cache_dp, f+".traceParameter-{0}.csv".format(args.parameter))
 		if not os.path.isfile(traceParameter_fp):
+			if verbose:
+				print("- generating: " + traceParameter_fp)
 			if t is None:
 				with open(tree_fp, 'rb') as input:
 					t = pickle.load(input)
@@ -190,22 +212,15 @@ def preprocess_db(db_fp, ctr, num_dbs):
 
 	return True
 
-def preprocess_db_job(dbs_pending, v):
-	while True:
-		try:
-			task = dbs_pending.get_nowait()
-		except queue.Empty:
-			break
-		else:
-			db_fp = task[0]
-			i = task[1]
-			n = task[2]
-			preprocess_db(db_fp, i, n)
-	return True
+def preprocess_db_job(task):
+	db_fp = task[0]
+	i = task[1]
+	n = task[2]
+	cache_dp = task[3]
+	preprocess_db(db_fp, i, n, cache_dp)
 
 def main():
-	tt_folder_dirpath = args.tt_results_dirpath
-	if not os.path.isdir(tt_folder_dirpath):
+	if (not tt_folder_dirpath is None) and not os.path.isdir(tt_folder_dirpath):
 		raise Exception("Folder does not exist: {0}".format(tt_folder_dirpath))
 
 	df_all_raw = None
@@ -220,35 +235,45 @@ def main():
 	## Group together rank call traces that have identical topology:
 	groupedCallTrees = None
 
-	cache_dp = os.path.join(tt_folder_dirpath, "_tt_cache")
+	db_fps = []
+	if not tt_folder_dirpath is None:
+		output_dirpath = tt_folder_dirpath
+		cache_dp = os.path.join(tt_folder_dirpath, "_tt_cache")
+		for run_root, run_dirnames, run_filenames in os.walk(tt_folder_dirpath):
+			for f in run_filenames:
+				if re.match("^results\.([0-9]+)\.db$", f):
+					db_fps.append(os.path.join(tt_folder_dirpath, f))
+	else:
+		output_dirpath = os.path.dirname(os.path.realpath(tt_db_filepath))
+		cache_dp = os.path.join(output_dirpath, "_tt_cache")
+		db_fps = [tt_db_filepath]
+
 	if not os.path.isdir(cache_dp):
 		os.mkdir(cache_dp)
-	db_fps = []
-	for run_root, run_dirnames, run_filenames in os.walk(tt_folder_dirpath):
-		for f in run_filenames:
-			if re.match("^results\.([0-9]+)\.db$", f):
-				db_fps.append(os.path.join(tt_folder_dirpath, f))
 
 	if parallel_process:
-		dbs_pending = Queue()
+		nprocs = cpu_count() - 1
+		print("Processing {0} DB files in parallel on {1} CPUs".format(len(db_fps), nprocs))
+		dbs_pending = []
 		for i in range(0, len(db_fps)):
 			db_fp = db_fps[i]
-			dbs_pending.put((db_fp, i+1, len(db_fps)))
-		processes = []
-		nprocs = cpu_count() - 1
-		for w in range(nprocs):
-			p = Process(target=preprocess_db_job, args=(dbs_pending, None))
-			processes.append(p)
-			p.start()
-		for i in processes:
-			p.join()
+			params = (db_fp, i+1, len(db_fps), cache_dp)
+			dbs_pending.append(params)
+		p = Pool(nprocs)
+		if verbose:
+			p.imap_unordered(preprocess_db_job, dbs_pending)
+		else:
+			for _ in tqdm.tqdm(p.imap_unordered(preprocess_db_job, dbs_pending), total=len(dbs_pending)):
+				pass
 	else:
-		for i in range(0, len(db_fps)):
-			preprocess_db(db_fps[i], i+1, len(db_fps))
+		print("Processing {0} DB files".format(len(db_fps)))
+		for i in tqdm.tqdm(range(0, len(db_fps))):
+			preprocess_db(db_fps[i], i+1, len(db_fps), cache_dp)
 	os.sync()
 	sleep(1) ## Give time for file writes to complete
 	print("All DBs pre-processed, outputs cached")
 
+	print("Collating data")
 	ctr = 0
 	for db_fp in db_fps:
 		f = os.path.basename(db_fp)
@@ -258,12 +283,13 @@ def main():
 			rank = int(m.groups()[0])
 			rank_ids.add(rank)
 
-			print("Collating rank {0} data".format(rank))
+			if verbose:
+				print("Collating rank {0} data".format(rank))
 
 			df_csv = os.path.join(cache_dp, f+".csv")
 			if not os.path.isfile(df_csv):
 				print("Processing: {0} ({1}/{2})".format(db_fp, ctr, len(db_fps)))
-				preprocess_db(db_fp, ctr, len(db_fps))
+				preprocess_db(db_fp, ctr, len(db_fps), cache_dp)
 			df = pd.read_csv(df_csv)
 			if df_all_raw is None:
 				df_all_raw = df
@@ -285,14 +311,15 @@ def main():
 				else:
 					traceTimes_all_df = traceTimes_all_df.append(df)
 				if args.trace_group_focus:
-					traceTimes_focused_fp = os.path.join(cache_dp, f+".traces.focused-on-{0}.csv".format(args.trace_group_focus))
+					traceTimes_focused_fp = os.path.join(cache_dp, f+".time-traces.focused-on-{0}.csv".format(args.trace_group_focus))
 					df = pd.read_csv(traceTimes_focused_fp)
 					if traceTimes_focused_all_df is None:
 						traceTimes_focused_all_df = df
 					else:
 						traceTimes_focused_all_df = traceTimes_focused_all_df.append(df)
+			else:
+				print("Cannot find: " + traceTimes_fp)
 
-			## TODO: read in TraceParameter data
 			if not args.parameter is None:
 				traceParameter_fp = os.path.join(cache_dp, f+".traceParameter-{0}.csv".format(args.parameter))
 				if os.path.isfile(traceParameter_fp):
@@ -305,6 +332,10 @@ def main():
 			tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
 			with open(tree_fp, 'rb') as input:
 				t = pickle.load(input)
+
+			if not tt_db_filepath is None:
+				# Just one DB being analysed, so print out call tree:
+				print(t)
 
 			if not args.charts is None:
 				## Add tree to a group
@@ -342,23 +373,23 @@ def main():
 			chartCallPath(aggSum, "Call stack times summed across ranks "+sorted(agg.ranks).__str__(), "rankGroup{0}.png".format(gn))
 
 	print("Drawing trace charts")
-	traceTimes_chartDynamicLoadBalance(traceTimes_all_df)
+	if not traceTimes_all_df is None:
+		traceTimes_chartDynamicLoadBalance(traceTimes_all_df)
 	if not traceTimes_focused_all_df is None:
-		traceTimes_chartDynamicLoadBalance(traces_focused_all_df, "focused-on-"+args.trace_group_focus)
-	## TODO: chart TraceParameter data
+		traceTimes_chartDynamicLoadBalance(traceTimes_focused_all_df, "focused-on-"+args.trace_group_focus)
 	if not traceParameter_all_df is None:
 		traceParameter_chart(traceParameter_all_df, args.parameter)
 
 	print("Writing out collated CSVs")
 	df_all_raw["num_ranks"] = len(rank_ids)
 	df_all_raw.sort_values(["Name", "rank"], inplace=True)
-	df_filename = os.path.join(tt_folder_dirpath, "timings_raw.csv")
+	df_filename = os.path.join(output_dirpath, "timings_raw.csv")
 	df_all_raw.to_csv(df_filename, index=False)
 	print("Collated raw data written to '{0}'".format(df_filename))
 
 
 	df_all_aggregated.sort_values(["Method type", "rank"], inplace=True)
-	df_filename = os.path.join(tt_folder_dirpath, "timings_aggregated.csv")
+	df_filename = os.path.join(output_dirpath, "timings_aggregated.csv")
 	df_all_aggregated.to_csv(df_filename, index=False)
 	print("Collated aggregated data written to '{0}'".format(df_filename))
 
@@ -593,7 +624,9 @@ def buildCallPathNodeTraversal(runID, processID, db, treeNode, nodeID, indentLev
 
 def findSolverNode(tree, parentCalls, walltime):
 	con1 = tree.time > (0.7*walltime)
-	con2 = tree.calls > (50*parentCalls)
+	#con2 = tree.calls > (50*parentCalls)
+	#con2 = tree.calls > (10*parentCalls)
+	con2 = tree.calls > (3*parentCalls)
 	if con1 and con2:
 		return tree
 	elif len(tree.leaves) > 0:
@@ -651,6 +684,7 @@ def plotCallPath_root(tree, plotType):
 	plotCallPath(tree, root_total, root_total, 0, 0, ax, plotType)
 
 def plotCallPath(tree, root_total, node_total, offset, level, ax, plotType):
+	are_any_nodes_labelled = False
 	if level == 0:
 		if not isinstance(tree, CallTreeNode):
 			raise Exception("'tree' parameter at root must be a CallTreeNode")
@@ -659,21 +693,25 @@ def plotCallPath(tree, root_total, node_total, offset, level, ax, plotType):
 		value = tree.time
 		subnodes = tree.leaves
 
+		are_any_subnodes_labelled = plotCallPath(subnodes, root_total, value, 0, level+1, ax, plotType)
+		do_label_node = args.label and not are_any_subnodes_labelled
+
+		are_any_nodes_labelled = are_any_nodes_labelled or do_label_node
+
 		if plotType == PlotType.Polar:
 			ax.bar(x=[0], height=[0.5], width=[node_total], color=[methodTypeToColour[methodType]])
-			if args.label:
+			if do_label_node:
 				ax.text(0, 0, label, ha='center', va='center')
 		else:
 			if plotType == PlotType.Vertical:
 				ax.bar(x=[node_total/2], height=[1.0], width=[node_total], color=[methodTypeToColour[methodType]])
-				if args.label:
+				if do_label_node:
 					ax.text(root_total/2, 0.5, label, ha='center', va='center')
 			else:
 				ax.bar(x=[0.5], height=[node_total], width=[1.0], color=[methodTypeToColour[methodType]])
-				if args.label:
+				if do_label_node:
 					ax.text(0.5, root_total/2, label, ha='center', va='center')
 
-		plotCallPath(subnodes, root_total, value, 0, level+1, ax, plotType)
 	elif tree:
 		if not isinstance(tree, list):
 			raise Exception("non-root 'tree' must be a list of CallTreeNode")
@@ -695,15 +733,22 @@ def plotCallPath(tree, root_total, node_total, offset, level, ax, plotType):
 			value = t.time
 			subnodes = t.leaves
 
+			are_any_subnodes_labelled = plotCallPath(subnodes, root_total, node_total, subnode_offset, level+1, ax, plotType)
+			subnode_offset += value
+
+			## Logic to ensure only outermost and non-tiny pie elements are labelled.
+			do_label_node = args.label and not are_any_subnodes_labelled
+			## No label text for tiny segments:
 			if (value / node_total) < 0.01:
-				## No label text for tiny segments
-				labels.append("")
-			else:
+				do_label_node = False
+			are_any_nodes_labelled = are_any_nodes_labelled or do_label_node or are_any_subnodes_labelled
+
+			if do_label_node:
 				labels.append(label)
+			else:
+				labels.append("")
 			sizes.append(value * d)
 			colours.append(methodTypeToColour[methodType])
-			plotCallPath(subnodes, root_total, node_total, subnode_offset, level+1, ax, plotType)
-			subnode_offset += value
 		if plotType == PlotType.Polar:
 			widths = sizes
 			heights = [1] * len(sizes)
@@ -732,13 +777,13 @@ def plotCallPath(tree, root_total, node_total, offset, level, ax, plotType):
 						rotation = ((360 - np.degrees(x) % 180)) % 360
 					else:
 						rotation = (90 + (360 - np.degrees(x) % 180)) % 360
-					if args.label:
+					if label != "" :
 						ax.text(x, y, label, rotation=rotation, ha='center', va='center')
 				else:
-					if args.label:
+					if label != "" :
 						ax.text(x, y, label, ha='center', va='center')
 			else:
-				if args.label:
+				if label != "" :
 					ax.text(x, y, label, ha='center', va='center')
 
 	if level == 0:
@@ -763,6 +808,7 @@ def plotCallPath(tree, root_total, node_total, offset, level, ax, plotType):
 			patchList.append(mpatches.Patch(color=legend_dict[k], label=k))
 		ax.legend(handles=patchList)
 
+	return are_any_nodes_labelled	
 
 def getNodeAggregatedStats(callPathID, runID, processID, db):
 	# ToDo: If looping over nodes, this will lead to the same data being loaded from the database multiple
@@ -990,7 +1036,10 @@ def traceParameter_aggregateTraceRange(db, runID, processID, paramTable, paramNa
 	## Multiple parameter values cannot be handled like runtimes (which can be summed).
 	qCountQuery = "SELECT COUNT(*) FROM {0} NATURAL JOIN CallPathData WHERE ParamName = \"{1}\" AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(paramTable, paramName, nodeEntryId, nodeExitId)
 	cur.execute(qCountQuery)
-	count = cur.fetchone()[0]
+	res = cur.fetchone()
+	if res is None:
+		return None
+	count = res[0]
 	if count > 1:
 		raise Exception("Parameter '{0}' recorded multiple values between a specific nodeID range. This situation has not been coded in TreeTimer, contact developers to request average, variance, or some other aggregating function.")
 
@@ -1036,10 +1085,11 @@ def traceParameter_aggregateByNode(db, runID, processID, tree, nodeName, paramNa
 	rows_all = None
 	for i in range(len(nodeEntryIds)):
 		rows = traceParameter_aggregateTraceRange(db, runID, processID, paramTable, paramName, nodeEntryIds[i], nodeExitIds[i])
-		if rows_all is None:
-			rows_all = rows
-		else:
-			rows_all = np.append(rows_all, rows, axis=0)
+		if not rows is None:
+			if rows_all is None:
+				rows_all = rows
+			else:
+				rows_all = np.append(rows_all, rows, axis=0)
 
 	# Pack rows into a DataFrame for final analysis
 	fields = ["TraceParamID", "ParamName", "Value"]
@@ -1052,7 +1102,11 @@ def traceParameter_aggregateByNode(db, runID, processID, tree, nodeName, paramNa
 
 def traceTimes_chartDynamicLoadBalance(traces_df, filename_suffix=None):
 	# Restrict to MPI time %:
-	mpi_traces = traces_df[traces_df["Type"]=="MPI"].drop(["Type", "InclusiveTime"], axis=1)
+	mpi_traces = traces_df[traces_df["Type"]=="MPI"]
+	if mpi_traces.shape[0] == 0:
+		print("No MPI functions were timed")
+		return
+	mpi_traces = mpi_traces.drop(["Type", "InclusiveTime"], axis=1)
 	mpi_traces = mpi_traces.rename(columns={"InclusiveTime %":"MPI %"})
 
 	r_root = mpi_traces["Rank"].min()
