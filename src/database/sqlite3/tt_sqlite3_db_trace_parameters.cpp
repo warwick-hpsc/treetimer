@@ -414,6 +414,8 @@ namespace treetimer
 					{
 						*traceParamIntID = sqlite3_last_insert_rowid(dataAccess.db);
 					}
+
+					sqlite3_finalize(pStmt);
 				}
 
 				void writeTraceParameterFloatData(TTSQLite3& dataAccess,
