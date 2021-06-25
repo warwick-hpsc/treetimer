@@ -263,6 +263,11 @@ namespace treetimer
 						return;
 					}
 
+					if (callTree.root == nullptr) {
+						// Nothing to do
+						return;
+					}
+
 					// Start at the root of the tree - there is no valid parentID so pass as -1
 					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeAggInstrumentationData, config.sqlIORunID, config.sqlIOProcessID, -1, config);
 
@@ -274,6 +279,11 @@ namespace treetimer
 									tt_sql::TTSQLite3* dataAccess)
 				{
 					// ToDo: Error Check - ensure database has been setup
+
+					if (callTree.root == nullptr) {
+						// Nothing to do
+						return;
+					}
 
 					// Start at the root of the tree - there is no valid parentID so pass as -1
 					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeTraceInstrumentationData, config.sqlIORunID, config.sqlIOProcessID, -1, config);

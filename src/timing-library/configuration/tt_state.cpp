@@ -19,6 +19,8 @@ namespace treetimer
 	{
 		State::State()
 		{
+			this->sleeping = false;
+
 			this->config = new Config();
 			this->callTree = new treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>();
 

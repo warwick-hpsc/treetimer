@@ -25,6 +25,9 @@ namespace treetimer
 			void TreeTimerInit();
 			void TreeTimerFinalize();
 
+			void TreeTimerSleep();
+			void TreeTimerWake();
+
 			void TreeTimerEnterTraceConductor(std::string blockName, int traceCallInterval);
 			void TreeTimerExitTraceConductor(std::string blockName);
 

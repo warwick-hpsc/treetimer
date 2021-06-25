@@ -26,6 +26,16 @@ void TreeTimerFinalize()
 	treetimer::core::drivers::TreeTimerFinalize();
 }
 
+void TreeTimerSleep()
+{
+	treetimer::core::drivers::TreeTimerSleep();
+}
+
+void TreeTimerWake()
+{
+	treetimer::core::drivers::TreeTimerWake();
+}
+
 void TreeTimerEnterTraceConductor(const char * name, int traceCallInterval)
 {
 	treetimer::core::drivers::TreeTimerEnterTraceConductor(name, traceCallInterval);

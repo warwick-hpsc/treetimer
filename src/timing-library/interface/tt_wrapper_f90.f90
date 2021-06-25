@@ -16,6 +16,8 @@ module treetimer
 	! Subroutines
 	public :: TreeTimerInit,						&
 			  TreeTimerFinalize,					&
+			  TreeTimerSleep,						&
+			  TreeTimerWake,						&
 			  TreeTimerEnterMethod,					&
 			  TreeTimerEnterLoop,					&
 			  TreeTimerEnterCompute,				&
@@ -49,6 +51,18 @@ module treetimer
 	
 		call c_tree_timer_finalize()
 		
+	end subroutine
+
+	subroutine TreeTimerSleep
+
+		call c_tree_timer_sleep
+
+	end subroutine
+
+	subroutine TreeTimerWake
+
+		call c_tree_timer_wake
+
 	end subroutine
 
 	subroutine TreeTimerEnterTraceConductor(blockName, traceCallInterval)

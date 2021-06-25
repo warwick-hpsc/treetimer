@@ -20,6 +20,9 @@ extern "C" {
 void TreeTimerInit();
 void TreeTimerFinalize();
 
+void TreeTimerSleep();
+void TreeTimerWake();
+
 void TreeTimerLogParameterInt(const char * paramName, int value);
 void TreeTimerLogParameterLong(const char * paramName, long value);
 void TreeTimerLogParameterDouble(const char * paramName, double value);

@@ -28,6 +28,8 @@ namespace treetimer
 				State();
 				~State();
 
+				bool sleeping; // If true, don't store any measured data. Call-tree traversal unaffected.
+
 				Config * config;
 				treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData> * callTree;
 

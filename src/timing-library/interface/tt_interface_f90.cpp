@@ -25,6 +25,18 @@ int F2C(c_tree_timer_finalize, C_TREE_TIMER_FINALIZE)()
 	return 0;
 }
 
+int F2C(c_tree_timer_sleep, C_TREE_TIMER_SLEEP)()
+{
+	TreeTimerSleep();
+	return 0;
+}
+
+int F2C(c_tree_timer_wake, C_TREE_TIMER_WAKE)()
+{
+	TreeTimerWake();
+	return 0;
+}
+
 int F2C(c_tree_timer_log_parameter_int, C_TREE_TIMER_LOG_PARAMETER_INT)(const char * name, int * text_len, int * value)
 {
 	char c_name[*text_len + 1];
