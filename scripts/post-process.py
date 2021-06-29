@@ -837,6 +837,7 @@ def getNodeAggregatedStats(callPathID, runID, processID, db):
 	if(len(childIDs) == 0):
 		# No child nodes means exclusive time = inclusive time
 		nodeStats['AggTotalTimeE'] = nodeStats['AggTotalTimeI']
+
 	else:
 		# Get sum of inclusive times taken by child nodes
 		childIDStr = ','.join([str(x) for x in childIDs])
@@ -846,11 +847,15 @@ def getNodeAggregatedStats(callPathID, runID, processID, db):
 		cur.execute(query);
 		childrenWalltime = cur.fetchone()['ChildrenWalltime']
 
-		nodeStats['AggTotalTimeE'] = nodeStats['AggTotalTimeI'] - childrenWalltime
-		# Due to overhead, potentially possible for this to be slightly negative, so will correct here
-		if nodeStats['AggTotalTimeE'] < 0.0:
-			print("Note: negative 'AggTotalTimeE' detected, zeroing")
+		if nodeStats["CallCount"] == 0:
 			nodeStats['AggTotalTimeE'] = 0.0
+			nodeStats['AggTotalTimeI'] = childrenWalltime
+		else:
+			nodeStats['AggTotalTimeE'] = nodeStats['AggTotalTimeI'] - childrenWalltime
+			# Due to overhead, potentially possible for this to be slightly negative, so will correct here
+			if nodeStats['AggTotalTimeE'] < 0.0:
+				print("Note: negative 'AggTotalTimeE' detected for nodeName '{0}', zeroing ({1})".format(nodeStats["Name"], nodeStats['AggTotalTimeE']))
+				nodeStats['AggTotalTimeE'] = 0.0
 
 	return nodeStats
 

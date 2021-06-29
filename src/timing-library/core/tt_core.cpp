@@ -119,38 +119,40 @@ namespace treetimer
 
 			void TreeTimerEnterTraceConductor(std::string blockName, int traceCallInterval)
 			{
-				if (treetimer::core::instrumState->sleeping) return;
+				if (!treetimer::core::instrumState->sleeping) {
+					//if (instrumState->config->eTTimers) {
+					if (instrumState->config->eTTimers || instrumState->config->eTParam) {
+						if (instrumState->traceConductorNodeName == "") {
+							// Initialise
+							instrumState->traceConductorNodeName = blockName;
+							instrumState->traceCallInterval = traceCallInterval;
+							instrumState->traceCallIntervalCounter = 0;
+						}
+						if (instrumState->traceConductorNodeName != blockName) {
+							printf("Attempting to set node '%s' as conductor, but another already is (%s)\n", blockName.c_str(), instrumState->traceConductorNodeName.c_str());
+							exit(EXIT_FAILURE);
+						}
 
-				//if (instrumState->config->eTTimers) {
-				if (instrumState->config->eTTimers || instrumState->config->eTParam) {
-					if (instrumState->traceConductorNodeName == "") {
-						// Initialise
-						instrumState->traceConductorNodeName = blockName;
-						instrumState->traceCallInterval = traceCallInterval;
-						instrumState->traceCallIntervalCounter = 0;
-					}
-					if (instrumState->traceConductorNodeName != blockName) {
-						printf("Attempting to set node '%s' as conductor, but another already is (%s)\n", blockName.c_str(), instrumState->traceConductorNodeName.c_str());
-						exit(EXIT_FAILURE);
-					}
-
-					// Decide whether to enable/block trace collection during this call:
-					instrumState->traceCallIntervalCounter--;
-					if (instrumState->traceCallIntervalCounter <= 0) {
-						// Enable trace collection
-						instrumState->traceCallCollectionEnabled = true;
-						instrumState->traceCallIntervalCounter = instrumState->traceCallInterval;
-					}
-					else {
-						// Disable trace collection
-						instrumState->traceCallCollectionEnabled = false;
+						// Decide whether to enable/block trace collection during this call:
+						instrumState->traceCallIntervalCounter--;
+						if (instrumState->traceCallIntervalCounter <= 0) {
+							// Enable trace collection
+							instrumState->traceCallCollectionEnabled = true;
+							instrumState->traceCallIntervalCounter = instrumState->traceCallInterval;
+						}
+						else {
+							// Disable trace collection
+							instrumState->traceCallCollectionEnabled = false;
+						}
 					}
 				}
 				
 				TreeTimerEnterBlock(blockName, TT_NODE_TYPE_TRACE_CONDUCTOR);
 
-				// In case trace timing is disabled, but trace parameters enabled, store a dummy parameter to ease data analysis:
-				TreeTimerLogParameter("TraceConductorEnabled?", true);
+				if (!treetimer::core::instrumState->sleeping) {
+					// In case trace timing is disabled, but trace parameters enabled, store a dummy parameter to ease data analysis:
+					TreeTimerLogParameter("TraceConductorEnabled?", true);
+				}
 			}
 
 			void TreeTimerEnterBlock(std::string blockName, CodeBlockType blockType)
@@ -163,16 +165,22 @@ namespace treetimer
 
 				instrumState->callTree->pos->nodeData.currentNodeEntryID = instrumState->callTree->nodeEntryCounter;
 
-				if (treetimer::core::instrumState->sleeping) return;
+				instrumState->callTree->pos->nodeData.instrumentThisVisit = ! treetimer::core::instrumState->sleeping;
+				if (instrumState->callTree->pos->parent == NULL) {
+					// Always instrument root node, need to know walltime
+					instrumState->callTree->pos->nodeData.instrumentThisVisit = true;
+				}
 
-				// Start instrumentation on data node
-				treetimer::measurement::drivers::startInstrumentation(
-					instrumState->callTree->pos->nodeData,
-					instrumState->config->eATimers,
-					// instrumState->config->eTTimers,
-					instrumState->config->eTTimers && instrumState->traceCallCollectionEnabled,
-					// (instrumState->config->eTTimers || instrumState->config->eTParam) && instrumState->traceCallCollectionEnabled,
-					instrumState->callTree->nodeEntryCounter);
+				if (instrumState->callTree->pos->nodeData.instrumentThisVisit) {
+					// Start instrumentation on data node
+					treetimer::measurement::drivers::startInstrumentation(
+						instrumState->callTree->pos->nodeData,
+						instrumState->config->eATimers,
+						// instrumState->config->eTTimers,
+						instrumState->config->eTTimers && instrumState->traceCallCollectionEnabled,
+						// (instrumState->config->eTTimers || instrumState->config->eTParam) && instrumState->traceCallCollectionEnabled,
+						instrumState->callTree->nodeEntryCounter);
+				}
 			}
 
 			void TreeTimerExitBlock(std::string blockName)
@@ -188,7 +196,7 @@ namespace treetimer
 				// pre-emptively increment
 				int nodeExitID = instrumState->callTree->nodeVisitCounter+1;
 
-				if (!treetimer::core::instrumState->sleeping) {
+				if (instrumState->callTree->pos->nodeData.instrumentThisVisit) {
 					// Stop instrumentation on current data node
 					treetimer::measurement::drivers::stopInstrumentation(
 						instrumState->callTree->pos->nodeData,
@@ -211,7 +219,7 @@ namespace treetimer
 
 			void TreeTimerLogParameter(std::string paramName, int val)
 			{
-				if (treetimer::core::instrumState->sleeping) return;
+				if (! instrumState->callTree->pos->nodeData.instrumentThisVisit) return;
 
 				bool inMPIBlock =  (instrumState->callTree->pos->nodeData.blockType == TT_NODE_TYPE_MPI_COMM_CALL) 
 								|| (instrumState->callTree->pos->nodeData.blockType == TT_NODE_TYPE_MPI_SYNC_CALL) 
@@ -226,7 +234,7 @@ namespace treetimer
 
 			void TreeTimerLogParameter(std::string paramName, long val)
 			{
-				if (treetimer::core::instrumState->sleeping) return;
+				if (! instrumState->callTree->pos->nodeData.instrumentThisVisit) return;
 
 				bool inMPIBlock =  (instrumState->callTree->pos->nodeData.blockType == TT_NODE_TYPE_MPI_COMM_CALL) 
 								|| (instrumState->callTree->pos->nodeData.blockType == TT_NODE_TYPE_MPI_SYNC_CALL) 
@@ -241,7 +249,7 @@ namespace treetimer
 
 			void TreeTimerLogParameter(std::string paramName, double val)
 			{
-				if (treetimer::core::instrumState->sleeping) return;
+				if (! instrumState->callTree->pos->nodeData.instrumentThisVisit) return;
 
 				bool inMPIBlock =  (instrumState->callTree->pos->nodeData.blockType == TT_NODE_TYPE_MPI_COMM_CALL) 
 								|| (instrumState->callTree->pos->nodeData.blockType == TT_NODE_TYPE_MPI_SYNC_CALL) 
@@ -256,7 +264,7 @@ namespace treetimer
 
 			void TreeTimerLogParameter(std::string paramName, bool val)
 			{
-				if (treetimer::core::instrumState->sleeping) return;
+				if (! instrumState->callTree->pos->nodeData.instrumentThisVisit) return;
 
 				bool inMPIBlock =  (instrumState->callTree->pos->nodeData.blockType == TT_NODE_TYPE_MPI_COMM_CALL) 
 								|| (instrumState->callTree->pos->nodeData.blockType == TT_NODE_TYPE_MPI_SYNC_CALL) 
@@ -271,7 +279,7 @@ namespace treetimer
 
 			void TreeTimerLogParameter(std::string paramName, std::string val)
 			{
-				if (treetimer::core::instrumState->sleeping) return;
+				if (! instrumState->callTree->pos->nodeData.instrumentThisVisit) return;
 
 				bool inMPIBlock =  (instrumState->callTree->pos->nodeData.blockType == TT_NODE_TYPE_MPI_COMM_CALL) 
 								|| (instrumState->callTree->pos->nodeData.blockType == TT_NODE_TYPE_MPI_SYNC_CALL) 

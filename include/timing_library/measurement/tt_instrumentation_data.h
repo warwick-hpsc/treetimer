@@ -55,6 +55,7 @@ namespace treetimer
 				// Trace collection management
 				bool isConductor = false;
 				int traceCallInterval = 0;
+				bool instrumentThisVisit = true;
 
 				int currentNodeEntryID = 0;
 
