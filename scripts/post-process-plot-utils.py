@@ -54,14 +54,25 @@ def plot_heatmap(df, index_colname, value_colname, fig_filepath):
 	ax.set_xlabel("Solver timestep progress %", fontsize=fs)
 	ax.set_ylabel("Rank", fontsize=fs)
 	## Best colormap doc: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-	#plt.imshow(df2.values, cmap='Reds')
-	plt.imshow(df2.values, cmap='Reds', extent=[0,99, 0,df["Rank"].max()])
-	# plt.pcolor(df2.values, cmap='Reds')
+	#cm = 'Reds'
+	cm = 'bwr'
+	vmax = max(df[value_colname].abs())
+	nm = plt.Normalize(-vmax, vmax)
+	#plt.imshow(df2.values, cmap=cm)
+	#plt.imshow(df2.values, cmap=cm, extent=[0,99, 0,df["Rank"].max()])
+	plt.imshow(df2.values, cmap=cm, norm=nm, extent=[0,99, 0,df["Rank"].max()])
+	# plt.pcolor(df2.values, cmap=cm)
 	#ax.set_xticks(df2.columns.values)
 	#ax.set_xticklabels(df2.columns.values)
 	# ax.set_yticks([0,diff_df["Rank"].max()])
+
 	cb = plt.colorbar(aspect=5)
+	#cb = plt.colorbar(aspect=5, ax=plt.axes(ylim=(0,vmax)), cax=plt.axes(ylim=(0,vmax)))
+	#cax = fig.add_axes([0.1, 0.1, -vmax, vmax])
+	#cb = plt.colorbar(aspect=5, cax=cax)
 	cb.ax.tick_params(labelsize=fs2)
+	cb.ax.set_ylim(df[value_colname].min(), df[value_colname].max())
+
 	ax.tick_params(labelsize=fs2)
 	plt.savefig(fig_filepath)
 	plt.close(fig)

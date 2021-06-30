@@ -55,6 +55,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 from multiprocessing import Pool, current_process, cpu_count
+nprocs = cpu_count() - 1
 import tqdm
 
 import argparse
@@ -143,7 +144,8 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 		t = buildCallPathTree(1, 1, dbm)
 		with open(tree_fp, 'wb') as output:
-			pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
+			#pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
+			pickle.dump(t, output, 4)
 
 	if not table_empty(db, "TraceTimeData"):
 		traceTimes_fp = os.path.join(cache_dp, f+".traceTimes.csv")
@@ -196,10 +198,9 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 			if t is None:
 				with open(tree_fp, 'rb') as input:
 					t = pickle.load(input)
-			try:
-				n = findTreeNodeByType(t, "TraceConductor")
-			except:
-				n = None
+			n = findTreeNodeByType(t, "TraceConductor")
+			if n is None:
+				n = findSolverNode(t, 1, t.time)
 			if n is None:
 				raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
 			else:
@@ -317,8 +318,8 @@ def main():
 						traceTimes_focused_all_df = df
 					else:
 						traceTimes_focused_all_df = traceTimes_focused_all_df.append(df)
-			else:
-				print("Cannot find: " + traceTimes_fp)
+			#else:
+			#	print("Cannot find: " + traceTimes_fp)
 
 			if not args.parameter is None:
 				traceParameter_fp = os.path.join(cache_dp, f+".traceParameter-{0}.csv".format(args.parameter))
@@ -396,6 +397,9 @@ def main():
 
 # Note - ProcessID is just a DB key, NOT the MPI rank.
 def aggregatedTimes_calculateHotspots(runID, processID, db):
+	if table_empty(db, "AggregateTime"):
+		raise Exception("DB table 'AggregateTime' is empty")
+
 	rootID = getNodeCallpathId(db, 'ProgramRoot')
 	rootRecord = getNodeAggregatedStats(rootID, runID, processID, db)
 
@@ -829,6 +833,9 @@ def getNodeAggregatedStats(callPathID, runID, processID, db):
 
 	cur.execute(query)
 	result = cur.fetchone()
+	if result is None:
+		print(query)
+		raise Exception("No node with CallPathID {0}".format(callPathID))
 	nodeStats = {k:result[k] for k in result.keys()}
 	nodeStats['AggTotalTimeI'] = nodeStats['AggAvgTime'] * nodeStats['CallCount']
 
@@ -1069,7 +1076,7 @@ def traceParameter_aggregateByNode(db, runID, processID, tree, nodeName, paramNa
 				raise Exception("ParamName {0} is present in multiple tables: {1} and {2}".format(paramName, paramTable, t))
 			paramTable = t
 	if paramTable is None:
-		raise Exception("ParamName {0} not found in any TraceParameter* tablw".format(paramName))
+		raise Exception("ParamName {0} not found in any TraceParameter* table".format(paramName))
 
 	query = "SELECT COUNT(*) FROM TraceParameterBoolData WHERE ParamName = \"TraceConductorEnabled?\";"
 	cur.execute(query)
@@ -1179,20 +1186,21 @@ def traceTimes_chartDynamicLoadBalance(traces_df, filename_suffix=None):
 		## Calculate diff, etc
 		col_ranks = ts1["Rank"].values if (col_ranks is None) else np.append(col_ranks, ts1["Rank"].values)
 		col_index = ts1["TimestepIndex"].values if (col_index is None) else np.append(col_index, ts1["TimestepIndex"].values)
-		diff = np.absolute(tsLast["MPI %"].values - ts1["MPI %"].values)
+		#diff = np.absolute(tsLast["MPI %"].values - ts1["MPI %"].values)
+		diff = ts1["MPI %"].values - tsLast["MPI %"].values
 		col_diffs = diff if (col_diffs is None) else np.append(col_diffs, diff)
-	diff_df = pd.DataFrame({"TimestepIndex":col_index, "Rank":col_ranks, "MPI % diff":col_diffs})
+	diff_df = pd.DataFrame({"TimestepIndex":col_index, "Rank":col_ranks, "(MPI %) diff":col_diffs})
 
 	if not filename_suffix is None:
 		fig_filename = "mpi-pct-change-heatmap.{0}.png".format(filename_suffix)
 	else:
 		fig_filename = "mpi-pct-change-heatmap.png"
 	fig_filepath = os.path.join(args.tt_results_dirpath, fig_filename)
-	plot_heatmap(diff_df, "TimestepIndex", "MPI % diff", fig_filepath)
+	plot_heatmap(diff_df, "TimestepIndex", "(MPI %) diff", fig_filepath)
 
 	## Sum stdev across ranks
 	diffSum_df = diff_df.drop("Rank", axis=1).groupby("TimestepIndex").sum().reset_index()
-	diffSum_df = diffSum_df.rename(columns={"MPI % diff":"Sum MPI % diff"})
+	diffSum_df = diffSum_df.rename(columns={"(MPI %) diff":"Sum MPI % diff"})
 	diffSum_stdev = diffSum_df["Sum MPI % diff"].std()
 	diffSum_mean = diffSum_df["Sum MPI % diff"].mean()
 	diffSum_stdev_pct = 0.0 if diffSum_mean == 0.0 else diffSum_stdev/diffSum_mean*100.0
@@ -1220,30 +1228,9 @@ def traceParameter_chart(traceParam_df, paramName):
 	traceParam_df = traceParam_df.sort_values(["TimestepIndex", "Rank"])
 
 	## Construct heatmap, of MPI % during simulation:
-	df2 = traceParam_df.pivot_table(index="Rank", columns="TimestepIndex", values="Value")
-	rank_max = traceParam_df["Rank"].max()
-	width = max(10, math.ceil((df2.shape[1])*0.4))
-	height = max(10, math.ceil((rank_max+1)*0.2))
-	fs = height*2
-	fs2 = round(fs*0.75)
-	fig = plt.figure(figsize=(width,height))
-	fig.suptitle("TraceParameter '{0}'".format(paramName), fontsize=fs)
-	ax = fig.add_subplot(1,1,1)
-	ax.set_xlabel("Solver timestep progress %", fontsize=fs)
-	ax.set_ylabel("Rank", fontsize=fs)
-	## Best colormap doc: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-	#plt.imshow(df2.values, cmap='Reds')
-	plt.imshow(df2.values, cmap='Reds', extent=[0,99, 0,traceParam_df["Rank"].max()])
-	# plt.pcolor(df2.values, cmap='Reds')
-	#ax.set_xticks(df2.columns.values)
-	#ax.set_xticklabels(df2.columns.values)
-	# ax.set_yticks([0,diff_df["Rank"].max()])
-	cb = plt.colorbar(aspect=5)
-	cb.ax.tick_params(labelsize=fs2)
-	ax.tick_params(labelsize=fs2)
 	fig_filename = "traceParameter-{0}-heatmap.png".format(paramName)
-	plt.savefig(os.path.join(args.tt_results_dirpath, fig_filename))
-	plt.close(fig)
+	fig_filepath = os.path.join(args.tt_results_dirpath, fig_filename)
+	plot_heatmap(traceParam_df, "TimestepIndex", "Value", fig_filepath)
 
 
 if __name__ == "__main__":
