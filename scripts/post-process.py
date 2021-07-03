@@ -122,8 +122,9 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 		if dbm is None:
 			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 		df = aggregatedTimes_calculateHotspots(1, 1, dbm)
-		df["rank"] = rank
-		df.to_csv(df_csv, index=False)
+		if not df is None:
+			df["rank"] = rank
+			df.to_csv(df_csv, index=False)
 
 	df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
 	if not os.path.isfile(df_agg_fp):
@@ -132,8 +133,9 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 		if dbm is None:
 			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 		df_agg = aggregateTimesByType(1, 1, dbm)
-		df_agg["rank"] = rank
-		df_agg.to_csv(df_agg_fp, index=False)
+		if not df_agg is None:
+			df_agg["rank"] = rank
+			df_agg.to_csv(df_agg_fp, index=False)
 
 	tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
 	t = None
@@ -291,18 +293,20 @@ def main():
 			if not os.path.isfile(df_csv):
 				print("Processing: {0} ({1}/{2})".format(db_fp, ctr, len(db_fps)))
 				preprocess_db(db_fp, ctr, len(db_fps), cache_dp)
-			df = pd.read_csv(df_csv)
-			if df_all_raw is None:
-				df_all_raw = df
-			else:
-				df_all_raw = df_all_raw.append(df)
+			if os.path.isfile(df_csv):
+				df = pd.read_csv(df_csv)
+				if df_all_raw is None:
+					df_all_raw = df
+				else:
+					df_all_raw = df_all_raw.append(df)
 
 			df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
-			df_agg = pd.read_csv(df_agg_fp)
-			if df_all_aggregated is None:
-				df_all_aggregated = df_agg
-			else:
-				df_all_aggregated = df_all_aggregated.append(df_agg)
+			if os.path.isfile(df_agg_fp):
+				df_agg = pd.read_csv(df_agg_fp)
+				if df_all_aggregated is None:
+					df_all_aggregated = df_agg
+				else:
+					df_all_aggregated = df_all_aggregated.append(df_agg)
 
 			traceTimes_fp = os.path.join(cache_dp, f+".traceTimes.csv")
 			if os.path.isfile(traceTimes_fp):
@@ -381,24 +385,25 @@ def main():
 	if not traceParameter_all_df is None:
 		traceParameter_chart(traceParameter_all_df, args.parameter)
 
-	print("Writing out collated CSVs")
-	df_all_raw["num_ranks"] = len(rank_ids)
-	df_all_raw.sort_values(["Name", "rank"], inplace=True)
-	df_filename = os.path.join(output_dirpath, "timings_raw.csv")
-	df_all_raw.to_csv(df_filename, index=False)
-	print("Collated raw data written to '{0}'".format(df_filename))
+	if not df_all_raw is None:
+		print("Writing out collated CSVs")
+		df_all_raw["num_ranks"] = len(rank_ids)
+		df_all_raw.sort_values(["Name", "rank"], inplace=True)
+		df_filename = os.path.join(output_dirpath, "timings_raw.csv")
+		df_all_raw.to_csv(df_filename, index=False)
+		print("Collated raw data written to '{0}'".format(df_filename))
 
-
-	df_all_aggregated.sort_values(["Method type", "rank"], inplace=True)
-	df_filename = os.path.join(output_dirpath, "timings_aggregated.csv")
-	df_all_aggregated.to_csv(df_filename, index=False)
-	print("Collated aggregated data written to '{0}'".format(df_filename))
+	if not df_all_aggregated is None:
+		df_all_aggregated.sort_values(["Method type", "rank"], inplace=True)
+		df_filename = os.path.join(output_dirpath, "timings_aggregated.csv")
+		df_all_aggregated.to_csv(df_filename, index=False)
+		print("Collated aggregated data written to '{0}'".format(df_filename))
 
 
 # Note - ProcessID is just a DB key, NOT the MPI rank.
 def aggregatedTimes_calculateHotspots(runID, processID, db):
 	if table_empty(db, "AggregateTime"):
-		raise Exception("DB table 'AggregateTime' is empty")
+		return None
 
 	rootID = getNodeCallpathId(db, 'ProgramRoot')
 	rootRecord = getNodeAggregatedStats(rootID, runID, processID, db)
@@ -414,7 +419,6 @@ def aggregatedTimes_calculateHotspots(runID, processID, db):
 
 # Note - ProcessID is just a DB key, NOT the MPI rank.
 def getAllProfileNodesAggregateTimeExclusive(runID, processID, db):
-
 	# Since aggregate properties operate on call path nodes (since
 	# times for different paths to the same profile node are stored
 	# separately), we need to merge these values.
@@ -609,9 +613,13 @@ def buildCallPathTree(runID, processID, db):
 
 def buildCallPathNodeTraversal(runID, processID, db, treeNode, nodeID, indentLevel):
 	# Recursive depth-first traversal through call stack
-	record = getNodeAggregatedStats(nodeID, runID, processID, db)
+	if table_empty(db, "AggregateTime"):
+		record = getNodeCallStats(nodeID, db)
+		leaf = CallTreeNode(record["Name"], record["TypeName"], 0.0, -1)
+	else:
+		record = getNodeAggregatedStats(nodeID, runID, processID, db)
+		leaf = CallTreeNode(record["Name"], record["TypeName"], record["AggTotalTimeI"], record["CallCount"])
 
-	leaf = CallTreeNode(record["Name"], record["TypeName"], record["AggTotalTimeI"], record["CallCount"])
 	am_root = False
 	if treeNode is None:
 		am_root = True
@@ -866,7 +874,35 @@ def getNodeAggregatedStats(callPathID, runID, processID, db):
 
 	return nodeStats
 
+def getNodeCallStats(callPathID, db):
+	## Lean version of getNodeAggregatedStats(), for when AggregateTime table is empty.
+
+	## Function call tree is assumed invariant to runID or processID, i.e. application code
+	## does not change significantly between runs
+
+	db.row_factory = sqlite3.Row
+	cur = db.cursor()
+
+	# Get Node Details - Should only ever have one entry
+	query = "SELECT D.NodeName AS Name, " + \
+			"T.TypeName AS TypeName " + \
+			"FROM CallPathData AS C " + \
+			"NATURAL JOIN ProfileNodeData AS D NATURAL JOIN ProfileNodeType AS T " + \
+			"WHERE C.CallPathID = {0} ;".format(callPathID)
+
+	cur.execute(query)
+	result = cur.fetchone()
+	if result is None:
+		print(query)
+		raise Exception("No node with CallPathID {0}".format(callPathID))
+	nodeStats = {k:result[k] for k in result.keys()}
+
+	return nodeStats
+
 def aggregateTimesByType(runID, processID, db):
+	if table_empty(db, "AggregateTime"):
+		return None
+	
 	# # Get all callpath node IDs
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
