@@ -73,6 +73,10 @@ LD = $(MPIFC)
 CFLAGS += -D${F2C_NAMING}
 CXXFLAGS += -D${F2C_NAMING}
 
+# Enable interception of PMPI calls:
+CFLAGS += -DTT_PMPI
+CXXFLAGS += -DTT_PMPI
+
 OBJECTS = \
 		  src/third-party/jsoncpp/jsoncpp.o \
 		  src/data_structures/tree/tt_tree_node.o \
@@ -107,6 +111,7 @@ OBJECTS = \
 		  src/timing-library/measurement/parameters/tt_agg_parameter.o \
 		  src/timing-library/measurement/parameters/tt_parameter.o \
 		  src/timing-library/measurement/mpi/tt_mpi.o \
+		  src/timing-library/measurement/mpi/tt_pmpi.o \
 		  src/timing-library/measurement/tt_instrumentation_data.o \
 		  src/timing-library/io/json/tt_io_json.o \
 		  src/timing-library/io/sqlite3/tt_io_sqlite3.o \
