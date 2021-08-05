@@ -74,8 +74,9 @@ CFLAGS += -D${F2C_NAMING}
 CXXFLAGS += -D${F2C_NAMING}
 
 # Enable interception of PMPI calls:
-CFLAGS += -DTT_PMPI
-CXXFLAGS += -DTT_PMPI
+#CFLAGS += -DTT_PMPI
+#CXXFLAGS += -DTT_PMPI
+# TODO: auto-detect whether PMPI interception is necessary
 
 OBJECTS = \
 		  src/third-party/jsoncpp/jsoncpp.o \
