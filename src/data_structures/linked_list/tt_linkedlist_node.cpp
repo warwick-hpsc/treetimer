@@ -36,6 +36,7 @@ namespace treetimer
 // Explicit Instantiation
 template class treetimer::data_structures::LinkedListNode<treetimer::timers::TraceTimer>;
 template class treetimer::data_structures::LinkedListNode<treetimer::parameters::TraceParameter<int>>;
+template class treetimer::data_structures::LinkedListNode<treetimer::parameters::TraceParameter<long>>;
 template class treetimer::data_structures::LinkedListNode<treetimer::parameters::TraceParameter<double>>;
 template class treetimer::data_structures::LinkedListNode<treetimer::parameters::TraceParameter<bool>>;
 template class treetimer::data_structures::LinkedListNode<treetimer::parameters::TraceParameter<std::string>>;

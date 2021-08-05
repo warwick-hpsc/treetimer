@@ -29,12 +29,12 @@ namespace treetimer
 
 				void findTraceTimeDataID(TTSQLite3& dataAccess,
 										 int runID, int callPathID, int processID,
-										 long nodeEntryCount, long nodeExitCount, double walltime,
+										 long nodeEntryID, long nodeExitID, double walltime,
 										 int * traceTimeID);
 
 				void writeTraceTimeData(TTSQLite3& dataAccess,
 										 int runID, int callPathID, int processID,
-										 long nodeEntryCount, long nodeExitCount, double walltime,
+										 long nodeEntryID, long nodeExitID, double walltime,
 										 int * traceTimeID);
 			}
 		}

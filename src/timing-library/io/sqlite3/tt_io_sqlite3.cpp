@@ -41,6 +41,8 @@
 
 #include <cmath>
 
+namespace tt_sql = treetimer::database::tt_sqlite3;
+
 namespace treetimer
 {
 	namespace io
@@ -49,82 +51,76 @@ namespace treetimer
 		{
 			namespace drivers
 			{
-				void setupOutput(treetimer::config::Config& config)
+				tt_sql::TTSQLite3* setupOutput(treetimer::config::Config& config)
 				{
+					// Create SQL Access Object
+					tt_sql::TTSQLite3* dataAccess = new tt_sql::TTSQLite3(config.outputFolder + "/" + config.sqlIOFilename);
+					tt_sql::drivers::openConnection(*dataAccess);
+
 					if(config.sqlIOSetup == false)
 					{
-						// Create SQL Access Object
-						treetimer::database::tt_sqlite3::TTSQLite3 * dataAccess = new treetimer::database::tt_sqlite3::TTSQLite3(config.outputFolder + "/" + config.sqlIOFilename);
-
-						// Open Connection
-						treetimer::database::tt_sqlite3::drivers::openConnection(*dataAccess);
-
 						// Setup the Database Schemas
 						// (a) Block Types
-						treetimer::database::tt_sqlite3::drivers::writeSchemaProfileNodeTypeData(*dataAccess);
+						tt_sql::drivers::writeSchemaProfileNodeTypeData(*dataAccess);
 
 						// (b) Library Configuration
-						treetimer::database::tt_sqlite3::drivers::writeSchemaLibraryConfigData(*dataAccess);
+						tt_sql::drivers::writeSchemaLibraryConfigData(*dataAccess);
 
 						// (c) Singular Parameters (used for Global Parameter Storage)
-						treetimer::database::tt_sqlite3::drivers::writeSchemaParameterData(*dataAccess);
+						tt_sql::drivers::writeSchemaParameterData(*dataAccess);
 
 						// (d) Application Data
-						treetimer::database::tt_sqlite3::drivers::writeSchemaApplicationData(*dataAccess);
+						tt_sql::drivers::writeSchemaApplicationData(*dataAccess);
 
 						// (e) Application Configuration Data (Links Combinations of Global Parameters)
-						treetimer::database::tt_sqlite3::drivers::writeSchemaApplicationConfigData(*dataAccess);
+						tt_sql::drivers::writeSchemaApplicationConfigData(*dataAccess);
 
 						// (f) Profile Nodes
-						treetimer::database::tt_sqlite3::drivers::writeSchemaProfileNodeData(*dataAccess);
+						tt_sql::drivers::writeSchemaProfileNodeData(*dataAccess);
 
 						// (g) CPU Data
-						treetimer::database::tt_sqlite3::drivers::writeSchemaCPUData(*dataAccess);
+						tt_sql::drivers::writeSchemaCPUData(*dataAccess);
 
 						// (h) Machine Data
-						treetimer::database::tt_sqlite3::drivers::writeSchemaMachineData(*dataAccess);
+						tt_sql::drivers::writeSchemaMachineData(*dataAccess);
 
 						// (i) Compute Node Data
-						treetimer::database::tt_sqlite3::drivers::writeSchemaComputeNodeData(*dataAccess);
+						tt_sql::drivers::writeSchemaComputeNodeData(*dataAccess);
 
 						// (j) Compute Node Socket Data
-						treetimer::database::tt_sqlite3::drivers::writeSchemaCPUSocketData(*dataAccess);
+						tt_sql::drivers::writeSchemaCPUSocketData(*dataAccess);
 
 						// (k) Compute Core Data
-						treetimer::database::tt_sqlite3::drivers::writeSchemaCPUCoreData(*dataAccess);
+						tt_sql::drivers::writeSchemaCPUCoreData(*dataAccess);
 
 						// (l) Call Path Data
-						treetimer::database::tt_sqlite3::drivers::writeSchemaCallPathData(*dataAccess);
+						tt_sql::drivers::writeSchemaCallPathData(*dataAccess);
 
 						// (m) MPI Process Data
-						treetimer::database::tt_sqlite3::drivers::writeSchemaProcessData(*dataAccess);
+						tt_sql::drivers::writeSchemaProcessData(*dataAccess);
 
 						// (n) Run Data (Configurations, Process Count etc)
-						treetimer::database::tt_sqlite3::drivers::writeSchemaProfileRunConfigData(*dataAccess);
+						tt_sql::drivers::writeSchemaProfileRunConfigData(*dataAccess);
 
 						// (o) Aggregate Parameter Data (Run Specific)
-						treetimer::database::tt_sqlite3::drivers::writeSchemaAggregateParameterData(*dataAccess);
+						tt_sql::drivers::writeSchemaAggregateParameterData(*dataAccess);
 
 						// (p) Aggregate Timer Data (Run Specific)
-						treetimer::database::tt_sqlite3::drivers::writeSchemaAggregateTimeData(*dataAccess);
+						tt_sql::drivers::writeSchemaAggregateTimeData(*dataAccess);
 
 						// (q) Trace Parameter Data (Run Specific)
-						treetimer::database::tt_sqlite3::drivers::writeSchemaTraceParameterData(*dataAccess);
+						tt_sql::drivers::writeSchemaTraceParameterData(*dataAccess);
 
 						// (r) Trace Timer Data (Run Specific)
-						treetimer::database::tt_sqlite3::drivers::writeSchemaTraceTimeData(*dataAccess);
-
-						// Close Connection
-						treetimer::database::tt_sqlite3::drivers::closeConnection(*dataAccess);
-
-						// Cleanup
-						delete(dataAccess);
+						tt_sql::drivers::writeSchemaTraceTimeData(*dataAccess);
 
 						config.sqlIOSetup = true;
 					}
+
+					return dataAccess;
 				}
 
-				void writeRunConfigData(treetimer::config::Config& config)
+				void writeRunConfigData(treetimer::config::Config& config, tt_sql::TTSQLite3* dataAccess)
 				{
 					// Write data pertaining to the run configuration
 
@@ -136,59 +132,56 @@ namespace treetimer
 
 					if(config.sqlIORunConfig == false)
 					{
-						treetimer::database::tt_sqlite3::TTSQLite3 * dataAccess = new treetimer::database::tt_sqlite3::TTSQLite3(config.outputFolder + "/" + config.sqlIOFilename);
-
 						// Profile Node Type Data
-						treetimer::database::tt_sqlite3::drivers::openConnection(*dataAccess);
 
 						for(int i = 0; i < TT_CODE_BLOCK_COUNT; i++)
 						{
 							int dbID;
-							treetimer::database::tt_sqlite3::drivers::writeProfileNodeTypeData(*dataAccess, codeBlockNames[i], &dbID);
+							tt_sql::drivers::writeProfileNodeTypeData(*dataAccess, codeBlockNames[i], &dbID);
 						}
 
 						// Library Config Data
 						int libConfigID;
-						treetimer::database::tt_sqlite3::drivers::writeLibraryConfigID(*dataAccess, config.libVerMajor, config.libVerMinor,
+						tt_sql::drivers::writeLibraryConfigID(*dataAccess, config.libVerMajor, config.libVerMinor,
 																						 config.eATimers, config.eTTimers,
 																						 config.eAParam, config.eTParam,
 																						 config.eAPAPI, config.eTPAPI,
 																						 config.eMPIHooks, &libConfigID);
 						// Application Data
 						int appID;
-						treetimer::database::tt_sqlite3::drivers::writeApplicationData(*dataAccess, config.appName, config.appVersion, &appID);
+						tt_sql::drivers::writeApplicationData(*dataAccess, config.appName, config.appVersion, &appID);
 
 						// Machine Data
 						int machineID;
-						treetimer::database::tt_sqlite3::drivers::writeMachineData(*dataAccess, config.machineName, &machineID);
+						tt_sql::drivers::writeMachineData(*dataAccess, config.machineName, &machineID);
 
 						// CPU Data
 						int cpuID;
 						std::string cpuModel = "Unknown";
-						treetimer::database::tt_sqlite3::drivers::writeCPUData(*dataAccess, cpuModel, &cpuID);
+						tt_sql::drivers::writeCPUData(*dataAccess, cpuModel, &cpuID);
 
 						// Compute Node Data
 						int computeNodeID;
 						std::string nodeName = "Unknown";
 						int socketCount = -1;
-						treetimer::database::tt_sqlite3::drivers::writeComputeNodeData(*dataAccess, machineID, nodeName,
+						tt_sql::drivers::writeComputeNodeData(*dataAccess, machineID, nodeName,
 																					   socketCount, &computeNodeID);
 
 						// CPU Socket Data
 						int cpuSocketID;
 						int phySocketNum = -1;
-						treetimer::database::tt_sqlite3::drivers::writeCPUSocketData(*dataAccess, computeNodeID, cpuID, phySocketNum, &cpuSocketID);
+						tt_sql::drivers::writeCPUSocketData(*dataAccess, computeNodeID, cpuID, phySocketNum, &cpuSocketID);
 
 						// CPU Core Data
 						int cpuCoreID;
 						int physicalCoreNum = -1;
-						treetimer::database::tt_sqlite3::drivers::writeCPUCoreData(*dataAccess, cpuSocketID, physicalCoreNum, &cpuCoreID);
+						tt_sql::drivers::writeCPUCoreData(*dataAccess, cpuSocketID, physicalCoreNum, &cpuCoreID);
 
 						// ProcessID
 						int processID;
 						int rank;
 						MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-						treetimer::database::tt_sqlite3::drivers::writeProcessData(*dataAccess, cpuCoreID,  rank, &processID);
+						tt_sql::drivers::writeProcessData(*dataAccess, cpuCoreID,  rank, &processID);
 
 						// App Config Data
 						// Build Vectors of the global parameters
@@ -234,7 +227,7 @@ namespace treetimer
 
 						// Application Config Data
 						int appConfigID;
-						treetimer::database::tt_sqlite3::drivers::writeApplicationConfigData(*dataAccess,
+						tt_sql::drivers::writeApplicationConfigData(*dataAccess,
 																							 appID,
 																							 intParamNames, intParamValues,
 																							 doubleParamNames, doubleParamValues,
@@ -246,7 +239,7 @@ namespace treetimer
 						int processCount;
 						int runID;
 						MPI_Comm_size(MPI_COMM_WORLD, &processCount);
-						treetimer::database::tt_sqlite3::drivers::writeProfileRunConfigData(*dataAccess,
+						tt_sql::drivers::writeProfileRunConfigData(*dataAccess,
 																							appConfigID,
 																							libConfigID,
 																							processCount,
@@ -255,18 +248,13 @@ namespace treetimer
 						config.sqlIORunID = runID;
 						config.sqlIOProcessID = processID;
 
-						// Close Connection
-						treetimer::database::tt_sqlite3::drivers::closeConnection(*dataAccess);
-
-						// Cleanup
-						delete(dataAccess);
-
 						config.sqlIORunConfig = true;
 					}
 				}
 
 				void writeAggData(treetimer::config::Config& config,
-								  treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree)
+								  treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
+								  tt_sql::TTSQLite3* dataAccess)
 				{
 					// ToDo: Error Check - ensure database has been setup
 
@@ -275,41 +263,36 @@ namespace treetimer
 						return;
 					}
 
-					// Open an access object
-					treetimer::database::tt_sqlite3::TTSQLite3 * dataAccess = new treetimer::database::tt_sqlite3::TTSQLite3(config.outputFolder + "/" + config.sqlIOFilename);
-					treetimer::database::tt_sqlite3::drivers::openConnection(*dataAccess);
+					if (callTree.root == nullptr) {
+						// Nothing to do
+						return;
+					}
 
 					// Start at the root of the tree - there is no valid parentID so pass as -1
 					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeAggInstrumentationData, config.sqlIORunID, config.sqlIOProcessID, -1, config);
-
-					treetimer::database::tt_sqlite3::drivers::closeConnection(*dataAccess);
-
-					delete(dataAccess);
 
 					config.sqlIOAggData = true;
 				}
 
 				void writeTraceData(treetimer::config::Config& config,
-									treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree)
+									treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
+									tt_sql::TTSQLite3* dataAccess)
 				{
 					// ToDo: Error Check - ensure database has been setup
 
-					// Open an access object
-					treetimer::database::tt_sqlite3::TTSQLite3 * dataAccess = new treetimer::database::tt_sqlite3::TTSQLite3(config.outputFolder + "/" + config.sqlIOFilename);
-					treetimer::database::tt_sqlite3::drivers::openConnection(*dataAccess);
+					if (callTree.root == nullptr) {
+						// Nothing to do
+						return;
+					}
 
 					// Start at the root of the tree - there is no valid parentID so pass as -1
 					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeTraceInstrumentationData, config.sqlIORunID, config.sqlIOProcessID, -1, config);
-
-					treetimer::database::tt_sqlite3::drivers::closeConnection(*dataAccess);
-
-					delete(dataAccess);
 
 					// We may wish to write trace data multiple times, this is just an indicator that we've done it at least once
 					config.sqlIOTraceData = true;
 				}
 
-				void writeTreeNodeAggInstrumentationData(treetimer::database::tt_sqlite3::TTSQLite3& dataAccess,
+				void writeTreeNodeAggInstrumentationData(tt_sql::TTSQLite3& dataAccess,
 											          treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node,
 													  int runID, int processID, int parentID, int * callPathID, treetimer::config::Config& config)
 				{
@@ -332,11 +315,11 @@ namespace treetimer
 
 					// Retrieve this node's block type ID
 					int blockTypeID;
-					treetimer::database::tt_sqlite3::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.nodeData.blockType], &blockTypeID);
+					tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.nodeData.blockType], &blockTypeID);
 
 					// (a) Profile Nodes
 					int profileNodeID;
-					treetimer::database::tt_sqlite3::drivers::writeTreeNodeProfileNodeData(dataAccess, node.key, blockTypeID, &profileNodeID);
+					tt_sql::drivers::writeTreeNodeProfileNodeData(dataAccess, node.key, blockTypeID, &profileNodeID);
 
 					// (b) Call Path Data
 					// CallPath Data should have been written for the parent as part of the tree traversal, and identified by parentID.
@@ -350,14 +333,14 @@ namespace treetimer
 						//int parentBlockType;
 
 						//std::string parentName = node.parent->key;
-						//treetimer::database::tt_sqlite3::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.parent->nodeData.blockType], &parentBlockType);
-						//treetimer::database::tt_sqlite3::drivers::findProfileNodeID(dataAccess, parentName, parentBlockType, &parentNodeID);
+						//tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.parent->nodeData.blockType], &parentBlockType);
+						//tt_sql::drivers::findProfileNodeID(dataAccess, parentName, parentBlockType, &parentNodeID);
 
-						treetimer::database::tt_sqlite3::drivers::writeCallPathData(dataAccess, profileNodeID, parentID, callPathID);
+						tt_sql::drivers::writeCallPathData(dataAccess, profileNodeID, parentID, callPathID);
 					}
 					else
 					{
-						treetimer::database::tt_sqlite3::drivers::writeCallPathData(dataAccess, profileNodeID, -1, callPathID);
+						tt_sql::drivers::writeCallPathData(dataAccess, profileNodeID, -1, callPathID);
 					}
 
 					// (c) Aggregate Time Data
@@ -366,12 +349,12 @@ namespace treetimer
 					if(config.eATimers)
 					{
 						int aggTimeID;
-						treetimer::database::tt_sqlite3::drivers::writeAggregateTimeData(dataAccess, runID, *callPathID, processID,
-										node.nodeData.blockTimes->aggTimings.minWalltime,
-										node.nodeData.blockTimes->aggTimings.avgWalltime,
-										node.nodeData.blockTimes->aggTimings.maxWalltime,
-										sqrt(node.nodeData.blockTimes->aggTimings.varianceWalltime),
-										node.nodeData.blockTimes->aggTimings.count,
+						tt_sql::drivers::writeAggregateTimeData(dataAccess, runID, *callPathID, processID,
+										node.nodeData.blockTimer->aggTimings.minWalltime,
+										node.nodeData.blockTimer->aggTimings.avgWalltime,
+										node.nodeData.blockTimer->aggTimings.maxWalltime,
+										sqrt(node.nodeData.blockTimer->aggTimings.varianceWalltime),
+										node.nodeData.blockTimer->aggTimings.count,
 										&aggTimeID);
 					}
 
@@ -387,7 +370,7 @@ namespace treetimer
 						for(it_int = node.nodeData.intParameters.begin(); it_int != node.nodeData.intParameters.end(); it_int++)
 						{
 							int aggParamID;
-							treetimer::database::tt_sqlite3::drivers::writeAggregateParameterIntData(
+							tt_sql::drivers::writeAggregateParameterIntData(
 													   dataAccess, runID, *callPathID, processID, it_int->first,
 													   it_int->second->aggParam.minVal,
 													   it_int->second->aggParam.avgVal,
@@ -403,7 +386,7 @@ namespace treetimer
 						for(it_float = node.nodeData.doubleParameters.begin(); it_float != node.nodeData.doubleParameters.end(); it_float++)
 						{
 							int aggParamID;
-							treetimer::database::tt_sqlite3::drivers::writeAggregateParameterFloatData(
+							tt_sql::drivers::writeAggregateParameterFloatData(
 													   dataAccess, runID, *callPathID, processID, it_float->first,
 													   it_float->second->aggParam.minVal,
 													   it_float->second->aggParam.avgVal,
@@ -419,7 +402,7 @@ namespace treetimer
 						for(it_bool = node.nodeData.boolParameters.begin(); it_bool != node.nodeData.boolParameters.end(); it_bool++)
 						{
 							int aggParamID;
-							treetimer::database::tt_sqlite3::drivers::writeAggregateParameterBoolData(
+							tt_sql::drivers::writeAggregateParameterBoolData(
 													   dataAccess, runID, *callPathID, processID, it_bool->first,
 													   it_bool->second->aggParam.minVal,
 													   it_bool->second->aggParam.avgVal,
@@ -433,7 +416,7 @@ namespace treetimer
 
 				}
 
-				void writeTreeNodeTraceInstrumentationData(treetimer::database::tt_sqlite3::TTSQLite3& dataAccess,
+				void writeTreeNodeTraceInstrumentationData(tt_sql::TTSQLite3& dataAccess,
 											          treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node,
 													  int runID, int processID, int parentID, int * callPathID, treetimer::config::Config& config)
 				{
@@ -456,11 +439,11 @@ namespace treetimer
 
 					// Retrieve this node's block type ID
 					int blockTypeID;
-					treetimer::database::tt_sqlite3::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.nodeData.blockType], &blockTypeID);
+					tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.nodeData.blockType], &blockTypeID);
 
 					// (a) Profile Nodes
 					int profileNodeID;
-					treetimer::database::tt_sqlite3::drivers::writeTreeNodeProfileNodeData(dataAccess, node.key, blockTypeID, &profileNodeID);
+					tt_sql::drivers::writeTreeNodeProfileNodeData(dataAccess, node.key, blockTypeID, &profileNodeID);
 
 					// (b) Call Path Data
 					// CallPath Data should have been written for the parent as part of the tree traversal, and identified by parentID.
@@ -469,11 +452,11 @@ namespace treetimer
 					// Could create an 'unknown' profile node to point to, that has a profile node entry but no callpath node entry
 					if(node.parent != nullptr)
 					{
-						treetimer::database::tt_sqlite3::drivers::writeCallPathData(dataAccess, profileNodeID, parentID, callPathID);
+						tt_sql::drivers::writeCallPathData(dataAccess, profileNodeID, parentID, callPathID);
 					}
 					else
 					{
-						treetimer::database::tt_sqlite3::drivers::writeCallPathData(dataAccess, profileNodeID, -1, callPathID);
+						tt_sql::drivers::writeCallPathData(dataAccess, profileNodeID, -1, callPathID);
 					}
 
 					// (c) Trace Times
@@ -481,12 +464,12 @@ namespace treetimer
 					if(config.eTTimers)
 					{
 						// Loop over trace entries for the timer
-						treetimer::data_structures::LinkedListNode<treetimer::timers::TraceTimer> * ptr = node.nodeData.blockTimes->traceTimers.head;
+						treetimer::data_structures::LinkedListNode<treetimer::timers::TraceTimer> * ptr = node.nodeData.blockTimer->traceTimers.head;
 
 						while(ptr != nullptr)
 						{
 							int traceTimeID;
-							treetimer::database::tt_sqlite3::drivers::writeTraceTimeData(dataAccess,
+							tt_sql::drivers::writeTraceTimeData(dataAccess,
 																	 runID, *callPathID, processID,
 																	 ptr->data.callEntryID, ptr->data.callExitID,
 																	 ptr->data.wallTime,
@@ -511,10 +494,9 @@ namespace treetimer
 							while(ptr != nullptr)
 							{
 								int traceParamID;
-								treetimer::database::tt_sqlite3::drivers::writeTraceParameterIntData(dataAccess,
+								tt_sql::drivers::writeTraceParameterIntData(dataAccess,
 										 runID, processID, *callPathID,
-										 ptr->data.nodeCallEntry,
-										 ptr->data.nodeCallExit,
+										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
 										 it_int->first,
 										 ptr->data.val,
 										 &traceParamID);
@@ -535,10 +517,9 @@ namespace treetimer
 							while(ptr != nullptr)
 							{
 								int traceParamID;
-								treetimer::database::tt_sqlite3::drivers::writeTraceParameterFloatData(dataAccess,
+								tt_sql::drivers::writeTraceParameterFloatData(dataAccess,
 										 runID, processID, *callPathID,
-										 ptr->data.nodeCallEntry,
-										 ptr->data.nodeCallExit,
+										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
 										 it_double->first,
 										 ptr->data.val,
 										 &traceParamID);
@@ -558,10 +539,9 @@ namespace treetimer
 							while(ptr != nullptr)
 							{
 								int traceParamID;
-								treetimer::database::tt_sqlite3::drivers::writeTraceParameterBoolData(dataAccess,
+								tt_sql::drivers::writeTraceParameterBoolData(dataAccess,
 										 runID, processID, *callPathID,
-										 ptr->data.nodeCallEntry,
-										 ptr->data.nodeCallExit,
+										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
 										 it_bool->first,
 										 ptr->data.val,
 										 &traceParamID);
@@ -581,10 +561,9 @@ namespace treetimer
 							while(ptr != nullptr)
 							{
 								int traceParamID;
-								treetimer::database::tt_sqlite3::drivers::writeTraceParameterStringData(dataAccess,
+								tt_sql::drivers::writeTraceParameterStringData(dataAccess,
 										 runID, processID, *callPathID,
-										 ptr->data.nodeCallEntry,
-										 ptr->data.nodeCallExit,
+										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
 										 it_string->first,
 										 ptr->data.val,
 										 &traceParamID);
@@ -596,9 +575,9 @@ namespace treetimer
 
 				}
 
-				void callTreeTraversal(treetimer::database::tt_sqlite3::TTSQLite3& dataAccess,
+				void callTreeTraversal(tt_sql::TTSQLite3& dataAccess,
 									   treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node,
-									   void (*func)(treetimer::database::tt_sqlite3::TTSQLite3& dataAccess,
+									   void (*func)(tt_sql::TTSQLite3& dataAccess,
 											   	    treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node,
 													int runID, int processID,
 													int parentID, int * callPathID,

@@ -40,7 +40,7 @@ namespace treetimer
 				// Linked List for Traces
 				struct it_trace_param_d_t * traceHead;
 				struct it_trace_param_d_t * traceTail;
-		}
+		};
 
 		namespace drivers
 		{

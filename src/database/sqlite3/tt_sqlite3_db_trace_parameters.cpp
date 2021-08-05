@@ -31,8 +31,8 @@ namespace treetimer
 																			"RunID INTEGER, "
 																			"ProcessID INTEGER, "
 																			"CallPathID INTEGER, "
-																			"NodeEntryCount, "
-																			"NodeExitCount, "
+																			"NodeEntryID, "
+																			"NodeExitID, "
 																			"ParamName TEXT, "
 																			"ParamValue INTEGER, "
 																			"PRIMARY KEY(TraceParamIntID)"
@@ -45,8 +45,8 @@ namespace treetimer
 																			"RunID INTEGER, "
 																			"ProcessID INTEGER, "
 																			"CallPathID INTEGER, "
-																			"NodeEntryCount, "
-																			"NodeExitCount, "
+																			"NodeEntryID, "
+																			"NodeExitID, "
 																			"ParamName TEXT, "
 																			"ParamValue REAL, "
 																			"PRIMARY KEY(TraceParamFloatID)"
@@ -59,8 +59,8 @@ namespace treetimer
 																			"RunID INTEGER, "
 																			"ProcessID INTEGER, "
 																			"CallPathID INTEGER, "
-																			"NodeEntryCount, "
-																			"NodeExitCount, "
+																			"NodeEntryID, "
+																			"NodeExitID, "
 																			"ParamName TEXT, "
 																			"ParamValue INTEGER, "
 																			"PRIMARY KEY(TraceParamBoolID)"
@@ -72,8 +72,8 @@ namespace treetimer
 																			"RunID INTEGER, "
 																			"ProcessID INTEGER, "
 																			"CallPathID INTEGER, "
-																			"NodeEntryCount, "
-																			"NodeExitCount, "
+																			"NodeEntryID, "
+																			"NodeExitID, "
 																			"ParamName TEXT, "
 																			"ParamValue TEXT, "
 																			"PRIMARY KEY(TraceParamStringID)"
@@ -83,7 +83,7 @@ namespace treetimer
 				}
 
 				void findTraceParameterIntDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryCount, int nodeExitCount,
+												 int runID, int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamIntID)
 				{
@@ -95,30 +95,49 @@ namespace treetimer
 										      "RunID = ? AND "
 											  "ProcessID = ? AND "
 											  "CallPathID = ? AND "
-											  "NodeEntryCount = ? AND "
-											  "NodeExitCount = ? AND "
+											  "NodeEntryID = ? AND "
 											  "ParamName LIKE ? AND "
 											  "ParamValue = ?",
 											  -1, &pStmt, NULL);
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_prepare() failed in findTraceParameterIntDataID (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+						*traceParamIntID = -1;
+						return;
+					}
 
 					sqlite3_bind_int(pStmt,1, runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
-					sqlite3_bind_int(pStmt,4, nodeEntryCount);
-					sqlite3_bind_int(pStmt,5, nodeExitCount);
-					sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
-					sqlite3_bind_int(pStmt,7, paramValue);
+					sqlite3_bind_int(pStmt,4, nodeEntryID);
+					sqlite3_bind_text(pStmt,5, paramName.c_str(), -1, SQLITE_TRANSIENT);
+					sqlite3_bind_int(pStmt,6, paramValue);
 
 					err = sqlite3_step(pStmt);
 
-					if(err == SQLITE_ERROR)
-					{
-						std::cout << "SQL Error encountered in findTraceParameterIntDataID\n";
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_step() failed in findTraceParameterIntDataID (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+
 						char * expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
 						sqlite3_free(expandedQuery);
+
+						*traceParamIntID = -1;
 					}
 					else if(err == SQLITE_ROW)
 					{
@@ -134,7 +153,7 @@ namespace treetimer
 
 
 				void findTraceParameterFloatDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryCount, int nodeExitCount,
+												 int runID, int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, double paramValue,
 												 int * traceParamDoubleID)
 				{
@@ -146,30 +165,49 @@ namespace treetimer
 										      "RunID = ? AND "
 											  "ProcessID = ? AND "
 											  "CallPathID = ? AND "
-											  "NodeEntryCount = ? AND "
-											  "NodeExitCount = ? AND "
+											  "NodeEntryID = ? AND "
 											  "ParamName LIKE ? AND "
 											  "ParamValue = ?",
 											  -1, &pStmt, NULL);
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_prepare() failed in findTraceParameterFloatDataID (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+						*traceParamDoubleID = -1;
+						return;
+					}
 
 					sqlite3_bind_int(pStmt,1, runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
-					sqlite3_bind_int(pStmt,4, nodeEntryCount);
-					sqlite3_bind_int(pStmt,5, nodeExitCount);
-					sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
-					sqlite3_bind_double(pStmt,7, paramValue);
+					sqlite3_bind_int(pStmt,4, nodeEntryID);
+					sqlite3_bind_text(pStmt,5, paramName.c_str(), -1, SQLITE_TRANSIENT);
+					sqlite3_bind_double(pStmt,6, paramValue);
 
 					err = sqlite3_step(pStmt);
 
-					if(err == SQLITE_ERROR)
-					{
-						std::cout << "SQL Error encountered in findTraceParameterFloatDataID\n";
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_step() failed in findTraceParameterFloatDataID (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+
 						char * expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
 						sqlite3_free(expandedQuery);
+
+						*traceParamDoubleID = -1;
 					}
 					else if(err == SQLITE_ROW)
 					{
@@ -185,7 +223,7 @@ namespace treetimer
 
 
 				void findTraceParameterBoolDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryCount, int nodeExitCount,
+												 int runID, int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamBoolID)
 				{
@@ -197,30 +235,49 @@ namespace treetimer
 										      "RunID = ? AND "
 											  "ProcessID = ? AND "
 											  "CallPathID = ? AND "
-											  "NodeEntryCount = ? AND "
-											  "NodeExitCount = ? AND "
+											  "NodeEntryID = ? AND "
 											  "ParamName LIKE ? AND "
 											  "ParamValue = ?",
 											  -1, &pStmt, NULL);
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_prepare() failed in findTraceParameterBoolDataID (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+						*traceParamBoolID = -1;
+						return;
+					}
 
 					sqlite3_bind_int(pStmt,1, runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
-					sqlite3_bind_int(pStmt,4, nodeEntryCount);
-					sqlite3_bind_int(pStmt,5, nodeExitCount);
-					sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
-					sqlite3_bind_int(pStmt,7, paramValue);
+					sqlite3_bind_int(pStmt,4, nodeEntryID);
+					sqlite3_bind_text(pStmt,5, paramName.c_str(), -1, SQLITE_TRANSIENT);
+					sqlite3_bind_int(pStmt,6, paramValue);
 
 					err = sqlite3_step(pStmt);
 
-					if(err == SQLITE_ERROR)
-					{
-						std::cout << "SQL Error encountered in findTraceParameterBoolDataID\n";
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_step() failed in findTraceParameterBoolDataID (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+
 						char * expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
 						sqlite3_free(expandedQuery);
+
+						*traceParamBoolID = -1;
 					}
 					else if(err == SQLITE_ROW)
 					{
@@ -236,7 +293,7 @@ namespace treetimer
 
 
 				void findTraceParameterStringDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryCount, int nodeExitCount,
+												 int runID, int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, std::string paramValue,
 												 int * traceParamStringID)
 				{
@@ -248,28 +305,49 @@ namespace treetimer
 										      "RunID = ? AND "
 											  "ProcessID = ? AND "
 											  "CallPathID = ? AND "
-											  "NodeEntryCount = ? AND "
-											  "NodeExitCount = ? AND "
+											  "NodeEntryID = ? AND "
 											  "ParamName LIKE ? AND "
 											  "ParamValue LIKE ?",
 											  -1, &pStmt, NULL);
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_prepare() failed in findTraceParameterStringDataID (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+						*traceParamStringID = -1;
+						return;
+					}
 
 					sqlite3_bind_int(pStmt,1, runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
-					sqlite3_bind_int(pStmt,4, nodeEntryCount);
-					sqlite3_bind_int(pStmt,5, nodeExitCount);
-					sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
-					sqlite3_bind_text(pStmt,7, paramValue.c_str(), -1, SQLITE_TRANSIENT);
+					sqlite3_bind_int(pStmt,4, nodeEntryID);
+					sqlite3_bind_text(pStmt,5, paramName.c_str(), -1, SQLITE_TRANSIENT);
+					sqlite3_bind_text(pStmt,6, paramValue.c_str(), -1, SQLITE_TRANSIENT);
 
 					err = sqlite3_step(pStmt);
 
-					if(err == SQLITE_ERROR)
-					{
-						std::cout << "SQL Error encountered in findTraceParameterStringDataID\n";
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_step() failed in findTraceParameterStringDataID (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+
 						char * expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 						sqlite3_free(expandedQuery);
+
+						*traceParamStringID = -1;
 					}
 					else if(err == SQLITE_ROW)
 					{
@@ -284,200 +362,232 @@ namespace treetimer
 				}
 
 				void writeTraceParameterIntData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryCount, int nodeExitCount,
+												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamIntID)
 				{
 					sqlite3_stmt * pStmt;
 					int err;
 
-					// Check for existing entry
-					int tmpID;
-					findTraceParameterIntDataID(dataAccess, runID, processID, callPathID, nodeEntryCount, nodeExitCount,
-							 	 	 	 	 	paramName, paramValue, &tmpID);
-
-					if(tmpID == -1)
-					{
-						err = sqlite3_prepare(dataAccess.db,"INSERT INTO TraceParameterIntData VALUES(NULL, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
-
-						sqlite3_bind_int(pStmt,1, runID);
-						sqlite3_bind_int(pStmt,2, processID);
-						sqlite3_bind_int(pStmt,3, callPathID);
-						sqlite3_bind_int(pStmt,4, nodeEntryCount);
-						sqlite3_bind_int(pStmt,5, nodeExitCount);
-						sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
-						sqlite3_bind_int(pStmt,7, paramValue);
-						err = sqlite3_step(pStmt);
-
-						if(err == SQLITE_ERROR)
-						{
-							std::cout << "SQL Error encountered in writeTraceParameterIntData\n";
-							char * expandedQuery = sqlite3_expanded_sql(pStmt);
-							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-							// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-							sqlite3_free(expandedQuery);
-							*traceParamIntID = -1;
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO TraceParameterIntData VALUES(NULL, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_prepare() failed in writeTraceParameterIntData (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
 						}
-						else
-						{
-							*traceParamIntID = sqlite3_last_insert_rowid(dataAccess.db);
-						}
+						std::cout << ")" << std::endl;
+						*traceParamIntID = -1;
+						return;
+					}
 
-						sqlite3_finalize(pStmt);
+					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,2, processID);
+					sqlite3_bind_int(pStmt,3, callPathID);
+					sqlite3_bind_int(pStmt,4, nodeEntryID);
+					sqlite3_bind_int(pStmt,5, nodeExitID);
+					sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
+					sqlite3_bind_int(pStmt,7, paramValue);
+					err = sqlite3_step(pStmt);
+
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_step() failed in writeTraceParameterIntData (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+
+						char * expandedQuery = sqlite3_expanded_sql(pStmt);
+						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+						sqlite3_free(expandedQuery);
+
+						*traceParamIntID = -1;
 					}
 					else
 					{
-						*traceParamIntID = tmpID;
+						*traceParamIntID = sqlite3_last_insert_rowid(dataAccess.db);
 					}
+
+					sqlite3_finalize(pStmt);
 				}
 
 				void writeTraceParameterFloatData(TTSQLite3& dataAccess,
-											 int runID, int processID, int callPathID, int nodeEntryCount, int nodeExitCount,
+											 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID, 
 											 std::string paramName, double paramValue,
 											 int * traceParamFloatID)
 				{
 					sqlite3_stmt * pStmt;
 					int err;
 
-					// Check for existing entry
-					int tmpID;
-					findTraceParameterFloatDataID(dataAccess, runID, processID, callPathID, nodeEntryCount, nodeExitCount,
-												paramName, paramValue, &tmpID);
-
-					if(tmpID == -1)
-					{
-						err = sqlite3_prepare(dataAccess.db,"INSERT INTO TraceParameterFloatData VALUES(NULL, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
-
-						sqlite3_bind_int(pStmt,1, runID);
-						sqlite3_bind_int(pStmt,2, processID);
-						sqlite3_bind_int(pStmt,3, callPathID);
-						sqlite3_bind_int(pStmt,4, nodeEntryCount);
-						sqlite3_bind_int(pStmt,5, nodeExitCount);
-						sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
-						sqlite3_bind_double(pStmt,7, paramValue);
-						err = sqlite3_step(pStmt);
-
-						if(err == SQLITE_ERROR)
-						{
-							std::cout << "SQL Error encountered in writeTraceParameterFloatData\n";
-							char * expandedQuery = sqlite3_expanded_sql(pStmt);
-							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-							// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-							sqlite3_free(expandedQuery);
-							*traceParamFloatID = -1;
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO TraceParameterFloatData VALUES(NULL, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_prepare() failed in writeTraceParameterFloatData (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
 						}
-						else
-						{
-							*traceParamFloatID = sqlite3_last_insert_rowid(dataAccess.db);
-						}
+						std::cout << ")" << std::endl;
+						*traceParamFloatID = -1;
+						return;
+					}
 
-						sqlite3_finalize(pStmt);
+					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,2, processID);
+					sqlite3_bind_int(pStmt,3, callPathID);
+					sqlite3_bind_int(pStmt,4, nodeEntryID);
+					sqlite3_bind_int(pStmt,5, nodeExitID);
+					sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
+					sqlite3_bind_double(pStmt,7, paramValue);
+					err = sqlite3_step(pStmt);
+
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_step() failed in writeTraceParameterFloatData (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+
+						char * expandedQuery = sqlite3_expanded_sql(pStmt);
+						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+						sqlite3_free(expandedQuery);
+
+						*traceParamFloatID = -1;
 					}
 					else
 					{
-						*traceParamFloatID = tmpID;
+						*traceParamFloatID = sqlite3_last_insert_rowid(dataAccess.db);
 					}
+
+					sqlite3_finalize(pStmt);
 				}
 
 				void writeTraceParameterBoolData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryCount, int nodeExitCount,
+												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamBoolID)
 				{
 					sqlite3_stmt * pStmt;
 					int err;
 
-					// Check for existing entry
-					int tmpID;
-					findTraceParameterBoolDataID(dataAccess, runID, processID, callPathID, nodeEntryCount, nodeExitCount,
-							 	 	 	 	 	paramName, paramValue, &tmpID);
-
-					if(tmpID == -1)
-					{
-						err = sqlite3_prepare(dataAccess.db,"INSERT INTO TraceParameterBoolData VALUES(NULL, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
-
-						sqlite3_bind_int(pStmt,1, runID);
-						sqlite3_bind_int(pStmt,2, processID);
-						sqlite3_bind_int(pStmt,3, callPathID);
-						sqlite3_bind_int(pStmt,4, nodeEntryCount);
-						sqlite3_bind_int(pStmt,5, nodeExitCount);
-						sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
-						sqlite3_bind_int(pStmt,7, paramValue);
-						err = sqlite3_step(pStmt);
-
-						if(err == SQLITE_ERROR)
-						{
-							std::cout << "SQL Error encountered in writeTraceParameterBoolData\n";
-							char * expandedQuery = sqlite3_expanded_sql(pStmt);
-							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-							// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-							sqlite3_free(expandedQuery);
-							*traceParamBoolID = -1;
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO TraceParameterBoolData VALUES(NULL, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_prepare() failed in writeTraceParameterBoolData (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
 						}
-						else
-						{
-							*traceParamBoolID = sqlite3_last_insert_rowid(dataAccess.db);
-						}
+						std::cout << ")" << std::endl;
+						*traceParamBoolID = -1;
+						return;
+					}
 
-						sqlite3_finalize(pStmt);
+					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,2, processID);
+					sqlite3_bind_int(pStmt,3, callPathID);
+					sqlite3_bind_int(pStmt,4, nodeEntryID);
+					sqlite3_bind_int(pStmt,5, nodeExitID);
+					sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
+					sqlite3_bind_int(pStmt,7, paramValue);
+					err = sqlite3_step(pStmt);
+
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_step() failed in writeTraceParameterBoolData (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+
+						char * expandedQuery = sqlite3_expanded_sql(pStmt);
+						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+						sqlite3_free(expandedQuery);
+
+						*traceParamBoolID = -1;
 					}
 					else
 					{
-						*traceParamBoolID = tmpID;
+						*traceParamBoolID = sqlite3_last_insert_rowid(dataAccess.db);
 					}
+
+					sqlite3_finalize(pStmt);
 				}
 
 
 				void writeTraceParameterStringData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryCount, int nodeExitCount,
+												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID, 
 												 std::string paramName, std::string paramValue,
 												 int * traceParamStringID)
 				{
 					sqlite3_stmt * pStmt;
 					int err;
 
-					// Check for existing entry
-					int tmpID;
-					findTraceParameterStringDataID(dataAccess, runID, processID, callPathID, nodeEntryCount, nodeExitCount,
-							 	 	 	 	 	paramName, paramValue, &tmpID);
-
-					if(tmpID == -1)
-					{
-						err = sqlite3_prepare(dataAccess.db,"INSERT INTO TraceParameterStringData VALUES(NULL, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
-
-						sqlite3_bind_int(pStmt,1, runID);
-						sqlite3_bind_int(pStmt,2, processID);
-						sqlite3_bind_int(pStmt,3, callPathID);
-						sqlite3_bind_int(pStmt,4, nodeEntryCount);
-						sqlite3_bind_int(pStmt,5, nodeExitCount);
-						sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
-						sqlite3_bind_text(pStmt,7, paramValue.c_str(), -1, SQLITE_TRANSIENT);
-						err = sqlite3_step(pStmt);
-
-						if(err == SQLITE_ERROR)
-						{
-							std::cout << "SQL Error encountered in writeTraceParameterStringData\n";
-							char * expandedQuery = sqlite3_expanded_sql(pStmt);
-							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-							// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-							sqlite3_free(expandedQuery);
-							*traceParamStringID = -1;
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO TraceParameterStringData VALUES(NULL, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_prepare() failed in writeTraceParameterStringData (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
 						}
-						else
-						{
-							*traceParamStringID = sqlite3_last_insert_rowid(dataAccess.db);
-						}
+						std::cout << ")" << std::endl;
+						*traceParamStringID = -1;
+						return;
+					}
 
-						sqlite3_finalize(pStmt);
+					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,2, processID);
+					sqlite3_bind_int(pStmt,3, callPathID);
+					sqlite3_bind_int(pStmt,4, nodeEntryID);
+					sqlite3_bind_int(pStmt,5, nodeExitID);
+					sqlite3_bind_text(pStmt,6, paramName.c_str(), -1, SQLITE_TRANSIENT);
+					sqlite3_bind_text(pStmt,7, paramValue.c_str(), -1, SQLITE_TRANSIENT);
+					err = sqlite3_step(pStmt);
+
+					if (err==SQLITE_ERROR || err==SQLITE_BUSY || err==SQLITE_MISUSE) {
+						std::cout << "SQL sqlite3_step() failed in writeTraceParameterStringData (error=";
+						if (err==SQLITE_BUSY) {
+							std::cout << "SQLITE_BUSY";
+						} else if (err==SQLITE_MISUSE) {
+							std::cout << "SQLITE_MISUSE";
+						} else {
+							std::cout << "SQLITE_ERROR";
+						}
+						std::cout << ")" << std::endl;
+
+						char * expandedQuery = sqlite3_expanded_sql(pStmt);
+						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+						sqlite3_free(expandedQuery);
+
+						*traceParamStringID = -1;
 					}
 					else
 					{
-						*traceParamStringID = tmpID;
+						*traceParamStringID = sqlite3_last_insert_rowid(dataAccess.db);
 					}
+
+					sqlite3_finalize(pStmt);
 				}
 			}
 		}

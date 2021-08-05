@@ -18,6 +18,7 @@
 #include "tt_parameter.h"
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace treetimer
 {
@@ -33,15 +34,30 @@ namespace treetimer
 				CodeBlockType blockType;
 
 				// ========= Instrumentation Data =================
-				treetimer::timers::Timer * blockTimes;			// Timers
+				treetimer::timers::Timer * blockTimer;			// Timers
 
 				// Parameters
 				// Multiple parameters of the same type are permitted per node
 				// Accessible by the parameter name
 				std::unordered_map<std::string, treetimer::parameters::Parameter<int> *>			intParameters;
+				std::unordered_map<std::string, treetimer::parameters::Parameter<long> *>			longParameters;
 				std::unordered_map<std::string, treetimer::parameters::Parameter<double> *> 		doubleParameters;
 				std::unordered_map<std::string, treetimer::parameters::Parameter<bool> *>   		boolParameters;
 				std::unordered_map<std::string, treetimer::parameters::Parameter<std::string> *>   	stringParameters;
+
+				// Temporary parameter cache, until current block is exited (so that nodeExitID can be recorded)
+				std::vector<std::pair<std::string, int>>          intParametersCached;
+				std::vector<std::pair<std::string, long>>         longParametersCached;
+				std::vector<std::pair<std::string, double>>       doubleParametersCached;
+				std::vector<std::pair<std::string, bool>>         boolParametersCached;
+				std::vector<std::pair<std::string, std::string>>  stringParametersCached;
+
+				// Trace collection management
+				bool isConductor = false;
+				int traceCallInterval = 0;
+				bool instrumentThisVisit = true;
+
+				int currentNodeEntryID = 0;
 
 				// PAPI
 		};
@@ -51,10 +67,13 @@ namespace treetimer
 			void startInstrumentation(InstrumentationData& node, bool eATimer, bool eTTimer, long callEntryID);
 			void stopInstrumentation(InstrumentationData& node, bool eATimer, bool eTTimer, long callExitID);
 
-			void logParameterValue(InstrumentationData& node, std::string name, int val, bool eAParam, bool eTParam, long nodeCallEntry, long nodeCallExit);
-			void logParameterValue(InstrumentationData& node, std::string name, double val, bool eAParam, bool eTParam, long nodeCallEntry, long nodeCallExit);
-			void logParameterValue(InstrumentationData& node, std::string name, bool val, bool eAParam, bool eTParam, long nodeCallEntry, long nodeCallExit);
-			void logParameterValue(InstrumentationData& node, std::string name, std::string val, bool eAParam, bool eTParam, long nodeCallEntry, long nodeCallExit);
+			void logParameterValue(InstrumentationData& node, std::string name, int val);
+			void logParameterValue(InstrumentationData& node, std::string name, long val);
+			void logParameterValue(InstrumentationData& node, std::string name, double val);
+			void logParameterValue(InstrumentationData& node, std::string name, bool val);
+			void logParameterValue(InstrumentationData& node, std::string name, std::string val);
+			void commitParameters(InstrumentationData& node, bool eAParam, bool eTParam, long nodeEntryID, long nodeExitID);
+
 		}
 	}
 }

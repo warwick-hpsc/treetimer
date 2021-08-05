@@ -23,6 +23,8 @@
 
 #include "tt_io_sqlite3.h"
 
+namespace tt_sql = treetimer::database::tt_sqlite3;
+
 namespace treetimer
 {
 	namespace io
@@ -33,16 +35,19 @@ namespace treetimer
 			void writeData(treetimer::config::State& state)
 			{
 				// Run Setup
-				setupOutput(*(state.config));
+				tt_sql::TTSQLite3* dataAccess = setupOutput(*(state.config));
 
 				// Write RunConfig Data
-				writeRunConfigData(*(state.config));
+				writeRunConfigData(*(state.config), dataAccess);
 
 				// Write Aggregate Data
-				writeAggData(*(state.config), *(state.callTree));
+				writeAggData(*(state.config), *(state.callTree), dataAccess);
 
 				// Write Trace Data
-				writeTraceData(*(state.config), *(state.callTree));
+				writeTraceData(*(state.config), *(state.callTree), dataAccess);
+
+				tt_sql::drivers::closeConnection(*dataAccess);
+				delete(dataAccess);
 			}
 
 			// Writes current trace data (and any other required data for this to occur)
@@ -63,13 +68,16 @@ namespace treetimer
 				// of this, pause any currently active timers, and resume them once it is complete.
 
 				// Run Setup
-				setupOutput(*(state.config));
+				tt_sql::TTSQLite3* dataAccess = setupOutput(*(state.config));
 
 				// Write RunConfig Data
-				writeRunConfigData(*(state.config));
+				writeRunConfigData(*(state.config), dataAccess);
 
 				// Write Trace Data
-				writeTraceData(*(state.config), *(state.callTree));
+				writeTraceData(*(state.config), *(state.callTree), dataAccess);
+				
+				tt_sql::drivers::closeConnection(*dataAccess);
+				delete(dataAccess);
 
 				// Reset Trace Data Status
 				resetTraceDataTree(*(state.callTree->root));
@@ -78,7 +86,7 @@ namespace treetimer
 			void resetTraceDataTree(treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node)
 			{
 				// Reset the trace data linked lists to free any linked list nodes
-				node.nodeData.blockTimes->traceTimers.reset();
+				node.nodeData.blockTimer->traceTimers.reset();
 
 				// Reset the trace parameter data linked lists to free any linked list nodes
 				std::unordered_map<std::string, treetimer::parameters::Parameter<int> *>::iterator it_int;
@@ -136,7 +144,7 @@ namespace treetimer
 				mkdir(config.outputFolder.c_str(), 0700);
 			}
 
-			void setupOutput(treetimer::config::Config& config)
+			tt_sql::TTSQLite3* setupOutput(treetimer::config::Config& config)
 			{
 				// === Results Directory needs to be created ===
 				int rank;
@@ -149,24 +157,26 @@ namespace treetimer
 
 				int err = MPI_Barrier(MPI_COMM_WORLD);
 
-				treetimer::io::tt_sqlite3::drivers::setupOutput(config);
+				return treetimer::io::tt_sqlite3::drivers::setupOutput(config);
 			}
 
-			void writeRunConfigData(treetimer::config::Config& config)
+			void writeRunConfigData(treetimer::config::Config& config, tt_sql::TTSQLite3* access)
 			{
-				treetimer::io::tt_sqlite3::drivers::writeRunConfigData(config);
+				treetimer::io::tt_sqlite3::drivers::writeRunConfigData(config, access);
 			}
 
 			void writeAggData(treetimer::config::Config& config,
-							  treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree)
+							  treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
+							  tt_sql::TTSQLite3* access)
 			{
-				treetimer::io::tt_sqlite3::drivers::writeAggData(config, callTree);
+				treetimer::io::tt_sqlite3::drivers::writeAggData(config, callTree, access);
 			}
 
 			void writeTraceData(treetimer::config::Config& config,
-								treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree)
+								treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
+								tt_sql::TTSQLite3* access)
 			{
-				treetimer::io::tt_sqlite3::drivers::writeTraceData(config, callTree);
+				treetimer::io::tt_sqlite3::drivers::writeTraceData(config, callTree, access);
 			}
 		}
 	}

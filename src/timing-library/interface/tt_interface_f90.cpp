@@ -25,6 +25,18 @@ int F2C(c_tree_timer_finalize, C_TREE_TIMER_FINALIZE)()
 	return 0;
 }
 
+int F2C(c_tree_timer_sleep, C_TREE_TIMER_SLEEP)()
+{
+	TreeTimerSleep();
+	return 0;
+}
+
+int F2C(c_tree_timer_wake, C_TREE_TIMER_WAKE)()
+{
+	TreeTimerWake();
+	return 0;
+}
+
 int F2C(c_tree_timer_log_parameter_int, C_TREE_TIMER_LOG_PARAMETER_INT)(const char * name, int * text_len, int * value)
 {
 	char c_name[*text_len + 1];
@@ -55,92 +67,110 @@ int F2C(c_tree_timer_log_parameter_bool, C_TREE_TIMER_LOG_PARAMETER_BOOL)(const 
 	return 0;
 }
 
-int F2C(c_tree_timer_enter_block_method, C_TREE_TIMER_ENTER_BLOCK_METHOD)(const char * name, int * text_len)
+int F2C(c_tree_timer_enter_trace_conductor, C_TREE_TIMER_ENTER_TRACE_CONDUCTOR)(const char * name, int * text_len,  int * traceCallInterval)
+{
+	char c_name[*text_len + 1];
+	F2C_strcpy(c_name, name, *text_len);
+	TreeTimerEnterTraceConductor(c_name, *traceCallInterval);
+	return 0;
+}
+
+int F2C(c_tree_timer_enter_method, C_TREE_TIMER_ENTER_METHOD)(const char * name, int * text_len)
 {
 	char c_name[*text_len + 1];
 	F2C_strcpy(c_name, name, *text_len);
 
-	TreeTimerEnterBlockMethod(c_name);
+	TreeTimerEnterMethod(c_name);
 
 	return 0;
 }
 
-int F2C(c_tree_timer_enter_block_loop, C_TREE_TIMER_ENTER_BLOCK_LOOP)(const char * name, int * text_len)
+int F2C(c_tree_timer_enter_loop, C_TREE_TIMER_ENTER_LOOP)(const char * name, int * text_len)
 {
 	char c_name[*text_len + 1];
 	F2C_strcpy(c_name, name, *text_len);
 
-	TreeTimerEnterBlockLoop(c_name);
+	TreeTimerEnterLoop(c_name);
 
 	return 0;
 }
 
-int F2C(c_tree_timer_enter_block_compute_loop, C_TREE_TIMER_ENTER_BLOCK_COMPUTE_LOOP)(const char * name, int * text_len)
+int F2C(c_tree_timer_enter_compute, C_TREE_TIMER_ENTER_COMPUTE)(const char * name, int * text_len)
 {
 	char c_name[*text_len + 1];
 	F2C_strcpy(c_name, name, *text_len);
 
-	TreeTimerEnterBlockComputeLoop(c_name);
+	TreeTimerEnterCompute(c_name);
 
 	return 0;
 }
 
-int F2C(c_tree_timer_enter_block_unspecified, C_TREE_TIMER_ENTER_BLOCK_UNSPECIFIED)(const char * name, int * text_len)
+int F2C(c_tree_timer_enter_block, C_TREE_TIMER_ENTER_BLOCK)(const char * name, int * text_len)
 {
 	char c_name[*text_len + 1];
 	F2C_strcpy(c_name, name, *text_len);
 
-	TreeTimerEnterBlockUnspecified(c_name);
+	TreeTimerEnterBlock(c_name);
 
 	return 0;
 }
 
-int F2C(c_tree_timer_enter_block_non_mpi_call, C_TREE_TIMER_ENTER_BLOCK_NON_MPI_CALL)(const char * name, int * text_len)
+int F2C(c_tree_timer_enter_mpi_comm_call, C_TREE_TIMER_ENTER_MPI_COMM_CALL)(const char * name, int * text_len)
 {
 	char c_name[*text_len + 1];
 	F2C_strcpy(c_name, name, *text_len);
 
-	TreeTimerEnterBlockNonMPICall(c_name);
+	TreeTimerEnterMPICommCall(c_name);
 
 	return 0;
 }
 
-int F2C(c_tree_timer_enter_block_mpi_comm_call, C_TREE_TIMER_ENTER_BLOCK_MPI_COMM_CALL)(const char * name, int * text_len)
+int F2C(c_tree_timer_enter_mpi_sync_call, C_TREE_TIMER_ENTER_MPI_SYNC_CALL)(const char * name, int * text_len)
 {
 	char c_name[*text_len + 1];
 	F2C_strcpy(c_name, name, *text_len);
 
-	TreeTimerEnterBlockMPICommCall(c_name);
+	TreeTimerEnterMPISyncCall(c_name);
 
 	return 0;
 }
 
-int F2C(c_tree_timer_enter_block_mpi_non_comm_call, C_TREE_TIMER_ENTER_BLOCK_MPI_COMM_CALL)(const char * name, int * text_len)
+int F2C(c_tree_timer_enter_mpi_collective_call, C_TREE_TIMER_ENTER_MPI_COLLECTIVE_CALL)(const char * name, int * text_len)
 {
 	char c_name[*text_len + 1];
 	F2C_strcpy(c_name, name, *text_len);
 
-	TreeTimerEnterBlockMPINonCommCall(c_name);
+	TreeTimerEnterMPICollectiveCall(c_name);
 
 	return 0;
 }
 
-int F2C(c_tree_timer_enter_block_io_call, C_TREE_TIMER_ENTER_BLOCK_IO_CALL)(const char * name, int * text_len)
+int F2C(c_tree_timer_enter_io_call, C_TREE_TIMER_ENTER_IO_CALL)(const char * name, int * text_len)
 {
 	char c_name[*text_len + 1];
 	F2C_strcpy(c_name, name, *text_len);
 
-	TreeTimeEnterBlockIOCall(c_name);
+	TreeTimerEnterIOCall(c_name);
 
 	return 0;
 }
 
-int F2C(c_tree_timer_exit_block, C_TREE_TIMER_EXIT_BLOCK)(const char * name, int * text_len)
+int F2C(c_tree_timer_enter_library_call, C_TREE_TIMER_ENTER_LIBRARY_CALL)(const char * name, int * text_len)
 {
 	char c_name[*text_len + 1];
 	F2C_strcpy(c_name, name, *text_len);
 
-	TreeTimerExitBlock(c_name);
+	TreeTimerEnterLibraryCall(c_name);
+
+	return 0;
+}
+
+int F2C(c_tree_timer_exit, C_TREE_TIMER_EXIT)(const char * name, int * text_len)
+{
+	char c_name[*text_len + 1];
+	F2C_strcpy(c_name, name, *text_len);
+
+	TreeTimerExit(c_name);
 
 	return 0;
 }
@@ -191,4 +221,6 @@ int F2C(c_tree_timer_log_global_parameter_string, C_TREE_TIMER_LOG_GLOBAL_PARAME
 int F2C(c_tree_timer_flush_trace_data, C_TREE_TIMER_FLUSH_TRACE_DATA)()
 {
 	TreeTimerFlushTraceData();
+
+	return 0;
 }

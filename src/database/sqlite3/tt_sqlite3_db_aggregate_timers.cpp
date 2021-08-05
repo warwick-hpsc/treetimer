@@ -101,6 +101,13 @@ namespace treetimer
 					sqlite3_stmt * pStmt;
 					int err;
 
+					if (count == 0) {
+						minWallTime = 0.0;
+						avgWallTime = 0.0;
+						maxWallTime = 0.0;
+						stdev = 0.0;
+					}
+
 					// Check for existing entry
 					int tmpID;
 					findAggregateTimeDataID(dataAccess,

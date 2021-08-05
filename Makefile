@@ -57,7 +57,7 @@ FFLAGS        := $(debug)
 FSTDLIBS      :=
 F2C_NAMING    = F2C_UNDERSCORE
 ifeq ($(COMPILER),intel)
-	FFLAGS = -heap-arrays 64 $(FFLAGS)
+	FFLAGS += -heap-arrays 64
 	FSTDLIBS      = $(LIB)ifcore $(LIB)ifport $(LIB)irc
 endif
 
@@ -70,8 +70,13 @@ CXXFLAGS      = $(debug)
 
 LD = $(MPIFC)
 
-FFLAGS +=
-CFLAGS += ${F2C_INC} ${CDEF}${F2C_OPT}
+CFLAGS += -D${F2C_NAMING}
+CXXFLAGS += -D${F2C_NAMING}
+
+# Enable interception of PMPI calls:
+#CFLAGS += -DTT_PMPI
+#CXXFLAGS += -DTT_PMPI
+# TODO: auto-detect whether PMPI interception is necessary
 
 OBJECTS = \
 		  src/third-party/jsoncpp/jsoncpp.o \
@@ -107,6 +112,7 @@ OBJECTS = \
 		  src/timing-library/measurement/parameters/tt_agg_parameter.o \
 		  src/timing-library/measurement/parameters/tt_parameter.o \
 		  src/timing-library/measurement/mpi/tt_mpi.o \
+		  src/timing-library/measurement/mpi/tt_pmpi.o \
 		  src/timing-library/measurement/tt_instrumentation_data.o \
 		  src/timing-library/io/json/tt_io_json.o \
 		  src/timing-library/io/sqlite3/tt_io_sqlite3.o \
@@ -115,10 +121,9 @@ OBJECTS = \
 		  src/timing-library/configuration/tt_config.o \
 		  src/timing-library/configuration/tt_state.o \
 		  src/timing-library/core/tt_core.o \
-		  src/timing-library/interface/tt_interface_c.o
-		  ## Disabling F2C interface as not compiling with GNU:
-		  # src/timing-library/interface/tt_interface_f90.o \
-		  # src/timing-library/interface/tt_wrapper_f90.o
+		  src/timing-library/interface/tt_interface_c.o \
+		  src/timing-library/interface/tt_interface_f90.o \
+		  src/timing-library/interface/tt_wrapper_f90.o
 
 INCLUDE+= \
         ${INC} include/third-party/jsoncpp \
@@ -149,6 +154,9 @@ lib-shared: ${OBJECTS}
 
 lib-static: ${OBJECTS}
 	$(AR) rv lib${LIB_NAME}.a ${OBJECTS}
+
+f90_module: src/timing-library/interface/tt_wrapper_f90.f90
+	$(FC) -c $^ 
 
 testing-c: lib-static
 	${MPICC} -O2 -c examples/c_interface/main.c ${INCLUDE}

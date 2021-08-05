@@ -19,13 +19,13 @@ namespace treetimer
 	{
 		InstrumentationData::InstrumentationData()
 		{
-			this->blockTimes = new treetimer::timers::Timer();
+			this->blockTimer = new treetimer::timers::Timer();
 		}
 
 		InstrumentationData::~InstrumentationData()
 		{
 			// Cleanup timer for this instrumentation
-			delete(this->blockTimes);
+			delete(this->blockTimer);
 
 			// Cleanup any parameter storage used for this instrumentation
 
@@ -36,96 +36,141 @@ namespace treetimer
 		{
 			void startInstrumentation(InstrumentationData& node, bool eATimer, bool eTTimer, long callEntryID)
 			{
-				treetimer::timers::drivers::startTimer(*(node.blockTimes), eATimer, eTTimer, callEntryID);
+				treetimer::timers::drivers::startTimer(*(node.blockTimer), eATimer, eTTimer, callEntryID);
+
+				node.intParametersCached.clear();
+				node.longParametersCached.clear();
+				node.doubleParametersCached.clear();
+				node.boolParametersCached.clear();
+				node.stringParametersCached.clear();
 			}
 
 			void stopInstrumentation(InstrumentationData& node, bool eATimer, bool eTTimer, long callExitID)
 			{
-				treetimer::timers::drivers::stopTimer(*(node.blockTimes), eATimer, eTTimer, callExitID);
+				treetimer::timers::drivers::stopTimer(*(node.blockTimer), eATimer, eTTimer, callExitID);
 			}
 
-			void logParameterValue(InstrumentationData& node, std::string name, int val, bool eAParam, bool eTParam, long nodeCallEntry, long nodeCallExit)
+			void logParameterValue(InstrumentationData& node, std::string name, int val)
 			{
-				// Find the appropriate parameter object from the map (if it exists) and update it, else create a new object and store
-				typename std::unordered_map<std::string, treetimer::parameters::Parameter<int> *>::const_iterator search = node.intParameters.find(name);
-
-				if(search == node.intParameters.end())
-				{
-					// Not found, create a new parameter
-					treetimer::parameters::Parameter<int> * store = new treetimer::parameters::Parameter<int>(name);
-					std::pair<std::string, treetimer::parameters::Parameter<int> *> insertPair(name, store);
-
-					node.intParameters.insert(insertPair);
-					treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeCallEntry, nodeCallExit);
-				}
-				else
-				{
-					// Found, update existing
-					treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeCallEntry, nodeCallExit);
-				}
+				// Cache parameter value, but don't commit until current block is exited
+				node.intParametersCached.push_back(std::make_pair(name, val));
 			}
 
-			void logParameterValue(InstrumentationData& node, std::string name, double val, bool eAParam, bool eTParam, long nodeCallEntry, long nodeCallExit)
+			void logParameterValue(InstrumentationData& node, std::string name, long val)
 			{
-				// Find the appropriate parameter object from the map (if it exists) and update it, else create a new object and store
-				typename std::unordered_map<std::string, treetimer::parameters::Parameter<double> *>::const_iterator search = node.doubleParameters.find(name);
-
-				if(search == node.doubleParameters.end())
-				{
-					// Not found, create a new parameter
-					treetimer::parameters::Parameter<double> * store = new treetimer::parameters::Parameter<double>(name);
-					std::pair<std::string, treetimer::parameters::Parameter<double> *> insertPair(name, store);
-
-					node.doubleParameters.insert(insertPair);
-					treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeCallEntry, nodeCallExit);
-				}
-				else
-				{
-					// Found, update existing
-					treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeCallEntry, nodeCallExit);
-				}
+				// Cache parameter value, but don't commit until current block is exited
+				node.longParametersCached.push_back(std::make_pair(name, val));
 			}
 
-			void logParameterValue(InstrumentationData& node, std::string name, bool val, bool eAParam, bool eTParam, long nodeCallEntry, long nodeCallExit)
+			void logParameterValue(InstrumentationData& node, std::string name, double val)
 			{
-				// Find the appropriate parameter object from the map (if it exists) and update it, else create a new object and store
-				typename std::unordered_map<std::string, treetimer::parameters::Parameter<bool> *>::const_iterator search = node.boolParameters.find(name);
-
-				if(search == node.boolParameters.end())
-				{
-					// Not found, create a new parameter
-					treetimer::parameters::Parameter<bool> * store = new treetimer::parameters::Parameter<bool>(name);
-					std::pair<std::string, treetimer::parameters::Parameter<bool> *> insertPair(name, store);
-
-					node.boolParameters.insert(insertPair);
-					treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeCallEntry, nodeCallExit);
-				}
-				else
-				{
-					// Found, update existing
-					treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeCallEntry, nodeCallExit);
-				}
+				// Cache parameter value, but don't commit until current block is exited
+				node.doubleParametersCached.push_back(std::make_pair(name, val));
 			}
 
-			void logParameterValue(InstrumentationData& node, std::string name, std::string val, bool eAParam, bool eTParam, long nodeCallEntry, long nodeCallExit)
+			void logParameterValue(InstrumentationData& node, std::string name, bool val)
 			{
-				// Find the appropriate parameter object from the map (if it exists) and update it, else create a new object and store
-				typename std::unordered_map<std::string, treetimer::parameters::Parameter<std::string> *>::const_iterator search = node.stringParameters.find(name);
+				// Cache parameter value, but don't commit until current block is exited
+				node.boolParametersCached.push_back(std::make_pair(name, val));
+			}
 
-				if(search == node.stringParameters.end())
-				{
-					// Not found, create a new parameter
-					treetimer::parameters::Parameter<std::string> * store = new treetimer::parameters::Parameter<std::string>(name);
-					std::pair<std::string, treetimer::parameters::Parameter<std::string> *> insertPair(name, store);
+			void logParameterValue(InstrumentationData& node, std::string name, std::string val)
+			{
+				// Cache parameter value, but don't commit until current block is exited
+				node.stringParametersCached.push_back(std::make_pair(name, val));
+			}
 
-					node.stringParameters.insert(insertPair);
-					treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeCallEntry, nodeCallExit);
+			void commitParameters(InstrumentationData& node, bool eAParam, bool eTParam, long nodeEntryID, long nodeExitID)
+			{
+				// Integer parameters
+				for (size_t i=0; i<node.intParametersCached.size(); i++) {
+					std::string name = std::get<0>(node.intParametersCached[i]);
+					int val = std::get<1>(node.intParametersCached[i]);
+
+					// Find the appropriate parameter object from the map (if it exists) and update it, else create a new object and store
+					typename std::unordered_map<std::string, treetimer::parameters::Parameter<int> *>::const_iterator search = node.intParameters.find(name);
+
+					if(search == node.intParameters.end()) {
+						// Not found, create a new parameter
+						treetimer::parameters::Parameter<int> * store = new treetimer::parameters::Parameter<int>(name);
+						std::pair<std::string, treetimer::parameters::Parameter<int> *> insertPair(name, store);
+
+						node.intParameters.insert(insertPair);
+						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
+					} else {
+						// Found, update existing
+						treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeEntryID, nodeExitID);
+					}
 				}
-				else
-				{
-					// Found, update existing
-					treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeCallEntry, nodeCallExit);
+				node.intParametersCached.clear();
+
+				// Long parameters
+				for (size_t i=0; i<node.longParametersCached.size(); i++) {
+					std::string name = std::get<0>(node.longParametersCached[i]);
+					long val = std::get<1>(node.longParametersCached[i]);
+
+					typename std::unordered_map<std::string, treetimer::parameters::Parameter<long> *>::const_iterator search = node.longParameters.find(name);
+					if(search == node.longParameters.end()) {
+						treetimer::parameters::Parameter<long> * store = new treetimer::parameters::Parameter<long>(name);
+						std::pair<std::string, treetimer::parameters::Parameter<long> *> insertPair(name, store);
+						node.longParameters.insert(insertPair);
+						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
+					} else {
+						treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeEntryID, nodeExitID);
+					}
 				}
+				node.longParametersCached.clear();
+
+				// Double parameters
+				for (size_t i=0; i<node.doubleParametersCached.size(); i++) {
+					std::string name = std::get<0>(node.doubleParametersCached[i]);
+					double val = std::get<1>(node.doubleParametersCached[i]);
+
+					typename std::unordered_map<std::string, treetimer::parameters::Parameter<double> *>::const_iterator search = node.doubleParameters.find(name);
+					if(search == node.doubleParameters.end()) {
+						treetimer::parameters::Parameter<double> * store = new treetimer::parameters::Parameter<double>(name);
+						std::pair<std::string, treetimer::parameters::Parameter<double> *> insertPair(name, store);
+						node.doubleParameters.insert(insertPair);
+						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
+					} else {
+						treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeEntryID, nodeExitID);
+					}
+				}
+				node.doubleParametersCached.clear();
+
+				// Bool parameters
+				for (size_t i=0; i<node.boolParametersCached.size(); i++) {
+					std::string name = std::get<0>(node.boolParametersCached[i]);
+					bool val = std::get<1>(node.boolParametersCached[i]);
+
+					typename std::unordered_map<std::string, treetimer::parameters::Parameter<bool> *>::const_iterator search = node.boolParameters.find(name);
+					if(search == node.boolParameters.end()) {
+						treetimer::parameters::Parameter<bool> * store = new treetimer::parameters::Parameter<bool>(name);
+						std::pair<std::string, treetimer::parameters::Parameter<bool> *> insertPair(name, store);
+						node.boolParameters.insert(insertPair);
+						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
+					} else {
+						treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeEntryID, nodeExitID);
+					}
+				}
+				node.boolParametersCached.clear();
+
+				// String parameters
+				for (size_t i=0; i<node.stringParametersCached.size(); i++) {
+					std::string name = std::get<0>(node.stringParametersCached[i]);
+					std::string val = std::get<1>(node.stringParametersCached[i]);
+
+					typename std::unordered_map<std::string, treetimer::parameters::Parameter<std::string> *>::const_iterator search = node.stringParameters.find(name);
+					if(search == node.stringParameters.end()) {
+						treetimer::parameters::Parameter<std::string> * store = new treetimer::parameters::Parameter<std::string>(name);
+						std::pair<std::string, treetimer::parameters::Parameter<std::string> *> insertPair(name, store);
+						node.stringParameters.insert(insertPair);
+						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
+					} else {
+						treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeEntryID, nodeExitID);
+					}
+				}
+				node.stringParametersCached.clear();
 			}
 		}
 	}

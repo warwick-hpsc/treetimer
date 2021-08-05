@@ -70,21 +70,22 @@ The TreeTimer Library has a number of configuration options that can be set at r
 TT_CONFIG_APPNAME : String. This environment variable contains the application name that will be associated with the results in the database.
 
 Aggregate Data: This will store aggregated data to minimise data output.
-TT_CONFIG_ATIMERS : [0|1] If set to 1, this enables aggregate timing data for a block. 0 disables this option. By default it is on if unset.
-TT_CONFIG_APARAM : [0:1] If set to 1, this enables aggregate parameter data for a block. 0 disables this option. By default it is on if unset.
-TT_CONFIG_APAPI : [0:1] If set to 1, this enables aggregate papi data for a block. 0 disables this option. This is a placeholder - PAPI is not yet included in this version.
+TT_CONFIG_ATIMERS : [0|1] Disable/enable aggregate timing data for a block. Default 1. 
+TT_CONFIG_APARAM : [0|1] Disable/enable aggregate parameter data for a block. Default 1.
+TT_CONFIG_APAPI : [0|1] Disable/enable aggregate papi data for a block. This is a placeholder - PAPI is not yet included in this version.
 
 Trace Data: This will store a unique data entry for every block entry/exit, enabling traces to be reconstructed.
-TT_CONFIG_TTIMERS : [0|1] If set to 1, this enables trace timing data for a block. 0 disables this option. By default it is on if unset.
-TT_CONFIG_TPARAM : [0:1] If set to 1, this enables trace parameter data for a block. 0 disables this option. By default it is on if unset.
-TT_CONFIG_TPAPI : [0:1] If set to 1, this enables trace papi data for a block. 0 disables this option. This is a placeholder - PAPI is not yet included in this version.
+TT_CONFIG_TTIMERS : [0|1] Disable/enable trace timing data for a block. Default 0.
+TT_CONFIG_TPARAM : [0|1] Disable/enable trace parameter data for a block. Default 0.
+TT_CONFIG_TPAPI : [0|1] Disable/enable trace papi data for a block. This is a placeholder - PAPI is not yet included in this version.
 
-TT_CONFIG_MPI_HOOKS: [0|1] If set to 1, this enables the wrapping of all MPI function calls (at least, those implemented in the library) such that MPI specific
-data including times, destinations, byte sizes, buffer sizes etc will be captured (depending on the type of call). 
-0 disables this option. This option is also influenced by the aggreate/trace configuration options - i.e. if trace is enabled then trace data should be stored for MPI calls.
+TT_CONFIG_MPI_HOOKS: [0|1] Disable/enable the wrapping of all MPI function calls (at least, those implemented in the library), *enabling* collection of MPI-specific times and data. Default 0.
+Whether time/data is actually collected also depends on above options, e.g. enable TT_CONFIG_ATIMERS for aggregate timing of MPI functions.
+This particular options requires the use of LD_PRELOAD and a shared treetimer library to be effective, since it utilises PMPI to catch MPI calls. It may work without LD_PRELOAD or a static library, but is not guaranteed or recommended since it will likely depend upon linking orders.
 
-This particular options requires the use of LD_PRELOAD and a shared treetimer library to be effective, since it utilises PMPI to catch MPI calls. It may work without LD_PRELOAD
-or a static library, but is not guaranteed or recommended since it will likely depend upon linking orders.
+TT_CONFIG_MPI_HOOKS_TPARAM : [0|1] Special option for collecting MPI parameters while tracing - destinations, byte sizes, buffer sizes etc. Default 0.
+If enabled, the traces are enormous, so you probably don't want this unless debugging. Requires TT_CONFIG_TPARAM and TT_CONFIG_MPI_HOOKS to also be set.
+
 
 #==============
 #  Building

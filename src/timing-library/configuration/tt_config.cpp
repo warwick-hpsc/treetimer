@@ -27,7 +27,7 @@ namespace treetimer
 		{
 			// By default, capture nothing but aggregate times.
 			drivers::setConfig(*this, "Unknown", "Unknown", "Unknown", "./tt_results", 0,
-							   1, 0, 0, 0, 0, 0, 0, 0);
+							   1, 0, 0, 0, 0, 0, 0, 0, 0);
 
 			// ToDo: move this into a separate SQLConfig
 
@@ -59,6 +59,7 @@ namespace treetimer
 				setAggParamFromEnv(config);
 				setTraceParamFromEnv(config);
 				setMPIHooksFromEnv(config);
+				setMPIHooksTParamFromEnv(config);
 
 				setGlobalParamFromEnv(config);
 			}
@@ -145,178 +146,51 @@ namespace treetimer
 
 			void setAggTimerFromEnv(Config& config)
 			{
-				char * envVar;
-
-				// ====== Application Name ========
-				envVar = getenv("TT_CONFIG_ATIMERS");
-
-				if(envVar != NULL)
-				{
-					if(strcmp(envVar, "1") == 0)
-					{
-						config.eATimers = true;
-					}
-					else
-					{
-						config.eATimers = false;
-					}
-				}
-				else
-				{
-					// Default to true
-					config.eATimers = true;
-				}
+				char* envVar = getenv("TT_CONFIG_ATIMERS");
+				config.eATimers = (envVar != NULL) && (strcmp(envVar, "1") == 0);
 			}
 
 			void setTraceTimerFromEnv(Config& config)
 			{
-				char * envVar;
-
-				// ====== Application Name ========
-				envVar = getenv("TT_CONFIG_TTIMERS");
-
-				if(envVar != NULL)
-				{
-					if(strcmp(envVar, "1") == 0)
-					{
-						config.eTTimers = true;
-					}
-					else
-					{
-						config.eTTimers = false;
-					}
-				}
-				else
-				{
-					// Default to false
-					config.eTTimers = false;
-				}
+				char* envVar = getenv("TT_CONFIG_TTIMERS");
+				config.eTTimers = (envVar != NULL) && (strcmp(envVar, "1") == 0);
 			}
 
 			void setAggPAPIFromEnv(Config& config)
 			{
-				char * envVar;
-
-				// ====== Application Name ========
-				envVar = getenv("TT_CONFIG_APAPI");
-
-				if(envVar != NULL)
-				{
-					if(strcmp(envVar, "1") == 0)
-					{
-						config.eAPAPI = true;
-					}
-					else
-					{
-						config.eAPAPI = false;
-					}
-				}
-				else
-				{
-					// Default to false
-					config.eAPAPI = false;
-				}
+				char* envVar = getenv("TT_CONFIG_APAPI");
+				config.eAPAPI = (envVar != NULL) && (strcmp(envVar, "1") == 0);
 			}
 
 			void setTracePAPIFromEnv(Config& config)
 			{
-				char * envVar;
-
-				// ====== Application Name ========
-				envVar = getenv("TT_CONFIG_TPAPI");
-
-				if(envVar != NULL)
-				{
-					if(strcmp(envVar, "1") == 0)
-					{
-						config.eTPAPI = true;
-					}
-					else
-					{
-						config.eTPAPI = false;
-					}
-				}
-				else
-				{
-					// Default to false
-					config.eTPAPI = false;
-				}
+				char* envVar = getenv("TT_CONFIG_TPAPI");
+				config.eAPAPI = (envVar != NULL) && (strcmp(envVar, "1") == 0);
 			}
 
 
 			void setAggParamFromEnv(Config& config)
 			{
-				char * envVar;
-
-				// ====== Application Name ========
-				envVar = getenv("TT_CONFIG_APARAM");
-
-				if(envVar != NULL)
-				{
-					if(strcmp(envVar, "1") == 0)
-					{
-						config.eAParam = true;
-					}
-					else
-					{
-						config.eAParam = false;
-					}
-				}
-				else
-				{
-					// Default to false
-					config.eAParam = false;
-				}
+				char* envVar = getenv("TT_CONFIG_APARAM");
+				config.eAParam = (envVar != NULL) && (strcmp(envVar, "1") == 0);
 			}
 
 			void setTraceParamFromEnv(Config& config)
 			{
-				char * envVar;
-
-				// ====== Application Name ========
-				envVar = getenv("TT_CONFIG_TPARAM");
-
-				if(envVar != NULL)
-				{
-					if(strcmp(envVar, "1") == 0)
-					{
-						config.eTParam = true;
-					}
-					else
-					{
-						config.eTParam = false;
-					}
-				}
-				else
-				{
-					// Default to false
-					config.eTParam = false;
-				}
+				char* envVar = getenv("TT_CONFIG_TPARAM");
+				config.eTParam = (envVar != NULL) && (strcmp(envVar, "1") == 0);
 			}
 
 			void setMPIHooksFromEnv(Config& config)
 			{
-				char * envVar;
+				char* envVar = getenv("TT_CONFIG_MPI_HOOKS");
+				config.eMPIHooks = (envVar != NULL) && (strcmp(envVar, "1") == 0);
+			}
 
-				// ====== Application Name ========
-				envVar = getenv("TT_CONFIG_MPI_HOOKS");
-
-				if(envVar != NULL)
-				{
-					if(strcmp(envVar, "1") == 0)
-					{
-						config.eMPIHooks = true;
-					}
-					else
-					{
-						config.eMPIHooks = false;
-					}
-				}
-				else
-				{
-					// Default to false
-					config.eMPIHooks = false;
-				}
+			void setMPIHooksTParamFromEnv(Config& config)
+			{
+				char* envVar = getenv("TT_CONFIG_MPI_HOOKS_TPARAM");
+				config.eMPIHooksTParam = (envVar != NULL) && (strcmp(envVar, "1") == 0);
 			}
 
 			void strSplit(std::string input, std::vector<std::string>& output, char delimiter)
@@ -546,7 +420,10 @@ namespace treetimer
 
 			void setConfig(Config& config, std::string appName, std::string appVersion, std::string machineName, std::string outputFolder,
 						   int processCount,
-						   bool eATimers, bool eTTimers, bool eAPAPI, bool eTPAPI, bool eAParam, bool eTParam, bool eMPIHooks, bool inLibrary)
+						   bool eATimers, bool eTTimers, 
+						   bool eAPAPI, bool eTPAPI, 
+						   bool eAParam, bool eTParam, 
+						   bool eMPIHooks, bool eMPIHooksTParam, bool inLibrary)
 			{
 				config.appName = appName;
 				config.appVersion = appVersion;
@@ -564,6 +441,7 @@ namespace treetimer
 				config.eAParam = eAParam;
 				config.eTParam = eTParam;
 				config.eMPIHooks = eMPIHooks;
+				config.eMPIHooksTParam = eMPIHooksTParam;
 				config.inLibrary = inLibrary;
 			}
 		}

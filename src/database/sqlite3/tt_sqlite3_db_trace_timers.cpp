@@ -28,13 +28,13 @@ namespace treetimer
 																			"RunID INTEGER, "
 																			"CallPathID INTEGER, "
 																			"ProcessID INTEGER, "
-																			"NodeEntryCount INTEGER, "
-																			"NodeExitCount INTEGER, "
+																			"NodeEntryID INTEGER, "
+																			"NodeExitID INTEGER, "
 																			"WallTime REAL, "
 																			"FOREIGN KEY(RunID) REFERENCES ProfileRunConfigData(RunID),"
 																			"FOREIGN KEY(CallPathID) REFERENCES CallPathData(CallPathID), "
 																			"FOREIGN KEY(ProcessID) REFERENCES ProcessData(ProcessID), "
-																			"UNIQUE(RunID, CallPathID, ProcessID, NodeEntryCount, NodeExitCount), "
+																			"UNIQUE(RunID, CallPathID, ProcessID, NodeEntryID, NodeExitID), "
 																		 	"PRIMARY KEY(TraceTimeID)"
 																		 	");";
 
@@ -43,7 +43,7 @@ namespace treetimer
 
 				void findTraceTimeDataID(TTSQLite3& dataAccess,
 										 int runID, int callPathID, int processID,
-										 long nodeEntryCount, long nodeExitCount, double walltime,
+										 long nodeEntryID, long nodeExitID, double walltime,
 										 int * traceTimeID)
 				{
 					sqlite3_stmt * pStmt;
@@ -54,16 +54,16 @@ namespace treetimer
 										      "RunID = ? AND "
 											  "CallPathID = ? AND "
 											  "ProcessID = ? AND "
-											  "NodeEntryCount = ? AND "
-											  "NodeExitCount = ? AND "
+											  "NodeEntryID = ? AND "
+											  "NodeExitID = ? AND "
 											  "WallTime = ?",
 											  -1, &pStmt, NULL);
 
 					sqlite3_bind_int(pStmt,1, runID);
 					sqlite3_bind_int(pStmt,2, callPathID);
 					sqlite3_bind_int(pStmt,3, processID);
-					sqlite3_bind_int(pStmt,4, nodeEntryCount);	// SQLite should handle the use of longs with dynamic typing
-					sqlite3_bind_int(pStmt,5, nodeExitCount);
+					sqlite3_bind_int(pStmt,4, nodeEntryID);	// SQLite should handle the use of longs with dynamic typing
+					sqlite3_bind_int(pStmt,5, nodeExitID);
 					sqlite3_bind_double(pStmt,6, walltime);
 
 					err = sqlite3_step(pStmt);
@@ -89,7 +89,7 @@ namespace treetimer
 
 				void writeTraceTimeData(TTSQLite3& dataAccess,
 										 int runID, int callPathID, int processID,
-										 long nodeEntryCount, long nodeExitCount, double walltime,
+										 long nodeEntryID, long nodeExitID, double walltime,
 										 int * traceTimeID)
 				{
 					sqlite3_stmt * pStmt;
@@ -97,7 +97,7 @@ namespace treetimer
 
 					// Check for existing entry
 					int tmpID;
-					findTraceTimeDataID(dataAccess, runID, callPathID, processID, nodeEntryCount, nodeExitCount, walltime, &tmpID);
+					findTraceTimeDataID(dataAccess, runID, callPathID, processID, nodeEntryID, nodeExitID, walltime, &tmpID);
 
 					if(tmpID == -1)
 					{
@@ -106,8 +106,8 @@ namespace treetimer
 						sqlite3_bind_int(pStmt,1, runID);
 						sqlite3_bind_int(pStmt,2, callPathID);
 						sqlite3_bind_int(pStmt,3, processID);
-						sqlite3_bind_int(pStmt,4, nodeEntryCount);
-						sqlite3_bind_int(pStmt,5, nodeExitCount);
+						sqlite3_bind_int(pStmt,4, nodeEntryID);
+						sqlite3_bind_int(pStmt,5, nodeExitID);
 						sqlite3_bind_double(pStmt,6, walltime);
 						err = sqlite3_step(pStmt);
 

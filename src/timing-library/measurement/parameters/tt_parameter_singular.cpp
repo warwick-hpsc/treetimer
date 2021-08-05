@@ -33,6 +33,7 @@ namespace treetimer
 
 // Explicit Instantiation
 template class treetimer::parameters::ParameterSingular<int>;
+template class treetimer::parameters::ParameterSingular<long>;
 template class treetimer::parameters::ParameterSingular<double>;
 template class treetimer::parameters::ParameterSingular<bool>;
 template class treetimer::parameters::ParameterSingular<std::string>;

@@ -25,10 +25,17 @@ namespace treetimer
 			void TreeTimerInit();
 			void TreeTimerFinalize();
 
+			void TreeTimerSleep();
+			void TreeTimerWake();
+
+			void TreeTimerEnterTraceConductor(std::string blockName, int traceCallInterval);
+			void TreeTimerExitTraceConductor(std::string blockName);
+
 			void TreeTimerEnterBlock(std::string blockName, CodeBlockType blockType);
 			void TreeTimerExitBlock(std::string blockName);
 
 			void TreeTimerLogParameter(std::string paramName, int val);
+			void TreeTimerLogParameter(std::string paramName, long val);
 			void TreeTimerLogParameter(std::string paramName, double val);
 			void TreeTimerLogParameter(std::string paramName, bool val);
 			void TreeTimerLogParameter(std::string paramName, std::string val);
