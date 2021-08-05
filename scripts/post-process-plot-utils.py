@@ -43,38 +43,32 @@ def sample_n_timesteps(df, n, indexColname):
 	return df
 
 def plot_heatmap(df, index_colname, value_colname, fig_filepath):
-	df2 = df.pivot_table(index="Rank", columns=index_colname, values=value_colname)
-	width = max(10, math.ceil((df2.shape[1])*0.4))
-	height = max(10, math.ceil((df2.shape[0])*0.2))
-	fs = height*2
-	fs2 = round(fs*0.75)
-	fig = plt.figure(figsize=(width,height))
-	fig.suptitle(value_colname, fontsize=fs)
+	df_pvt = df.pivot_table(index="Rank", columns=index_colname, values=value_colname)
+
+	fig = plt.figure(dpi=75)
+	fig.suptitle(value_colname)
 	ax = fig.add_subplot(1,1,1)
-	ax.set_xlabel("Solver timestep progress %", fontsize=fs)
-	ax.set_ylabel("Rank", fontsize=fs)
+	ax.set_xlabel("Solver timestep progress %")
+	ax.set_ylabel("Rank")
+
 	## Best colormap doc: https://matplotlib.org/stable/tutorials/colors/colormaps.html
-	#cm = 'Reds'
-	cm = 'bwr'
-	vmax = max(df[value_colname].abs())
-	nm = plt.Normalize(-vmax, vmax)
-	#plt.imshow(df2.values, cmap=cm)
-	#plt.imshow(df2.values, cmap=cm, extent=[0,99, 0,df["Rank"].max()])
-	plt.imshow(df2.values, cmap=cm, norm=nm, extent=[0,99, 0,df["Rank"].max()])
-	# plt.pcolor(df2.values, cmap=cm)
-	#ax.set_xticks(df2.columns.values)
-	#ax.set_xticklabels(df2.columns.values)
-	# ax.set_yticks([0,diff_df["Rank"].max()])
+	## Normalize() used to ensure 0.0 is white.
+	if df[value_colname].min() < 0.0 and df[value_colname].max() > 0.0:
+		cm = 'bwr'
+		a = df[value_colname].abs().max()
+		nm = plt.Normalize(-a, a)
+	else:
+		if df[value_colname].max() > 0.0:
+			cm = 'Reds'
+			nm = plt.Normalize(0.0, df[value_colname].max())
+		else:
+			cm = 'Blues'
+			nm = plt.Normalize(df[value_colname].min(), 0.0)
+	plt.imshow(df_pvt.values, cmap=cm, norm=nm, extent=[0,99, 0,df["Rank"].max()])
+	cb = plt.colorbar()
 
-	cb = plt.colorbar(aspect=5)
-	#cb = plt.colorbar(aspect=5, ax=plt.axes(ylim=(0,vmax)), cax=plt.axes(ylim=(0,vmax)))
-	#cax = fig.add_axes([0.1, 0.1, -vmax, vmax])
-	#cb = plt.colorbar(aspect=5, cax=cax)
-	cb.ax.tick_params(labelsize=fs2)
-	cb.ax.set_ylim(df[value_colname].min(), df[value_colname].max())
-
-	ax.tick_params(labelsize=fs2)
 	plt.savefig(fig_filepath)
 	plt.close(fig)
 
 	print("Heatmap written to: " + fig_filepath)
+

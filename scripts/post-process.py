@@ -44,10 +44,10 @@ imp.load_source("PostProcessPlotUtils", os.path.join(os.path.dirname(os.path.rea
 from PostProcessPlotUtils import *
 
 parallel_process = True
-#parallel_process = False
-
 verbose = False
+#parallel_process = False
 #verbose = True
+max_nprocs = 16
 
 import pandas as pd
 import numpy as np
@@ -55,7 +55,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 from multiprocessing import Pool, current_process, cpu_count
-nprocs = cpu_count() - 1
+nprocs = min(cpu_count() - 1, max_nprocs)
 import tqdm
 
 import argparse
@@ -161,9 +161,10 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 			n = findTreeNodeByType(t, "TraceConductor")
 			if n is None:
 				n = findSolverNode(t, 1, t.time)
-			if n is None:
-				raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
-			else:
+			#if n is None:
+			#	raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+			#else:
+			if not n is None:
 				traceGroupNode = n.name
 				if dbm is None:
 					dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
@@ -255,7 +256,6 @@ def main():
 		os.mkdir(cache_dp)
 
 	if parallel_process:
-		nprocs = cpu_count() - 1
 		print("Processing {0} DB files in parallel on {1} CPUs".format(len(db_fps), nprocs))
 		dbs_pending = []
 		for i in range(0, len(db_fps)):
@@ -377,21 +377,21 @@ def main():
 			aggSum = agg.sumElementwise()
 			chartCallPath(aggSum, "Call stack times summed across ranks "+sorted(agg.ranks).__str__(), "rankGroup{0}.png".format(gn))
 
-	print("Drawing trace charts")
-	if not traceTimes_all_df is None:
-		traceTimes_chartDynamicLoadBalance(traceTimes_all_df)
-	if not traceTimes_focused_all_df is None:
-		traceTimes_chartDynamicLoadBalance(traceTimes_focused_all_df, "focused-on-"+args.trace_group_focus)
-	if not traceParameter_all_df is None:
-		traceParameter_chart(traceParameter_all_df, args.parameter)
+	if len(rank_ids) > 1:
+		print("Drawing trace charts")
+		if not traceTimes_all_df is None:
+			traceTimes_chartDynamicLoadBalance(traceTimes_all_df)
+		if not traceTimes_focused_all_df is None:
+			traceTimes_chartDynamicLoadBalance(traceTimes_focused_all_df, "focused-on-"+args.trace_group_focus)
+		if not traceParameter_all_df is None:
+			traceParameter_chart(traceParameter_all_df, args.parameter)
 
-	if not df_all_raw is None:
-		print("Writing out collated CSVs")
-		df_all_raw["num_ranks"] = len(rank_ids)
-		df_all_raw.sort_values(["Name", "rank"], inplace=True)
-		df_filename = os.path.join(output_dirpath, "timings_raw.csv")
-		df_all_raw.to_csv(df_filename, index=False)
-		print("Collated raw data written to '{0}'".format(df_filename))
+	print("Writing out collated CSVs")
+	df_all_raw["num_ranks"] = len(rank_ids)
+	df_all_raw.sort_values(["Name", "rank"], inplace=True)
+	df_filename = os.path.join(output_dirpath, "timings_raw.csv")
+	df_all_raw.to_csv(df_filename, index=False)
+	print("Collated raw data written to '{0}'".format(df_filename))
 
 	if not df_all_aggregated is None:
 		df_all_aggregated.sort_values(["Method type", "rank"], inplace=True)
@@ -678,7 +678,10 @@ def chartCallPath(tree, title, filename):
 	fig = plt.figure(figsize=fig_dims)
 	plotCallPath_root(tree, plotType)
 	fig.suptitle(title)
-	chart_dirpath = os.path.join(args.tt_results_dirpath, "charts", plotTypeToString[plotType])
+	if not args.tt_results_dirpath is None:
+		chart_dirpath = os.path.join(args.tt_results_dirpath, "charts", plotTypeToString[plotType])
+	else:
+		chart_dirpath = os.path.join("charts", plotTypeToString[plotType])
 	if not os.path.isdir(chart_dirpath):
 		os.makedirs(chart_dirpath)
 	chart_filepath = os.path.join(chart_dirpath, filename)
@@ -1188,7 +1191,10 @@ def traceTimes_chartDynamicLoadBalance(traces_df, filename_suffix=None):
 		fig_filename = "mpi-pct-heatmap.{0}.png".format(filename_suffix)
 	else:
 		fig_filename = "mpi-pct-heatmap.png"
-	fig_filepath = os.path.join(args.tt_results_dirpath, fig_filename)
+	if not args.tt_results_dirpath is None:
+		fig_filepath = os.path.join(args.tt_results_dirpath, fig_filename)
+	else:
+		fig_filepath = fig_filename
 	plot_heatmap(mpi_traces, "TimestepIndex", "MPI %", fig_filepath)
 
 	## Finally! Calculate difference in MPI % over time:
@@ -1231,7 +1237,10 @@ def traceTimes_chartDynamicLoadBalance(traces_df, filename_suffix=None):
 		fig_filename = "mpi-pct-change-heatmap.{0}.png".format(filename_suffix)
 	else:
 		fig_filename = "mpi-pct-change-heatmap.png"
-	fig_filepath = os.path.join(args.tt_results_dirpath, fig_filename)
+	if not args.tt_results_dirpath is None:
+		fig_filepath = os.path.join(args.tt_results_dirpath, fig_filename)
+	else:
+		fig_filepath = fig_filename
 	plot_heatmap(diff_df, "TimestepIndex", "(MPI %) diff", fig_filepath)
 
 	## Sum stdev across ranks
@@ -1265,7 +1274,10 @@ def traceParameter_chart(traceParam_df, paramName):
 
 	## Construct heatmap, of MPI % during simulation:
 	fig_filename = "traceParameter-{0}-heatmap.png".format(paramName)
-	fig_filepath = os.path.join(args.tt_results_dirpath, fig_filename)
+	if not args.tt_results_dirpath is None:
+		fig_filepath = os.path.join(args.tt_results_dirpath, fig_filename)
+	else:
+		fig_filepath = fig_filename
 	plot_heatmap(traceParam_df, "TimestepIndex", "Value", fig_filepath)
 
 
