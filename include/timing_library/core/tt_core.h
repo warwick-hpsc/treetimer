@@ -32,7 +32,7 @@ namespace treetimer
 			void TreeTimerExitTraceConductor(std::string blockName);
 
 			void TreeTimerEnterBlock(std::string blockName, CodeBlockType blockType);
-			void TreeTimerExitBlock(std::string blockName);
+			void TreeTimerExit(std::string blockName);
 
 			void TreeTimerLogParameter(std::string paramName, int val);
 			void TreeTimerLogParameter(std::string paramName, long val);

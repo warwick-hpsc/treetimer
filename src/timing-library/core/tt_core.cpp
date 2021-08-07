@@ -88,7 +88,7 @@ namespace treetimer
 			void TreeTimerFinalize()
 			{
 			    // Exit Root Block
-			    TreeTimerExitBlock("ProgramRoot");
+			    TreeTimerExit("ProgramRoot");
 
 			    // Inidicate that we are now performing library operations
 			    // Important since the effective tree location is now null
@@ -183,7 +183,7 @@ namespace treetimer
 				}
 			}
 
-			void TreeTimerExitBlock(std::string blockName)
+			void TreeTimerExit(std::string blockName)
 			{
 				// Debug/Error Check: Ensure that the block we are stopping is the same as the one we are in.
 				if(blockName != instrumState->callTree->pos->key)

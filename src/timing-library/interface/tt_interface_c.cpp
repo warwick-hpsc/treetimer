@@ -98,7 +98,7 @@ void TreeTimerEnterLibraryCall(const char * blockName)
 void TreeTimerExit(const char * blockName)
 {
 	std::string strName(blockName);
-	treetimer::core::drivers::TreeTimerExitBlock(strName);
+	treetimer::core::drivers::TreeTimerExit(strName);
 }
 
 void TreeTimerLogParameterInt(const char * paramName, int value)

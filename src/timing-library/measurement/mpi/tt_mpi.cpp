@@ -51,7 +51,7 @@ int MPI_Comm_size(MPI_Comm comm, int * size)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Comm_size");
+		tt_d::TreeTimerExit("MPI_Comm_size");
 	}
 
 	return r;
@@ -75,7 +75,7 @@ int MPI_Comm_rank(MPI_Comm comm, int * rank)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Comm_rank");
+		tt_d::TreeTimerExit("MPI_Comm_rank");
 	}
 
 	return r;
@@ -105,7 +105,7 @@ int MPI_Send(const void *buf, int count, MPI_Datatype datatype, int dest, int ta
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Send");
+		tt_d::TreeTimerExit("MPI_Send");
 	}
 
 	return r;
@@ -135,7 +135,7 @@ int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int t
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Isend");
+		tt_d::TreeTimerExit("MPI_Isend");
 	}
 
 	return r;
@@ -167,7 +167,7 @@ int MPI_Ssend(const void *buf, int count, MPI_Datatype datatype, int dest, int t
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Ssend");
+		tt_d::TreeTimerExit("MPI_Ssend");
 	}
 
 	return r;
@@ -198,7 +198,7 @@ int MPI_Issend(const void *buf, int count, MPI_Datatype datatype, int dest, int 
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Issend");
+		tt_d::TreeTimerExit("MPI_Issend");
 	}
 
 	return r;
@@ -228,7 +228,7 @@ int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, M
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Recv");
+		tt_d::TreeTimerExit("MPI_Recv");
 	}
 
 	return r;
@@ -258,7 +258,7 @@ int MPI_Irecv(void * buf, int count, MPI_Datatype datatype, int source, int tag,
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Irecv");
+		tt_d::TreeTimerExit("MPI_Irecv");
 	}
 
 	return r;
@@ -282,7 +282,7 @@ int MPI_Barrier(MPI_Comm comm)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Barrier");
+		tt_d::TreeTimerExit("MPI_Barrier");
 	}
 
 	return r;
@@ -300,7 +300,7 @@ int MPI_Wait(MPI_Request *request, MPI_Status *status)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Wait");
+		tt_d::TreeTimerExit("MPI_Wait");
 	}
 
 	return r;
@@ -317,7 +317,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Waitall");
+		tt_d::TreeTimerExit("MPI_Waitall");
 	}
 
 	return r;
@@ -335,7 +335,7 @@ int MPI_Waitany(int count, MPI_Request array_of_requests[], int *indx,
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Waitany");
+		tt_d::TreeTimerExit("MPI_Waitany");
 	}
 
 	return r;
@@ -353,7 +353,7 @@ int MPI_Test(MPI_Request *request, int * flag, MPI_Status *status)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Test");
+		tt_d::TreeTimerExit("MPI_Test");
 	}
 
 	return r;
@@ -371,7 +371,7 @@ int MPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status * status)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Probe");
+		tt_d::TreeTimerExit("MPI_Probe");
 	}
 
 	return r;
@@ -408,7 +408,7 @@ int MPI_Gather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Gather");
+		tt_d::TreeTimerExit("MPI_Gather");
 	}
 
 	return r;
@@ -445,7 +445,7 @@ int MPI_Gatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Gatherv");
+		tt_d::TreeTimerExit("MPI_Gatherv");
 	}
 
 	return r;
@@ -482,7 +482,7 @@ int MPI_Allgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Allgather");
+		tt_d::TreeTimerExit("MPI_Allgather");
 	}
 
 	return r;
@@ -518,7 +518,7 @@ int MPI_Allgatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Allgatherv");
+		tt_d::TreeTimerExit("MPI_Allgatherv");
 	}
 
 	return r;
@@ -554,7 +554,7 @@ int MPI_Iallgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Iallgather");
+		tt_d::TreeTimerExit("MPI_Iallgather");
 	}
 
 	return r;
@@ -590,7 +590,7 @@ int MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Alltoall");
+		tt_d::TreeTimerExit("MPI_Alltoall");
 	}
 
 	return r;
@@ -620,7 +620,7 @@ int MPI_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Bcast");
+		tt_d::TreeTimerExit("MPI_Bcast");
 	}
 
 	return r;
@@ -654,7 +654,7 @@ int MPI_Reduce(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datat
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Reduce");
+		tt_d::TreeTimerExit("MPI_Reduce");
 	}
 
 	return r;
@@ -685,7 +685,7 @@ int MPI_Allreduce(const void *sendbuf, void *recvbuf, int count, MPI_Datatype da
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Allreduce");
+		tt_d::TreeTimerExit("MPI_Allreduce");
 	}
 
 	return r;
@@ -715,7 +715,7 @@ int MPI_Unpack(const void *inbuf, int insize, int *position, void *outbuf, int o
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Unpack");
+		tt_d::TreeTimerExit("MPI_Unpack");
 	}
 
 	return r;
@@ -745,7 +745,7 @@ int MPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype, void* outbuf
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Pack");
+		tt_d::TreeTimerExit("MPI_Pack");
 	}
 
 	return r;
@@ -776,7 +776,7 @@ int MPI_Bsend(const void *buf, int count, MPI_Datatype datatype, int dest, int t
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Bsend");
+		tt_d::TreeTimerExit("MPI_Bsend");
 	}
 
 	return r;
@@ -794,7 +794,7 @@ int MPI_Buffer_attach(void *buffer, int size)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Buffer_attach");
+		tt_d::TreeTimerExit("MPI_Buffer_attach");
 	}
 
 	return r;
@@ -827,7 +827,7 @@ int MPI_Send_init(const void *buf, int count, MPI_Datatype datatype, int dest, i
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Send_init");
+		tt_d::TreeTimerExit("MPI_Send_init");
 	}
 
 	return r;
@@ -858,7 +858,7 @@ int MPI_Bsend_init(const void *buf, int count, MPI_Datatype datatype, int dest, 
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Bsend_init");
+		tt_d::TreeTimerExit("MPI_Bsend_init");
 	}
 
 	return r;
@@ -889,7 +889,7 @@ int MPI_Ssend_init(const void *buf, int count, MPI_Datatype datatype, int dest, 
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Ssend_init");
+		tt_d::TreeTimerExit("MPI_Ssend_init");
 	}
 
 	return r;
@@ -921,7 +921,7 @@ int MPI_Rsend_init(const void *buf, int count, MPI_Datatype datatype, int dest, 
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Rsend_init");
+		tt_d::TreeTimerExit("MPI_Rsend_init");
 	}
 
 	return r;
@@ -952,7 +952,7 @@ int MPI_Recv_init(void *buf, int count, MPI_Datatype datatype, int source, int t
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Recv_init");
+		tt_d::TreeTimerExit("MPI_Recv_init");
 	}
 
 	return r;
@@ -969,7 +969,7 @@ int MPI_Start(MPI_Request * request)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Start");
+		tt_d::TreeTimerExit("MPI_Start");
 	}
 
 	return r;
@@ -986,7 +986,7 @@ int MPI_Startall(int count, MPI_Request * array_of_requests)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Startall");
+		tt_d::TreeTimerExit("MPI_Startall");
 	}
 
 	return r;
@@ -1017,7 +1017,7 @@ int MPI_Put(const void *origin_addr, int origin_count, MPI_Datatype origin_datat
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Put");
+		tt_d::TreeTimerExit("MPI_Put");
 	}
 
 	return r;
@@ -1034,7 +1034,7 @@ int MPI_Win_create(void *base, MPI_Aint size, int disp_unit, MPI_Info info, MPI_
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Win_create");
+		tt_d::TreeTimerExit("MPI_Win_create");
 	}
 
 	return r;
@@ -1052,7 +1052,7 @@ int MPI_Win_start(MPI_Group group, int assert, MPI_Win win)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Win_start");
+		tt_d::TreeTimerExit("MPI_Win_start");
 	}
 
 	return r;
@@ -1070,7 +1070,7 @@ int MPI_Win_fence(int assert, MPI_Win win)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Win_fence");
+		tt_d::TreeTimerExit("MPI_Win_fence");
 	}
 
 	return r;
@@ -1088,7 +1088,7 @@ int MPI_Win_lock(int lock_type, int rank, int assert, MPI_Win win)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Win_lock");
+		tt_d::TreeTimerExit("MPI_Win_lock");
 	}
 
 	return r;
@@ -1106,7 +1106,7 @@ int MPI_Win_unlock(int rank, MPI_Win win)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Win_unlock");
+		tt_d::TreeTimerExit("MPI_Win_unlock");
 	}
 
 	return r;
@@ -1123,7 +1123,7 @@ int MPI_Win_post(MPI_Group group, int assert, MPI_Win win)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Win_post");
+		tt_d::TreeTimerExit("MPI_Win_post");
 	}
 
 	return r;
@@ -1140,7 +1140,7 @@ int MPI_Win_complete(MPI_Win win)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Win_complete");
+		tt_d::TreeTimerExit("MPI_Win_complete");
 	}
 
 	return r;
@@ -1157,7 +1157,7 @@ int MPI_Win_free(MPI_Win *win)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Win_free");
+		tt_d::TreeTimerExit("MPI_Win_free");
 	}
 
 	return r;
@@ -1174,7 +1174,7 @@ int MPI_Win_wait(MPI_Win win)
 
 	if(INSTR_MPI_CONDITION)
 	{
-		tt_d::TreeTimerExitBlock("MPI_Win_wait");
+		tt_d::TreeTimerExit("MPI_Win_wait");
 	}
 
 	return r;

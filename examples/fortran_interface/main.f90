@@ -23,7 +23,7 @@ program main
     call MPI_Comm_rank(MPI_COMM_WORLD, rank, err)
 	call MPI_Comm_size(MPI_COMM_WORLD, commSize, err)
 
-	call TreeTimerEnterBlockUnspecified("params1");
+	call TreeTimerEnterBlock("params1");
 
 	call TreeTimerLogGlobalParameterInt("GlobalIntTest", 19);
 	call TreeTimerLogGlobalParameterString("GlobalStringTest", "Hello");
@@ -31,9 +31,9 @@ program main
 	call TreeTimerLogGlobalParameterLogical("GlobalLogicalTestT", .true.);
 	call TreeTimerLogGlobalParameterLogical("GlobalLogicalTestF", .false.);
 
-	call TreeTimerExitBlock("params1");
+	call TreeTimerExit("params1");
 
-	call TreeTimerEnterBlockUnspecified("allgather");
+	call TreeTimerEnterBlock("allgather");
 
 	allGatherInput = rank
 	allocate(allGatherOutput(commSize))
@@ -43,10 +43,10 @@ program main
 
     deallocate(allGatherOutput)
 
-	call TreeTimerExitBlock("allgather");
+	call TreeTimerExit("allgather");
 
 	do i = 1, 4
-		call TreeTimerEnterBlockUnspecified("Test");
+		call TreeTimerEnterBlock("Test");
 
 		call TreeTimerLogParameterInt("TestVal", 2);
 		call TreeTimerLogParameterInt("TestVal", 4);
@@ -58,28 +58,28 @@ program main
 		call TreeTimerLogParameterLogical("TestValLogF", .false.);
 		
 		do j = 1, 4
-			call TreeTimerEnterBlockLoop("Test2");
+			call TreeTimerEnterLoop("Test2");
 			call sleep(j);
 
-			call TreeTimerEnterBlockLoop("Test3");
+			call TreeTimerEnterLoop("Test3");
 			call sleep(1);
-			call TreeTimerExitBlock("Test3");
+			call TreeTimerExit("Test3");
 
-			call TreeTimerExitBlock("Test2");
+			call TreeTimerExit("Test2");
 		end do
 
 		call sleep(i);
-		call TreeTimerExitBlock("Test");
+		call TreeTimerExit("Test");
 
 		do j = 1, 3
-			call TreeTimerEnterBlockLoop("Test2");
+			call TreeTimerEnterLoop("Test2");
 			call sleep(j);
 
-			call TreeTimerEnterBlockLoop("Test3");
+			call TreeTimerEnterLoop("Test3");
 			call sleep(1);
-			call TreeTimerExitBlock("Test3");
+			call TreeTimerExit("Test3");
 
-			call TreeTimerExitBlock("Test2");
+			call TreeTimerExit("Test2");
 		end do
 		
 	end do

@@ -154,7 +154,7 @@ module treetimer
 		character(len=*)	:: blockName
 		real(kind=4)		:: value
 		
-		call c_tree_timer_log_parameter_double(blockName, len_trim(blockName), value)
+		call c_tree_timer_log_parameter_double(blockName, len_trim(blockName), REAL(value,8))
 	
 	end subroutine
 	
@@ -189,7 +189,7 @@ module treetimer
 		character(len=*)	:: blockName
 		real(kind=4)		:: value
 		
-		call c_tree_timer_log_global_parameter_double(blockName, len_trim(blockName), value)
+		call c_tree_timer_log_global_parameter_double(blockName, len_trim(blockName), REAL(value,8))
 	end subroutine
 
 	subroutine TreeTimerLogGlobalParameterRealDouble(blockName, value)
