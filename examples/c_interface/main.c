@@ -16,7 +16,7 @@ void main(int argc, char ** argv)
 
 	for(int i = 1; i < 5; i++)
 	{
-		TreeTimerEnterBlockUnspecified("Test");
+		TreeTimerEnterBlock("Test");
 		TreeTimerLogParameterInt("TestVal", 2);
 		TreeTimerLogParameterInt("TestVal", 4);
 		TreeTimerLogParameterInt("TestVal", 6);
@@ -26,19 +26,19 @@ void main(int argc, char ** argv)
 
 		for(int j = 1; j < 5; j++)
 		{
-			TreeTimerEnterBlockLoop("Test2");
+			TreeTimerEnterLoop("Test2");
 			sleep(j);
-			TreeTimerExitBlock("Test2");
+			TreeTimerExit("Test2");
 		}
 
 		sleep(i);
-		TreeTimerExitBlock("Test");
+		TreeTimerExit("Test");
 
 		for(int j = 1; j < 4; j++)
 		{
-			TreeTimerEnterBlockLoop("Test2");
+			TreeTimerEnterLoop("Test2");
 			sleep(j);
-			TreeTimerExitBlock("Test2");
+			TreeTimerExit("Test2");
 		}
 
 	}
