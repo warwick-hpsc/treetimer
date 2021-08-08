@@ -44,6 +44,7 @@ namespace treetimer
 					// State for gather-at-root:
 					int rankGlobal = -1;
 					int rankLocal = -1;
+					int nRanksLocal = -1;
 					bool gatherIntraNode = false;
 					std::vector<aggTimeData> aggTimeRecords;
 			};
