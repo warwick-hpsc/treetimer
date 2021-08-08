@@ -28,14 +28,14 @@ namespace treetimer
 				void writeSchemaAggregateTimeData(TTSQLite3& dataAccess);
 
 				void findAggregateTimeDataID(TTSQLite3& dataAccess,
-											 int runID, int callPathID, int processID,
-											 double minWallTime, double avgWallTime, double maxWallTime, double stdev, int count,
-											 int * aggTimeID);
+											int runID, int rank, int callPathID, int processID,
+											double minWallTime, double avgWallTime, double maxWallTime, double stdev, int count,
+											int * aggTimeID);
 
 				void writeAggregateTimeData(TTSQLite3& dataAccess,
-											 int runID, int callPathID, int processID,
-											 double minWallTime, double avgWallTime, double maxWallTime, double stdev, int count,
-											 int * aggTimeID);
+											int runID, int rank, int callPathID, int processID,
+											double minWallTime, double avgWallTime, double maxWallTime, double stdev, int count,
+											int * aggTimeID);
 			}
 		}
 	}

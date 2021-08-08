@@ -143,10 +143,10 @@ namespace treetimer
 						// Library Config Data
 						int libConfigID;
 						tt_sql::drivers::writeLibraryConfigID(*dataAccess, config.libVerMajor, config.libVerMinor,
-																						 config.eATimers, config.eTTimers,
-																						 config.eAParam, config.eTParam,
-																						 config.eAPAPI, config.eTPAPI,
-																						 config.eMPIHooks, &libConfigID);
+																config.eATimers, config.eTTimers,
+																config.eAParam, config.eTParam,
+																config.eAPAPI, config.eTPAPI,
+																config.eMPIHooks, &libConfigID);
 						// Application Data
 						int appID;
 						tt_sql::drivers::writeApplicationData(*dataAccess, config.appName, config.appVersion, &appID);
@@ -165,7 +165,7 @@ namespace treetimer
 						std::string nodeName = "Unknown";
 						int socketCount = -1;
 						tt_sql::drivers::writeComputeNodeData(*dataAccess, machineID, nodeName,
-																					   socketCount, &computeNodeID);
+																socketCount, &computeNodeID);
 
 						// CPU Socket Data
 						int cpuSocketID;
@@ -228,22 +228,22 @@ namespace treetimer
 						// Application Config Data
 						int appConfigID;
 						tt_sql::drivers::writeApplicationConfigData(*dataAccess,
-																							 appID,
-																							 intParamNames, intParamValues,
-																							 doubleParamNames, doubleParamValues,
-																							 boolParamNames, boolParamValues,
-																							 stringParamNames, stringParamValues,
-																							 &appConfigID);
+																	appID,
+																	intParamNames, intParamValues,
+																	doubleParamNames, doubleParamValues,
+																	boolParamNames, boolParamValues,
+																	stringParamNames, stringParamValues,
+																	&appConfigID);
 
 						// Run Config Data (Runs are always recorded as new)
 						int processCount;
 						int runID;
 						MPI_Comm_size(MPI_COMM_WORLD, &processCount);
 						tt_sql::drivers::writeProfileRunConfigData(*dataAccess,
-																							appConfigID,
-																							libConfigID,
-																							processCount,
-																							&runID);
+																	appConfigID,
+																	libConfigID,
+																	processCount,
+																	&runID);
 
 						config.sqlIORunID = runID;
 						config.sqlIOProcessID = processID;
@@ -293,8 +293,8 @@ namespace treetimer
 				}
 
 				void writeTreeNodeAggInstrumentationData(tt_sql::TTSQLite3& dataAccess,
-											          treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node,
-													  int runID, int processID, int parentID, int * callPathID, treetimer::config::Config& config)
+											        	treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node,
+														int runID, int processID, int parentID, int * callPathID, treetimer::config::Config& config)
 				{
 
 					// Instrumentation Data can include:
@@ -312,6 +312,12 @@ namespace treetimer
 
 					// Each of the pieces of data have their own insertion function for their relevant piece of data, but they may have
 					// differing requirements for existing data (i.e. they may need to be provided foreign key values)
+
+
+					// Update:
+					// To avoid high-rank runs smashing filesystem, perform intra-node gather and write.
+					int rankGlobal;
+					MPI_Comm_rank(MPI_COMM_WORLD, &rankGlobal);
 
 					// Retrieve this node's block type ID
 					int blockTypeID;
@@ -349,7 +355,7 @@ namespace treetimer
 					if(config.eATimers)
 					{
 						int aggTimeID;
-						tt_sql::drivers::writeAggregateTimeData(dataAccess, runID, *callPathID, processID,
+						tt_sql::drivers::writeAggregateTimeData(dataAccess, runID, rankGlobal, *callPathID, processID,
 										node.nodeData.blockTimer->aggTimings.minWalltime,
 										node.nodeData.blockTimer->aggTimings.avgWalltime,
 										node.nodeData.blockTimer->aggTimings.maxWalltime,
