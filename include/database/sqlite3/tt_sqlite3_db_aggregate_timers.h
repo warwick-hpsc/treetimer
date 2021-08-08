@@ -36,6 +36,9 @@ namespace treetimer
 											int runID, int rank, int callPathID, int processID,
 											double minWallTime, double avgWallTime, double maxWallTime, double stdev, int count,
 											int * aggTimeID);
+				void writeAggregateTimeData_v2(TTSQLite3& dataAccess,
+											aggTimeData d,
+											int * aggTimeID);
 			}
 		}
 	}

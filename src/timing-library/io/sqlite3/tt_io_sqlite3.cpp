@@ -268,8 +268,38 @@ namespace treetimer
 						return;
 					}
 
+					// To avoid high-rank runs smashing filesystem, perform intra-node gather and write.
+					int rankGlobal, nRanksGlobal, err;
+					MPI_Comm_rank(MPI_COMM_WORLD, &rankGlobal);
+					MPI_Comm_size(MPI_COMM_WORLD, &nRanksGlobal);
+					// Todo: make 'gatherIntraNode' conditional on number of ranks
+					bool gatherIntraNode = true;
+					MPI_Comm nodeComm;
+					int rankLocal, nRanksLocal;
+					err = MPI_Comm_split(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rankGlobal, &nodeComm);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Rank %d failed to create intra-node MPI communicator\n", rankGlobal);
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					MPI_Comm_rank(nodeComm, &rankLocal);
+					MPI_Comm_size(nodeComm, &nRanksLocal);
+					if (nRanksLocal == 1) {
+						gatherIntraNode = false;
+					}
+					dataAccess->rankGlobal = rankGlobal;
+					dataAccess->rankLocal = rankLocal;
+					dataAccess->gatherIntraNode = gatherIntraNode;
+
 					// Start at the root of the tree - there is no valid parentID so pass as -1
 					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeAggInstrumentationData, config.sqlIORunID, config.sqlIOProcessID, -1, config);
+
+					// Test that local collation of records works, by writing out here:
+					dataAccess->gatherIntraNode = false;
+					int aggTimeID;
+					for (int i=0; i<dataAccess->aggTimeRecords.size(); i++) {
+						tt_sql::drivers::writeAggregateTimeData_v2(*dataAccess, dataAccess->aggTimeRecords[i], &aggTimeID);
+					}
 
 					config.sqlIOAggData = true;
 				}
@@ -313,12 +343,6 @@ namespace treetimer
 					// Each of the pieces of data have their own insertion function for their relevant piece of data, but they may have
 					// differing requirements for existing data (i.e. they may need to be provided foreign key values)
 
-
-					// Update:
-					// To avoid high-rank runs smashing filesystem, perform intra-node gather and write.
-					int rankGlobal;
-					MPI_Comm_rank(MPI_COMM_WORLD, &rankGlobal);
-
 					// Retrieve this node's block type ID
 					int blockTypeID;
 					tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.nodeData.blockType], &blockTypeID);
@@ -355,13 +379,24 @@ namespace treetimer
 					if(config.eATimers)
 					{
 						int aggTimeID;
-						tt_sql::drivers::writeAggregateTimeData(dataAccess, runID, rankGlobal, *callPathID, processID,
-										node.nodeData.blockTimer->aggTimings.minWalltime,
-										node.nodeData.blockTimer->aggTimings.avgWalltime,
-										node.nodeData.blockTimer->aggTimings.maxWalltime,
-										sqrt(node.nodeData.blockTimer->aggTimings.varianceWalltime),
-										node.nodeData.blockTimer->aggTimings.count,
-										&aggTimeID);
+						// tt_sql::drivers::writeAggregateTimeData(dataAccess, runID, rankGlobal, *callPathID, processID,
+						// 				node.nodeData.blockTimer->aggTimings.minWalltime,
+						// 				node.nodeData.blockTimer->aggTimings.avgWalltime,
+						// 				node.nodeData.blockTimer->aggTimings.maxWalltime,
+						// 				sqrt(node.nodeData.blockTimer->aggTimings.varianceWalltime),
+						// 				node.nodeData.blockTimer->aggTimings.count,
+						// 				&aggTimeID);
+						tt_sql::aggTimeData d;
+						d.runID = runID;
+						d.rank = dataAccess.rankGlobal;
+						d.callPathID = *callPathID;
+						d.processID = processID;
+						d.minWallTime = node.nodeData.blockTimer->aggTimings.minWalltime;
+						d.avgWallTime = node.nodeData.blockTimer->aggTimings.avgWalltime;
+						d.maxWallTime = node.nodeData.blockTimer->aggTimings.maxWalltime;
+						d.stdev = sqrt(node.nodeData.blockTimer->aggTimings.varianceWalltime);
+						d.count = node.nodeData.blockTimer->aggTimings.count;
+						tt_sql::drivers::writeAggregateTimeData_v2(dataAccess, d, &aggTimeID);
 					}
 
 					// (d) Aggregate Parameter Data

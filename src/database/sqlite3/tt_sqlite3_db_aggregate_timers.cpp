@@ -156,6 +156,21 @@ namespace treetimer
 						*aggTimeID = tmpID;
 					}
 				}
+
+				void writeAggregateTimeData_v2(TTSQLite3& dataAccess,
+											aggTimeData d,
+											int * aggTimeID)
+				{
+					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
+						dataAccess.aggTimeRecords.push_back(d);
+						*aggTimeID = -1;
+					}
+					else {
+						writeAggregateTimeData(dataAccess, d.runID, d.rank, d.callPathID, d.processID, 
+												d.minWallTime, d.avgWallTime, d.maxWallTime, d.stdev, d.count, 
+												aggTimeID);
+					}
+				}
 			}
 		}
 	}

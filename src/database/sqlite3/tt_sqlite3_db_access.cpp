@@ -23,6 +23,9 @@ namespace treetimer
 			TTSQLite3::TTSQLite3(std::string filePath)
 			{
 				this->filePath = filePath;
+
+				// This fixes push_back() seg-fault:
+				this->aggTimeRecords.resize(0);
 			}
 
 			TTSQLite3::~TTSQLite3()

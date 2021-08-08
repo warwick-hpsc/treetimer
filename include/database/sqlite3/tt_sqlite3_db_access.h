@@ -15,6 +15,7 @@
 
 #include "sqlite3.h"
 #include <string>
+#include <vector>
 
 namespace treetimer
 {
@@ -22,6 +23,15 @@ namespace treetimer
 	{
 		namespace tt_sqlite3
 		{
+			// To implement gather-at-root, need a place to collate data before transferring.
+			// That place needs to be a class object passed around. Ideally would be a new class, 
+			// but will put it into TTSQLite3
+			typedef struct {
+				int runID, rank, callPathID, processID;
+				double minWallTime, avgWallTime, maxWallTime, stdev;
+				int count;
+			} aggTimeData;
+
 			class TTSQLite3
 			{
 				public:
@@ -30,6 +40,12 @@ namespace treetimer
 
 					std::string filePath;
 					sqlite3 * db;
+
+					// State for gather-at-root:
+					int rankGlobal = -1;
+					int rankLocal = -1;
+					bool gatherIntraNode = false;
+					std::vector<aggTimeData> aggTimeRecords;
 			};
 
 			namespace drivers
