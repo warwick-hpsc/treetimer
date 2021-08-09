@@ -12,8 +12,6 @@
 
 #include "tt_io_sqlite3.h"
 #include "tt_code_block_type.h"
-#include <iostream>
-#include "mpi.h"
 
 #include "tt_sqlite3_db_access.h"
 #include "tt_sqlite3_db_aggregate_parameters.h"
@@ -35,11 +33,12 @@
 #include "tt_sqlite3_db_trace_parameters.h"
 #include "tt_sqlite3_db_trace_timers.h"
 
-#include "tt_code_block_type.h"
-
-#include <vector>
+#include "mpi.h"
 
 #include <cmath>
+#include <iostream>
+#include <unistd.h>
+#include <vector>
 
 namespace tt_sql = treetimer::database::tt_sqlite3;
 
@@ -268,36 +267,11 @@ namespace treetimer
 						return;
 					}
 
-					// To avoid high-rank runs smashing filesystem, perform intra-node gather and write.
-					// Need to decide if will perform gather before traversing Tree.
-					int rankGlobal, nRanksGlobal, err;
-					MPI_Comm_rank(MPI_COMM_WORLD, &rankGlobal);
-					MPI_Comm_size(MPI_COMM_WORLD, &nRanksGlobal);
-					// Todo: make 'gatherIntraNode' conditional on number of ranks
-					bool gatherIntraNode = true;
-					MPI_Comm nodeComm;
-					int rankLocal, nRanksLocal;
-					MPI_Info info;
-					err = MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rankGlobal, info, &nodeComm);
-					if (err != MPI_SUCCESS) {
-						fprintf(stderr, "Rank %d failed to create intra-node MPI communicator\n", rankGlobal);
-						MPI_Abort(MPI_COMM_WORLD, err);
-						exit(EXIT_FAILURE);
-					}
-					MPI_Comm_rank(nodeComm, &rankLocal);
-					MPI_Comm_size(nodeComm, &nRanksLocal);
-					if (nRanksLocal == 1) {
-						gatherIntraNode = false;
-					}
-					dataAccess->rankGlobal = rankGlobal;
-					dataAccess->rankLocal = rankLocal;
-					dataAccess->nRanksLocal = nRanksLocal;
-					dataAccess->gatherIntraNode = gatherIntraNode;
-
 					// Start at the root of the tree - there is no valid parentID so pass as -1
 					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeAggInstrumentationData, config.sqlIORunID, config.sqlIOProcessID, -1, config);
 
 					// Create MPI type for a AggregateTime record:
+					int err;
 					tt_sql::aggTimeData atr;
 					MPI_Datatype aggTimeRecord_MPI;
 					int lengths[9] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -331,6 +305,8 @@ namespace treetimer
 					if (dataAccess->nRanksLocal > 1) {
 						if (dataAccess->rankLocal == 0) {
 							int n = dataAccess->nRanksLocal;
+
+							/*
 							int  bufferSizes[n-1];
 							MPI_Status stats[n-1];
 							MPI_Request reqs[n-1];
@@ -338,7 +314,7 @@ namespace treetimer
 							int nReceives = 0;
 							for (int r=1; r<n; r++) {
 								receives[r-1] = false;
-								err = MPI_Probe(r, 0, nodeComm, &stats[r-1]);
+								err = MPI_Probe(r, 0, dataAccess->nodeComm, &stats[r-1]);
 								if (err != MPI_SUCCESS) {
 									fprintf(stderr, "Gather rank failed to probe msg from %d\n", r);
 									MPI_Abort(MPI_COMM_WORLD, err);
@@ -357,29 +333,13 @@ namespace treetimer
 								}
 
 								buffers[r-1] = (tt_sql::aggTimeData*)malloc(bufferSizes[r-1] * sizeof(tt_sql::aggTimeData));
-								err = MPI_Irecv(buffers[r-1], bufferSizes[r-1], aggTimeRecord_MPI, r, 0, nodeComm, &reqs[r-1]);
+								err = MPI_Irecv(buffers[r-1], bufferSizes[r-1], aggTimeRecord_MPI, r, 0, dataAccess->nodeComm, &reqs[r-1]);
 								if (err != MPI_SUCCESS) {
 									fprintf(stderr, "Gather rank failed on MPI_Irecv(rank=%d)\n", r);
 									MPI_Abort(MPI_COMM_WORLD, err);
 									exit(EXIT_FAILURE);
 								}
 							}
-
-							// // Wait for all data then write:
-							// err = MPI_Waitall(n-1, reqs, stats);
-							// if (err != MPI_SUCCESS) {
-							// 	fprintf(stderr, "Gather rank failed on MPI_Waitall\n");
-							// 	MPI_Abort(MPI_COMM_WORLD, err);
-							// 	exit(EXIT_FAILURE);
-							// }
-							// int aggTimeID;
-							// for (int r=1; r<n; r++) {
-							// 	int nr = bufferSizes[r-1];
-							// 	for (int i=0; i<nr; i++) {
-							// 		tt_sql::drivers::writeAggregateTimeData(*dataAccess, buffers[r-1][i], &aggTimeID);
-							// 	}
-							// 	free(buffers[r-1]);
-							// }
 
 							// Write data as it arrives:
 							int aggTimeID;
@@ -400,13 +360,65 @@ namespace treetimer
 								}
 								free(buffers[r-1]);
 							}
+							*/
 
+							// New gather logic: switch probe to non-blocking. Above use of blocking probe
+							// was prevening any async comms from occurring.
+							int nReceives = 0;
+							bool workDone = false;
+							int ready = 0;
+							MPI_Status stat;
+							MPI_Request req;
+							int bufferSize = 0;
+							tt_sql::aggTimeData* buffer = NULL;
+							int aggTimeID;
+							while (nReceives != (n-1)) {
+								for (int r=1; r<n; r++) {
+									err = MPI_Iprobe(r, 0, dataAccess->nodeComm, &ready, &stat);
+									if (err != MPI_SUCCESS) {
+										fprintf(stderr, "Gather rank failed to probe msg from %d\n", r);
+										MPI_Abort(MPI_COMM_WORLD, err);
+										exit(EXIT_FAILURE);
+									}
+
+									if (ready == 1) {
+										workDone = true;
+										nReceives++;
+
+										err = MPI_Get_count(&stat, aggTimeRecord_MPI, &bufferSize);
+										if (err != MPI_SUCCESS) {
+											fprintf(stderr, "Gather rank failed on MPI_Get_count(rank=%d)\n", r);
+											MPI_Abort(MPI_COMM_WORLD, err);
+											exit(EXIT_FAILURE);
+										}
+
+										buffer = (tt_sql::aggTimeData*)malloc(bufferSize * sizeof(tt_sql::aggTimeData));
+										err = MPI_Recv(buffer, bufferSize, aggTimeRecord_MPI, r, 0, dataAccess->nodeComm, &stat);
+										if (err != MPI_SUCCESS) {
+											fprintf(stderr, "Gather rank failed on MPI_Recv(rank=%d)\n", r);
+											MPI_Abort(MPI_COMM_WORLD, err);
+											exit(EXIT_FAILURE);
+										}
+
+										for (int i=0; i<bufferSize; i++) {
+											tt_sql::drivers::writeAggregateTimeData(*dataAccess, buffer[i], &aggTimeID);
+										}
+
+										free(buffer); buffer = NULL; bufferSize = 0;
+									}
+								}
+
+								if (!workDone) {
+									// Sleep 1 second
+									sleep(1);
+								}
+							}
 						}
 						else {
 							// Send to local root
 							MPI_Request r;
 							MPI_Status s;
-							err = MPI_Isend(dataAccess->aggTimeRecords.data(), dataAccess->aggTimeRecords.size(), aggTimeRecord_MPI, 0, 0, nodeComm, &r);
+							err = MPI_Isend(dataAccess->aggTimeRecords.data(), dataAccess->aggTimeRecords.size(), aggTimeRecord_MPI, 0, 0, dataAccess->nodeComm, &r);
 							if (err != MPI_SUCCESS) {
 								fprintf(stderr, "Rankd %d failed Isend\n", r);
 								MPI_Abort(MPI_COMM_WORLD, err);

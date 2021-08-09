@@ -13,9 +13,11 @@
 #ifndef TT_DATABASE_SQLITE3_ACCESS_INCLUDE_H
 #define TT_DATABASE_SQLITE3_ACCESS_INCLUDE_H
 
-#include "sqlite3.h"
 #include <string>
 #include <vector>
+
+#include "mpi.h"
+#include "sqlite3.h"
 
 namespace treetimer
 {
@@ -48,6 +50,7 @@ namespace treetimer
 					int rankLocal = -1;
 					int nRanksLocal = -1;
 					bool gatherIntraNode = false;
+					MPI_Comm nodeComm;
 					std::vector<aggTimeData> aggTimeRecords;
 			};
 

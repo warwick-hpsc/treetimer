@@ -26,6 +26,33 @@ namespace treetimer
 
 				// This fixes push_back() seg-fault:
 				this->aggTimeRecords.resize(0);
+
+				// To avoid high-rank runs smashing filesystem, perform intra-node gather and write.
+				// Need to decide if will perform gather before traversing Tree.
+				int rankGlobal, nRanksGlobal, err;
+				MPI_Comm_rank(MPI_COMM_WORLD, &rankGlobal);
+				MPI_Comm_size(MPI_COMM_WORLD, &nRanksGlobal);
+				// Todo: make 'gatherIntraNode' conditional on number of ranks
+				bool gatherIntraNode = true;
+				MPI_Comm nodeComm;
+				int rankLocal, nRanksLocal;
+				MPI_Info info;
+				err = MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rankGlobal, info, &nodeComm);
+				if (err != MPI_SUCCESS) {
+					fprintf(stderr, "Rank %d failed to create intra-node MPI communicator\n", rankGlobal);
+					MPI_Abort(MPI_COMM_WORLD, err);
+					exit(EXIT_FAILURE);
+				}
+				MPI_Comm_rank(nodeComm, &rankLocal);
+				MPI_Comm_size(nodeComm, &nRanksLocal);
+				if (nRanksLocal == 1) {
+					gatherIntraNode = false;
+				}
+				this->rankGlobal = rankGlobal;
+				this->rankLocal = rankLocal;
+				this->nRanksLocal = nRanksLocal;
+				this->gatherIntraNode = gatherIntraNode;
+				this->nodeComm = nodeComm;
 			}
 
 			TTSQLite3::~TTSQLite3()
