@@ -277,7 +277,8 @@ namespace treetimer
 					bool gatherIntraNode = true;
 					MPI_Comm nodeComm;
 					int rankLocal, nRanksLocal;
-					err = MPI_Comm_split(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rankGlobal, &nodeComm);
+					MPI_Info info;
+					err = MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rankGlobal, info, &nodeComm);
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Rank %d failed to create intra-node MPI communicator\n", rankGlobal);
 						MPI_Abort(MPI_COMM_WORLD, err);
