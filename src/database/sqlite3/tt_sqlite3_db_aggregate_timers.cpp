@@ -43,10 +43,7 @@ namespace treetimer
 					int err = sqlite3_exec(dataAccess.db, stmt.c_str(), NULL, 0, &zErrMsg);
 				}
 
-				void findAggregateTimeDataID(TTSQLite3& dataAccess,
-											int runID, int rank, int callPathID, int processID,
-											double minWallTime, double avgWallTime, double maxWallTime, double stdev, int count,
-											int * aggTimeID)
+				void findAggregateTimeDataID(TTSQLite3& dataAccess, aggTimeData d, int * aggTimeID)
 				{
 					sqlite3_stmt * pStmt;
 					char * zErrMsg = 0;
@@ -64,15 +61,15 @@ namespace treetimer
 												"Count = ?",
 												-1, &pStmt, NULL);
 
-					sqlite3_bind_int(pStmt,1, runID);
-					sqlite3_bind_int(pStmt,2, rank);
-					sqlite3_bind_int(pStmt,3, callPathID);
-					sqlite3_bind_int(pStmt,4, processID);
-					sqlite3_bind_double(pStmt,5, minWallTime);
-					sqlite3_bind_double(pStmt,6, avgWallTime);
-					sqlite3_bind_double(pStmt,7, maxWallTime);
-					sqlite3_bind_double(pStmt,8, stdev);
-					sqlite3_bind_int(pStmt,9, count);
+					sqlite3_bind_int(   pStmt,1, d.runID);
+					sqlite3_bind_int(   pStmt,2, d.rank);
+					sqlite3_bind_int(   pStmt,3, d.callPathID);
+					sqlite3_bind_int(   pStmt,4, d.processID);
+					sqlite3_bind_double(pStmt,5, d.minWallTime);
+					sqlite3_bind_double(pStmt,6, d.avgWallTime);
+					sqlite3_bind_double(pStmt,7, d.maxWallTime);
+					sqlite3_bind_double(pStmt,8, d.stdev);
+					sqlite3_bind_int(   pStmt,9, d.count);
 					err = sqlite3_step(pStmt);
 
 					if(err == SQLITE_ERROR)
@@ -96,41 +93,41 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeAggregateTimeData(TTSQLite3& dataAccess,
-											int runID, int rank, int callPathID, int processID,
-											double minWallTime, double avgWallTime, double maxWallTime, double stdev, int count,
-											int * aggTimeID)
+				void writeAggregateTimeData(TTSQLite3& dataAccess, aggTimeData d, int * aggTimeID)
 				{
+					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
+						dataAccess.aggTimeRecords.push_back(d);
+						*aggTimeID = -1;
+						return;
+					}
+
 					sqlite3_stmt * pStmt;
 					int err;
 
-					if (count == 0) {
-						minWallTime = 0.0;
-						avgWallTime = 0.0;
-						maxWallTime = 0.0;
-						stdev = 0.0;
+					if (d.count == 0) {
+						d.minWallTime = 0.0;
+						d.avgWallTime = 0.0;
+						d.maxWallTime = 0.0;
+						d.stdev = 0.0;
 					}
 
 					// Check for existing entry
 					int tmpID = -1;
-					findAggregateTimeDataID(dataAccess,
-							runID, rank, callPathID, processID,
-							minWallTime, avgWallTime, maxWallTime, stdev, count,
-							&tmpID);
+					findAggregateTimeDataID(dataAccess, d, &tmpID);
 
 					if(tmpID == -1)
 					{
 						err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateTime VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
-						sqlite3_bind_int(pStmt,1, runID);
-						sqlite3_bind_int(pStmt,2, rank);
-						sqlite3_bind_int(pStmt,3, callPathID);
-						sqlite3_bind_int(pStmt,4, processID);
-						sqlite3_bind_double(pStmt,5, minWallTime);
-						sqlite3_bind_double(pStmt,6, avgWallTime);
-						sqlite3_bind_double(pStmt,7, maxWallTime);
-						sqlite3_bind_double(pStmt,8, stdev);
-						sqlite3_bind_int(pStmt,9, count);
+						sqlite3_bind_int(   pStmt,1, d.runID);
+						sqlite3_bind_int(   pStmt,2, d.rank);
+						sqlite3_bind_int(   pStmt,3, d.callPathID);
+						sqlite3_bind_int(   pStmt,4, d.processID);
+						sqlite3_bind_double(pStmt,5, d.minWallTime);
+						sqlite3_bind_double(pStmt,6, d.avgWallTime);
+						sqlite3_bind_double(pStmt,7, d.maxWallTime);
+						sqlite3_bind_double(pStmt,8, d.stdev);
+						sqlite3_bind_int(   pStmt,9, d.count);
 						err = sqlite3_step(pStmt);
 
 
@@ -154,21 +151,6 @@ namespace treetimer
 					else
 					{
 						*aggTimeID = tmpID;
-					}
-				}
-
-				void writeAggregateTimeData_v2(TTSQLite3& dataAccess,
-											aggTimeData d,
-											int * aggTimeID)
-				{
-					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
-						dataAccess.aggTimeRecords.push_back(d);
-						*aggTimeID = -1;
-					}
-					else {
-						writeAggregateTimeData(dataAccess, d.runID, d.rank, d.callPathID, d.processID, 
-												d.minWallTime, d.avgWallTime, d.maxWallTime, d.stdev, d.count, 
-												aggTimeID);
 					}
 				}
 			}

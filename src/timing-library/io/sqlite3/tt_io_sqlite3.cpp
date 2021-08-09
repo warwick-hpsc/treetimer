@@ -375,8 +375,9 @@ namespace treetimer
 							// for (int r=1; r<n; r++) {
 							// 	int nr = bufferSizes[r-1];
 							// 	for (int i=0; i<nr; i++) {
-							// 		tt_sql::drivers::writeAggregateTimeData_v2(*dataAccess, buffers[r-1][i], &aggTimeID);
+							// 		tt_sql::drivers::writeAggregateTimeData(*dataAccess, buffers[r-1][i], &aggTimeID);
 							// 	}
+							// 	free(buffers[r-1]);
 							// }
 
 							// Write data as it arrives:
@@ -394,8 +395,9 @@ namespace treetimer
 								int r = indx+1;
 								int nr = bufferSizes[r-1];
 								for (int i=0; i<nr; i++) {
-									tt_sql::drivers::writeAggregateTimeData_v2(*dataAccess, buffers[r-1][i], &aggTimeID);
+									tt_sql::drivers::writeAggregateTimeData(*dataAccess, buffers[r-1][i], &aggTimeID);
 								}
+								free(buffers[r-1]);
 							}
 
 						}
@@ -410,6 +412,7 @@ namespace treetimer
 								exit(EXIT_FAILURE);
 							}
 							MPI_Wait(&r, &s);
+							dataAccess->aggTimeRecords.clear();
 						}
 					}
 
@@ -492,13 +495,6 @@ namespace treetimer
 					if(config.eATimers)
 					{
 						int aggTimeID;
-						// tt_sql::drivers::writeAggregateTimeData(dataAccess, runID, rankGlobal, *callPathID, processID,
-						// 				node.nodeData.blockTimer->aggTimings.minWalltime,
-						// 				node.nodeData.blockTimer->aggTimings.avgWalltime,
-						// 				node.nodeData.blockTimer->aggTimings.maxWalltime,
-						// 				sqrt(node.nodeData.blockTimer->aggTimings.varianceWalltime),
-						// 				node.nodeData.blockTimer->aggTimings.count,
-						// 				&aggTimeID);
 						tt_sql::aggTimeData d;
 						d.runID = runID;
 						d.rank = dataAccess.rankGlobal;
@@ -509,7 +505,7 @@ namespace treetimer
 						d.maxWallTime = node.nodeData.blockTimer->aggTimings.maxWalltime;
 						d.stdev = sqrt(node.nodeData.blockTimer->aggTimings.varianceWalltime);
 						d.count = node.nodeData.blockTimer->aggTimings.count;
-						tt_sql::drivers::writeAggregateTimeData_v2(dataAccess, d, &aggTimeID);
+						tt_sql::drivers::writeAggregateTimeData(dataAccess, d, &aggTimeID);
 					}
 
 					// (d) Aggregate Parameter Data

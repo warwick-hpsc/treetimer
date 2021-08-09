@@ -25,7 +25,9 @@ namespace treetimer
 		{
 			// To implement gather-at-root, need a place to collate data before transferring.
 			// That place needs to be a class object passed around. Ideally would be a new class, 
-			// but will put it into TTSQLite3
+			// but will put it into TTSQLite3 to get something working asap.
+
+			// 'rank' can be inferred, but included so that struct matches SQL exactly:
 			typedef struct {
 				int runID, rank, callPathID, processID;
 				double minWallTime, avgWallTime, maxWallTime, stdev;
