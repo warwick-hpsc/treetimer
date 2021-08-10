@@ -53,6 +53,11 @@ namespace treetimer
 											          tt_ds::TreeNode<std::string, tt_m::InstrumentationData>& node,
 													  int runID, int processID, int parentID, int * callPathID, treetimer::config::Config& config);
 
+				int fetchNextGatheredRecord(tt_sql::TTSQLite3& dataAccess, void** records, int* nRecords, int* srcRank,
+											int elemBytes, MPI_Datatype elemType, int mpiTag);
+				int sendRecordsToRoot(tt_sql::TTSQLite3& dataAccess, const void* data, int nElems, 
+									MPI_Datatype elemType, int elemBytes, int mpiTag);
+
 				void callTreeTraversal(tt_sql::TTSQLite3& dataAccess,
 									   tt_ds::TreeNode<std::string, tt_m::InstrumentationData>& node,
 									   void (*func)(tt_sql::TTSQLite3& dataAccess,
