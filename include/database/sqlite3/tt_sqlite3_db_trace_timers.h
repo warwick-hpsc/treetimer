@@ -27,15 +27,9 @@ namespace treetimer
 			{
 				void writeSchemaTraceTimeData(TTSQLite3& dataAccess);
 
-				void findTraceTimeDataID(TTSQLite3& dataAccess,
-										 int runID, int callPathID, int processID,
-										 long nodeEntryID, long nodeExitID, double walltime,
-										 int * traceTimeID);
+				void findTraceTimeDataID(TTSQLite3& dataAccess, TTTraceTiming d, int * traceTimeID);
 
-				void writeTraceTimeData(TTSQLite3& dataAccess,
-										 int runID, int callPathID, int processID,
-										 long nodeEntryID, long nodeExitID, double walltime,
-										 int * traceTimeID);
+				void writeTraceTimeData(TTSQLite3& dataAccess, TTTraceTiming d, int * traceTimeID);
 			}
 		}
 	}

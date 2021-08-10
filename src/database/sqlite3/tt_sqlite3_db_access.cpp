@@ -24,9 +24,6 @@ namespace treetimer
 			{
 				this->filePath = filePath;
 
-				// This fixes push_back() seg-fault:
-				this->aggTimeRecords.resize(0);
-
 				// To avoid high-rank runs smashing filesystem, perform intra-node gather and write.
 				// Need to decide if will perform gather before traversing Tree.
 				int rankGlobal, nRanksGlobal, err;
@@ -53,6 +50,10 @@ namespace treetimer
 				this->nRanksLocal = nRanksLocal;
 				this->gatherIntraNode = gatherIntraNode;
 				this->nodeComm = nodeComm;
+
+				// This fixes push_back() seg-fault:
+				this->aggTimeRecords.resize(0);
+				this->traceTimeRecords.resize(0);
 			}
 
 			TTSQLite3::~TTSQLite3()

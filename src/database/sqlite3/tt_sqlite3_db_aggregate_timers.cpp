@@ -43,7 +43,7 @@ namespace treetimer
 					int err = sqlite3_exec(dataAccess.db, stmt.c_str(), NULL, 0, &zErrMsg);
 				}
 
-				void findAggregateTimeDataID(TTSQLite3& dataAccess, aggTimeData d, int * aggTimeID)
+				void findAggregateTimeDataID(TTSQLite3& dataAccess, TTAggTiming d, int * aggTimeID)
 				{
 					sqlite3_stmt * pStmt;
 					char * zErrMsg = 0;
@@ -93,7 +93,7 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeAggregateTimeData(TTSQLite3& dataAccess, aggTimeData d, int * aggTimeID)
+				void writeAggregateTimeData(TTSQLite3& dataAccess, TTAggTiming d, int * aggTimeID)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
 						dataAccess.aggTimeRecords.push_back(d);

@@ -39,7 +39,7 @@ endif
 
 # Build options:
 opt           = -O2
-debug         = -g -O2
+debug         = -g -O2 -DDEBUG
 
 # Include Paths
 TREETIMER_INC=./include

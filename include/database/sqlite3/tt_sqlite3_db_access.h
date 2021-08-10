@@ -34,7 +34,13 @@ namespace treetimer
 				int runID, rank, callPathID, processID;
 				double minWallTime, avgWallTime, maxWallTime, stdev;
 				int count;
-			} aggTimeData;
+			} TTAggTiming;
+
+			typedef struct {
+				int runID, rank, callPathID, processID;
+				int nodeEntryID, nodeExitID;
+				double walltime;
+			} TTTraceTiming;
 
 			class TTSQLite3
 			{
@@ -51,7 +57,8 @@ namespace treetimer
 					int nRanksLocal = -1;
 					bool gatherIntraNode = false;
 					MPI_Comm nodeComm;
-					std::vector<aggTimeData> aggTimeRecords;
+					std::vector<TTAggTiming> aggTimeRecords;
+					std::vector<TTTraceTiming> traceTimeRecords;
 			};
 
 			namespace drivers

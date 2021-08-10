@@ -11,7 +11,9 @@
  */
 
 #include "tt_io_sqlite3.h"
+
 #include "tt_code_block_type.h"
+#include "tt_global.h"
 
 #include "tt_sqlite3_db_access.h"
 #include "tt_sqlite3_db_aggregate_parameters.h"
@@ -41,6 +43,11 @@
 #include <vector>
 
 namespace tt_sql = treetimer::database::tt_sqlite3;
+
+// Note! When performing intra-node gather of database records,
+// MPI tags will be used to distinguish between different DB tables.
+#define TAG_AGG 0
+#define TAG_TRC 1
 
 namespace treetimer
 {
@@ -272,19 +279,18 @@ namespace treetimer
 
 					// Create MPI type for a AggregateTime record:
 					int err;
-					tt_sql::aggTimeData atr;
 					MPI_Datatype aggTimeRecord_MPI;
 					int lengths[9] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
 					MPI_Aint displacements[9];
-					displacements[0] = offsetof(tt_sql::aggTimeData, runID);
-					displacements[1] = offsetof(tt_sql::aggTimeData, rank);
-					displacements[2] = offsetof(tt_sql::aggTimeData, callPathID);
-					displacements[3] = offsetof(tt_sql::aggTimeData, processID);
-					displacements[4] = offsetof(tt_sql::aggTimeData, minWallTime);
-					displacements[5] = offsetof(tt_sql::aggTimeData, avgWallTime);
-					displacements[6] = offsetof(tt_sql::aggTimeData, maxWallTime);
-					displacements[7] = offsetof(tt_sql::aggTimeData, stdev);
-					displacements[8] = offsetof(tt_sql::aggTimeData, count);
+					displacements[0] = offsetof(tt_sql::TTAggTiming, runID);
+					displacements[1] = offsetof(tt_sql::TTAggTiming, rank);
+					displacements[2] = offsetof(tt_sql::TTAggTiming, callPathID);
+					displacements[3] = offsetof(tt_sql::TTAggTiming, processID);
+					displacements[4] = offsetof(tt_sql::TTAggTiming, minWallTime);
+					displacements[5] = offsetof(tt_sql::TTAggTiming, avgWallTime);
+					displacements[6] = offsetof(tt_sql::TTAggTiming, maxWallTime);
+					displacements[7] = offsetof(tt_sql::TTAggTiming, stdev);
+					displacements[8] = offsetof(tt_sql::TTAggTiming, count);
 					MPI_Datatype types[9] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, 
 												MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, 
 												MPI_INT };
@@ -306,62 +312,6 @@ namespace treetimer
 						if (dataAccess->rankLocal == 0) {
 							int n = dataAccess->nRanksLocal;
 
-							/*
-							int  bufferSizes[n-1];
-							MPI_Status stats[n-1];
-							MPI_Request reqs[n-1];
-							bool    receives[n-1];
-							int nReceives = 0;
-							for (int r=1; r<n; r++) {
-								receives[r-1] = false;
-								err = MPI_Probe(r, 0, dataAccess->nodeComm, &stats[r-1]);
-								if (err != MPI_SUCCESS) {
-									fprintf(stderr, "Gather rank failed to probe msg from %d\n", r);
-									MPI_Abort(MPI_COMM_WORLD, err);
-									exit(EXIT_FAILURE);
-								}
-							}
-
-							// Gather data:
-							tt_sql::aggTimeData* buffers[n-1];
-							for (int r=1; r<n; r++) {
-								err = MPI_Get_count(&stats[r-1], aggTimeRecord_MPI, &bufferSizes[r-1]);
-								if (err != MPI_SUCCESS) {
-									fprintf(stderr, "Gather rank failed on MPI_Get_count(rank=%d)\n", r);
-									MPI_Abort(MPI_COMM_WORLD, err);
-									exit(EXIT_FAILURE);
-								}
-
-								buffers[r-1] = (tt_sql::aggTimeData*)malloc(bufferSizes[r-1] * sizeof(tt_sql::aggTimeData));
-								err = MPI_Irecv(buffers[r-1], bufferSizes[r-1], aggTimeRecord_MPI, r, 0, dataAccess->nodeComm, &reqs[r-1]);
-								if (err != MPI_SUCCESS) {
-									fprintf(stderr, "Gather rank failed on MPI_Irecv(rank=%d)\n", r);
-									MPI_Abort(MPI_COMM_WORLD, err);
-									exit(EXIT_FAILURE);
-								}
-							}
-
-							// Write data as it arrives:
-							int aggTimeID;
-							while (nReceives != (n-1)) {
-								int indx;
-								MPI_Status s;
-								err = MPI_Waitany(n-1, reqs, &indx, &s);
-								if (err != MPI_SUCCESS) {
-									fprintf(stderr, "Gather rank failed on MPI_Waitany\n");
-									MPI_Abort(MPI_COMM_WORLD, err);
-									exit(EXIT_FAILURE);
-								}
-								nReceives++;
-								int r = indx+1;
-								int nr = bufferSizes[r-1];
-								for (int i=0; i<nr; i++) {
-									tt_sql::drivers::writeAggregateTimeData(*dataAccess, buffers[r-1][i], &aggTimeID);
-								}
-								free(buffers[r-1]);
-							}
-							*/
-
 							// New gather logic: switch probe to non-blocking. Above use of blocking probe
 							// was prevening any async comms from occurring.
 							int nReceives = 0;
@@ -370,15 +320,14 @@ namespace treetimer
 							MPI_Status stat;
 							MPI_Request req;
 							int bufferSize = 0;
-							tt_sql::aggTimeData* buffer = NULL;
+							tt_sql::TTAggTiming* buffer = NULL;
 							int aggTimeID;
 							while (nReceives != (n-1)) {
 								for (int r=1; r<n; r++) {
-									err = MPI_Iprobe(r, 0, dataAccess->nodeComm, &ready, &stat);
+									err = MPI_Iprobe(r, TAG_AGG, dataAccess->nodeComm, &ready, &stat);
 									if (err != MPI_SUCCESS) {
-										fprintf(stderr, "Gather rank failed to probe msg from %d\n", r);
-										MPI_Abort(MPI_COMM_WORLD, err);
-										exit(EXIT_FAILURE);
+										fprintf(stderr, "Root rank failed to probe msg from %d\n", r);
+										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 									}
 
 									if (ready == 1) {
@@ -387,17 +336,19 @@ namespace treetimer
 
 										err = MPI_Get_count(&stat, aggTimeRecord_MPI, &bufferSize);
 										if (err != MPI_SUCCESS) {
-											fprintf(stderr, "Gather rank failed on MPI_Get_count(rank=%d)\n", r);
-											MPI_Abort(MPI_COMM_WORLD, err);
-											exit(EXIT_FAILURE);
+											fprintf(stderr, "Root failed on MPI_Get_count(rank=%d)\n", r);
+											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
 
-										buffer = (tt_sql::aggTimeData*)malloc(bufferSize * sizeof(tt_sql::aggTimeData));
-										err = MPI_Recv(buffer, bufferSize, aggTimeRecord_MPI, r, 0, dataAccess->nodeComm, &stat);
+										if (bufferSize == 0) {
+											buffer = (tt_sql::TTAggTiming*)malloc(1 * sizeof(tt_sql::TTAggTiming));
+										} else {
+											buffer = (tt_sql::TTAggTiming*)malloc(bufferSize * sizeof(tt_sql::TTAggTiming));
+										}
+										err = MPI_Recv(buffer, bufferSize, aggTimeRecord_MPI, r, TAG_AGG, dataAccess->nodeComm, &stat);
 										if (err != MPI_SUCCESS) {
-											fprintf(stderr, "Gather rank failed on MPI_Recv(rank=%d)\n", r);
-											MPI_Abort(MPI_COMM_WORLD, err);
-											exit(EXIT_FAILURE);
+											fprintf(stderr, "Root failed on MPI_Recv(rank=%d)\n", r);
+											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
 
 										for (int i=0; i<bufferSize; i++) {
@@ -407,24 +358,19 @@ namespace treetimer
 										free(buffer); buffer = NULL; bufferSize = 0;
 									}
 								}
-
-								if (!workDone) {
-									// Sleep 1 second
-									sleep(1);
-								}
+								if (!workDone) sleep(1);
 							}
 						}
 						else {
 							// Send to local root
-							MPI_Request r;
-							MPI_Status s;
-							err = MPI_Isend(dataAccess->aggTimeRecords.data(), dataAccess->aggTimeRecords.size(), aggTimeRecord_MPI, 0, 0, dataAccess->nodeComm, &r);
+							MPI_Request req;
+							MPI_Status stat;
+							err = MPI_Isend(dataAccess->aggTimeRecords.data(), dataAccess->aggTimeRecords.size(), aggTimeRecord_MPI, 0, TAG_AGG, dataAccess->nodeComm, &req);
 							if (err != MPI_SUCCESS) {
-								fprintf(stderr, "Rankd %d failed Isend\n", r);
-								MPI_Abort(MPI_COMM_WORLD, err);
-								exit(EXIT_FAILURE);
+								fprintf(stderr, "Rank %d failed Isend\n", dataAccess->rankGlobal);
+								MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 							}
-							MPI_Wait(&r, &s);
+							MPI_Wait(&req, &stat);
 							dataAccess->aggTimeRecords.clear();
 						}
 					}
@@ -446,6 +392,102 @@ namespace treetimer
 
 					// Start at the root of the tree - there is no valid parentID so pass as -1
 					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeTraceInstrumentationData, config.sqlIORunID, config.sqlIOProcessID, -1, config);
+
+					// Create MPI type for a TraceTime record:
+					int err;
+					MPI_Datatype traceTimeRecord_MPI;
+					int lengths[7] = {1, 1, 1, 1, 1, 1, 1};
+					MPI_Aint displacements[9];
+					displacements[0] = offsetof(tt_sql::TTTraceTiming, runID);
+					displacements[1] = offsetof(tt_sql::TTTraceTiming, rank);
+					displacements[2] = offsetof(tt_sql::TTTraceTiming, callPathID);
+					displacements[3] = offsetof(tt_sql::TTTraceTiming, processID);
+					displacements[4] = offsetof(tt_sql::TTTraceTiming, nodeEntryID);
+					displacements[5] = offsetof(tt_sql::TTTraceTiming, nodeExitID);
+					displacements[6] = offsetof(tt_sql::TTTraceTiming, walltime);
+					MPI_Datatype types[7] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, 
+												MPI_INT, MPI_INT, MPI_DOUBLE };
+					err = MPI_Type_create_struct(7, lengths, displacements, types, &traceTimeRecord_MPI);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Rank %d failed to create custom type for traceTimeRecord\n", dataAccess->rankGlobal);
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					err = MPI_Type_commit(&traceTimeRecord_MPI);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Rank %d failed to commit custom type for traceTimeRecord\n", dataAccess->rankGlobal);
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+
+					// Perform intra-node gather-at-root:
+					if (dataAccess->nRanksLocal > 1) {
+						if (dataAccess->rankLocal == 0) {
+							int n = dataAccess->nRanksLocal;
+
+							// New gather logic: switch probe to non-blocking. Above use of blocking probe
+							// was prevening any async comms from occurring.
+							int nReceives = 0;
+							bool workDone = false;
+							int ready = 0;
+							MPI_Status stat;
+							MPI_Request req;
+							int bufferSize = 0;
+							tt_sql::TTTraceTiming* buffer = NULL;
+							int traceTimeID;
+							while (nReceives != (n-1)) {
+								for (int r=1; r<n; r++) {
+									err = MPI_Iprobe(r, TAG_TRC, dataAccess->nodeComm, &ready, &stat);
+									if (err != MPI_SUCCESS) {
+										fprintf(stderr, "Gather rank failed to probe msg from %d\n", r);
+										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+									}
+
+									if (ready == 1) {
+										workDone = true;
+										nReceives++;
+
+										err = MPI_Get_count(&stat, traceTimeRecord_MPI, &bufferSize);
+										if (err != MPI_SUCCESS) {
+											fprintf(stderr, "Gather rank failed on MPI_Get_count(rank=%d)\n", r);
+											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+										}
+
+										if (bufferSize == 0) {
+											buffer = (tt_sql::TTTraceTiming*)malloc(1 * sizeof(tt_sql::TTTraceTiming));
+										} else {
+											buffer = (tt_sql::TTTraceTiming*)malloc(bufferSize * sizeof(tt_sql::TTTraceTiming));
+										}
+										err = MPI_Recv(buffer, bufferSize, traceTimeRecord_MPI, r, TAG_TRC, dataAccess->nodeComm, &stat);
+										if (err != MPI_SUCCESS) {
+											fflush(stdout); sleep(1);
+											fprintf(stderr, "Root failed on MPI_Recv(rank=%d)\n", r);
+											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+										}
+
+										for (int i=0; i<bufferSize; i++) {
+											tt_sql::drivers::writeTraceTimeData(*dataAccess, buffer[i], &traceTimeID);
+										}
+
+										free(buffer); buffer = NULL; bufferSize = 0;
+									}
+								}
+								if (!workDone) sleep(1);
+							}
+						}
+						else {
+							// Send to local root
+							MPI_Request r;
+							MPI_Status s;
+							err = MPI_Isend(dataAccess->traceTimeRecords.data(), dataAccess->traceTimeRecords.size(), traceTimeRecord_MPI, 0, TAG_TRC, dataAccess->nodeComm, &r);
+							if (err != MPI_SUCCESS) {
+								fprintf(stderr, "Rankd %d failed Isend\n", r);
+								MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+							}
+							MPI_Wait(&r, &s);
+							dataAccess->traceTimeRecords.clear();
+						}
+					}
 
 					// We may wish to write trace data multiple times, this is just an indicator that we've done it at least once
 					config.sqlIOTraceData = true;
@@ -508,7 +550,7 @@ namespace treetimer
 					if(config.eATimers)
 					{
 						int aggTimeID;
-						tt_sql::aggTimeData d;
+						tt_sql::TTAggTiming d;
 						d.runID = runID;
 						d.rank = dataAccess.rankGlobal;
 						d.callPathID = *callPathID;
@@ -632,11 +674,15 @@ namespace treetimer
 						while(ptr != nullptr)
 						{
 							int traceTimeID;
-							tt_sql::drivers::writeTraceTimeData(dataAccess,
-																	 runID, *callPathID, processID,
-																	 ptr->data.callEntryID, ptr->data.callExitID,
-																	 ptr->data.wallTime,
-																	 &traceTimeID);
+							tt_sql::TTTraceTiming d;
+							d.runID = runID;
+							d.rank = dataAccess.rankGlobal;
+							d.callPathID = *callPathID;
+							d.processID = processID;
+							d.nodeEntryID = ptr->data.callEntryID;
+							d.nodeExitID  = ptr->data.callExitID;
+							d.walltime    = ptr->data.wallTime;
+							tt_sql::drivers::writeTraceTimeData(dataAccess, d, &traceTimeID);
 
 							ptr = ptr->next;
 						}

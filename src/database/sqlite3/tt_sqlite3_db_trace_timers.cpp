@@ -26,6 +26,7 @@ namespace treetimer
 					char * zErrMsg = 0;
 					std::string stmt = "CREATE TABLE IF NOT EXISTS TraceTimeData(TraceTimeID INTEGER, "
 																			"RunID INTEGER, "
+																			"Rank INTEGER, "
 																			"CallPathID INTEGER, "
 																			"ProcessID INTEGER, "
 																			"NodeEntryID INTEGER, "
@@ -34,17 +35,14 @@ namespace treetimer
 																			"FOREIGN KEY(RunID) REFERENCES ProfileRunConfigData(RunID),"
 																			"FOREIGN KEY(CallPathID) REFERENCES CallPathData(CallPathID), "
 																			"FOREIGN KEY(ProcessID) REFERENCES ProcessData(ProcessID), "
-																			"UNIQUE(RunID, CallPathID, ProcessID, NodeEntryID, NodeExitID), "
+																			"UNIQUE(RunID, Rank, CallPathID, ProcessID, NodeEntryID, NodeExitID), "
 																		 	"PRIMARY KEY(TraceTimeID)"
 																		 	");";
 
 					int err = sqlite3_exec(dataAccess.db, stmt.c_str(), NULL, 0, &zErrMsg);
 				}
 
-				void findTraceTimeDataID(TTSQLite3& dataAccess,
-										 int runID, int callPathID, int processID,
-										 long nodeEntryID, long nodeExitID, double walltime,
-										 int * traceTimeID)
+				void findTraceTimeDataID(TTSQLite3& dataAccess, TTTraceTiming d, int * traceTimeID)
 				{
 					sqlite3_stmt * pStmt;
 					char * zErrMsg = 0;
@@ -52,6 +50,7 @@ namespace treetimer
 					int err = sqlite3_prepare(dataAccess.db,
 											  "SELECT TraceTimeID FROM TraceTimeData WHERE "
 										      "RunID = ? AND "
+										      "Rank = ? AND "
 											  "CallPathID = ? AND "
 											  "ProcessID = ? AND "
 											  "NodeEntryID = ? AND "
@@ -59,12 +58,13 @@ namespace treetimer
 											  "WallTime = ?",
 											  -1, &pStmt, NULL);
 
-					sqlite3_bind_int(pStmt,1, runID);
-					sqlite3_bind_int(pStmt,2, callPathID);
-					sqlite3_bind_int(pStmt,3, processID);
-					sqlite3_bind_int(pStmt,4, nodeEntryID);	// SQLite should handle the use of longs with dynamic typing
-					sqlite3_bind_int(pStmt,5, nodeExitID);
-					sqlite3_bind_double(pStmt,6, walltime);
+					sqlite3_bind_int(   pStmt,1, d.runID);
+					sqlite3_bind_int(   pStmt,2, d.rank);
+					sqlite3_bind_int(   pStmt,3, d.callPathID);
+					sqlite3_bind_int(   pStmt,4, d.processID);
+					sqlite3_bind_int(   pStmt,5, d.nodeEntryID);
+					sqlite3_bind_int(   pStmt,6, d.nodeExitID);
+					sqlite3_bind_double(pStmt,7, d.walltime);
 
 					err = sqlite3_step(pStmt);
 
@@ -87,28 +87,32 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeTraceTimeData(TTSQLite3& dataAccess,
-										 int runID, int callPathID, int processID,
-										 long nodeEntryID, long nodeExitID, double walltime,
-										 int * traceTimeID)
+				void writeTraceTimeData(TTSQLite3& dataAccess, TTTraceTiming d, int * traceTimeID)
 				{
+					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
+						dataAccess.traceTimeRecords.push_back(d);
+						*traceTimeID = -1;
+						return;
+					}
+
 					sqlite3_stmt * pStmt;
 					int err;
 
 					// Check for existing entry
 					int tmpID;
-					findTraceTimeDataID(dataAccess, runID, callPathID, processID, nodeEntryID, nodeExitID, walltime, &tmpID);
+					findTraceTimeDataID(dataAccess, d, &tmpID);
 
 					if(tmpID == -1)
 					{
-						err = sqlite3_prepare(dataAccess.db,"INSERT INTO TraceTimeData VALUES(NULL, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+						err = sqlite3_prepare(dataAccess.db,"INSERT INTO TraceTimeData VALUES(NULL, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
-						sqlite3_bind_int(pStmt,1, runID);
-						sqlite3_bind_int(pStmt,2, callPathID);
-						sqlite3_bind_int(pStmt,3, processID);
-						sqlite3_bind_int(pStmt,4, nodeEntryID);
-						sqlite3_bind_int(pStmt,5, nodeExitID);
-						sqlite3_bind_double(pStmt,6, walltime);
+						sqlite3_bind_int(   pStmt,1, d.runID);
+						sqlite3_bind_int(   pStmt,2, d.rank);
+						sqlite3_bind_int(   pStmt,3, d.callPathID);
+						sqlite3_bind_int(   pStmt,4, d.processID);
+						sqlite3_bind_int(   pStmt,5, d.nodeEntryID);
+						sqlite3_bind_int(   pStmt,6, d.nodeExitID);
+						sqlite3_bind_double(pStmt,7, d.walltime);
 						err = sqlite3_step(pStmt);
 
 						if(err == SQLITE_ERROR)

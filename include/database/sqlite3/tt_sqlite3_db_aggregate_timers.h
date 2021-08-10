@@ -27,9 +27,9 @@ namespace treetimer
 			{
 				void writeSchemaAggregateTimeData(TTSQLite3& dataAccess);
 
-				void findAggregateTimeDataID(TTSQLite3& dataAccess, aggTimeData d, int * aggTimeID);
+				void findAggregateTimeDataID(TTSQLite3& dataAccess, TTAggTiming d, int * aggTimeID);
 
-				void writeAggregateTimeData(TTSQLite3& dataAccess, aggTimeData d, int * aggTimeID);
+				void writeAggregateTimeData(TTSQLite3& dataAccess, TTAggTiming d, int * aggTimeID);
 			}
 		}
 	}
