@@ -19,6 +19,8 @@
 #include "mpi.h"
 #include "sqlite3.h"
 
+#include "tt_global.h"
+
 namespace treetimer
 {
 	namespace database
@@ -31,16 +33,50 @@ namespace treetimer
 
 			// 'rank' can be inferred, but included so that struct matches SQL exactly:
 			typedef struct {
-				int runID, rank, callPathID, processID;
+				int rank, callPathID, processID;
 				double minWallTime, avgWallTime, maxWallTime, stdev;
 				int count;
-			} TTAggTiming;
+			} TT_AggTiming;
 
 			typedef struct {
-				int runID, rank, callPathID, processID;
+				int rank, callPathID, processID;
 				int nodeEntryID, nodeExitID;
 				double walltime;
-			} TTTraceTiming;
+			} TT_TraceTiming;
+
+			typedef struct {
+				int rank;
+				char nodeName[MAX_STRING_LENGTH];
+				int blockType;
+				int callPathID, parentID;
+			} TT_CallPathNode;
+
+
+			typedef struct {
+				int physicalCoreNum;
+			} TT_CpuCore;
+
+			typedef struct {
+				char cpuModel[MAX_STRING_LENGTH];
+			} TT_Cpu;
+
+			typedef struct {
+				int phySocketNum;
+			} TT_Socket;
+
+			typedef struct {
+				char nodeName[MAX_STRING_LENGTH];
+				int socketCount;
+			} TT_ComputeNode;
+
+			typedef struct {
+				int thread, rankGlobal;
+				char nodeName[MAX_STRING_LENGTH];
+				char cpuModel[MAX_STRING_LENGTH];
+				int socketCount, phySocketNum, physicalCoreNum;
+			} TT_HwInfo;
+
+
 
 			class TTSQLite3
 			{
@@ -57,8 +93,17 @@ namespace treetimer
 					int nRanksLocal = -1;
 					bool gatherIntraNode = false;
 					MPI_Comm nodeComm;
-					std::vector<TTAggTiming> aggTimeRecords;
-					std::vector<TTTraceTiming> traceTimeRecords;
+
+					std::vector<TT_CallPathNode> callPathNodeRecords;
+					std::vector<TT_AggTiming> aggTimeRecords;
+					std::vector<TT_TraceTiming> traceTimeRecords;
+
+					std::vector<int> rankLocalToProcessID;
+					std::vector<int> rankLocalToRankGlobal;
+
+					// Global variables:
+					int processID = -1;
+					int runID = -1;
 			};
 
 			namespace drivers

@@ -42,7 +42,7 @@ namespace treetimer
 					int err = sqlite3_exec(dataAccess.db, stmt.c_str(), NULL, 0, &zErrMsg);
 				}
 
-				void findTraceTimeDataID(TTSQLite3& dataAccess, TTTraceTiming d, int * traceTimeID)
+				void findTraceTimeDataID(TTSQLite3& dataAccess, TT_TraceTiming d, int * traceTimeID)
 				{
 					sqlite3_stmt * pStmt;
 					char * zErrMsg = 0;
@@ -58,7 +58,7 @@ namespace treetimer
 											  "WallTime = ?",
 											  -1, &pStmt, NULL);
 
-					sqlite3_bind_int(   pStmt,1, d.runID);
+					sqlite3_bind_int(   pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(   pStmt,2, d.rank);
 					sqlite3_bind_int(   pStmt,3, d.callPathID);
 					sqlite3_bind_int(   pStmt,4, d.processID);
@@ -87,7 +87,7 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeTraceTimeData(TTSQLite3& dataAccess, TTTraceTiming d, int * traceTimeID)
+				void writeTraceTimeData(TTSQLite3& dataAccess, TT_TraceTiming d, int * traceTimeID)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
 						dataAccess.traceTimeRecords.push_back(d);
@@ -106,7 +106,7 @@ namespace treetimer
 					{
 						err = sqlite3_prepare(dataAccess.db,"INSERT INTO TraceTimeData VALUES(NULL, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
-						sqlite3_bind_int(   pStmt,1, d.runID);
+						sqlite3_bind_int(   pStmt,1, dataAccess.runID);
 						sqlite3_bind_int(   pStmt,2, d.rank);
 						sqlite3_bind_int(   pStmt,3, d.callPathID);
 						sqlite3_bind_int(   pStmt,4, d.processID);
@@ -134,6 +134,52 @@ namespace treetimer
 					{
 						*traceTimeID = tmpID;
 					}
+				}
+
+				MPI_Datatype createTraceTimeMpiType()
+				{
+					// Create MPI type for a TraceTime record:
+					int err;
+					MPI_Datatype traceTimeRecord_MPI, tmpType;
+
+					int lengths[6] = {1, 1, 1, 1, 1, 1};
+					MPI_Aint displacements[6];
+					displacements[0] = offsetof(TT_TraceTiming, rank);
+					displacements[1] = offsetof(TT_TraceTiming, callPathID);
+					displacements[2] = offsetof(TT_TraceTiming, processID);
+					displacements[3] = offsetof(TT_TraceTiming, nodeEntryID);
+					displacements[4] = offsetof(TT_TraceTiming, nodeExitID);
+					displacements[5] = offsetof(TT_TraceTiming, walltime);
+					MPI_Datatype types[6] = { MPI_INT, MPI_INT, MPI_INT, 
+												MPI_INT, MPI_INT, MPI_DOUBLE };
+					err = MPI_Type_create_struct(6, lengths, displacements, types, &tmpType);
+
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to create custom type for traceTimeRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					MPI_Aint lb, extent;
+					err = MPI_Type_get_extent(tmpType, &lb, &extent);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to get extent of custom type for traceTimeRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					err = MPI_Type_create_resized(tmpType, lb, extent, &traceTimeRecord_MPI);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to resize custom type for traceTimeRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					err = MPI_Type_commit(&traceTimeRecord_MPI);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to commit custom type for traceTimeRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+
+					return traceTimeRecord_MPI;
 				}
 			}
 		}

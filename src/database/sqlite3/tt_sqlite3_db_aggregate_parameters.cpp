@@ -95,7 +95,7 @@ namespace treetimer
 				}
 
 				void findAggregateParameterIntDataID(TTSQLite3& dataAccess,
-										   int runID, int callPathID, int processID, std::string paramName,
+										   int callPathID, int processID, std::string paramName,
 										   int minValue, double avgValue, int maxValue, double stddev, int count,
 										   int * aggParamIntID)
 				{
@@ -115,7 +115,7 @@ namespace treetimer
 											  "Count = ?",
 											  -1, &pStmt, NULL);
 
-					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(pStmt,2, callPathID);
 					sqlite3_bind_int(pStmt,3, processID);
 					sqlite3_bind_text(pStmt,4, paramName.c_str(), -1, SQLITE_TRANSIENT);
@@ -151,7 +151,7 @@ namespace treetimer
 
 
 				void findAggregateParameterFloatDataID(TTSQLite3& dataAccess,
-										   int runID, int callPathID, int processID, std::string paramName,
+										   int callPathID, int processID, std::string paramName,
 										   double minValue, double avgValue, double maxValue, double stddev, int count,
 										   int * aggParamFloatID)
 				{
@@ -171,7 +171,7 @@ namespace treetimer
 											  "Count = ?",
 											  -1, &pStmt, NULL);
 
-					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(pStmt,2, callPathID);
 					sqlite3_bind_int(pStmt,3, processID);
 					sqlite3_bind_text(pStmt,4, paramName.c_str(), -1, SQLITE_TRANSIENT);
@@ -206,7 +206,7 @@ namespace treetimer
 
 
 				void findAggregateParameterBoolDataID(TTSQLite3& dataAccess,
-										   int runID, int callPathID, int processID, std::string paramName,
+										   int callPathID, int processID, std::string paramName,
 										   int minValue, double avgValue, int maxValue, double stddev, int count,
 										   int * aggParamBoolID)
 				{
@@ -226,7 +226,7 @@ namespace treetimer
 											  "Count = ?",
 											  -1, &pStmt, NULL);
 
-					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(pStmt,2, callPathID);
 					sqlite3_bind_int(pStmt,3, processID);
 					sqlite3_bind_text(pStmt,4, paramName.c_str(), -1, SQLITE_TRANSIENT);
@@ -260,7 +260,7 @@ namespace treetimer
 				}
 
 				void writeAggregateParameterIntData(TTSQLite3& dataAccess,
-						   int runID, int callPathID, int processID, std::string paramName,
+						   int callPathID, int processID, std::string paramName,
 						   int minValue, double avgValue, int maxValue, double stddev, int count,
 						   int * aggParamIntID)
 				{
@@ -269,7 +269,8 @@ namespace treetimer
 
 					// Check for existing entry
 					int tmpID;
-					findAggregateParameterIntDataID(dataAccess, runID, callPathID, processID,paramName,
+					findAggregateParameterIntDataID(dataAccess, 
+													callPathID, processID,paramName,
 												    minValue, avgValue, maxValue, stddev, count,
 												    &tmpID);
 
@@ -277,7 +278,7 @@ namespace treetimer
 					{
 						err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterInt VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
-						sqlite3_bind_int(pStmt,1, runID);
+						sqlite3_bind_int(pStmt,1, dataAccess.runID);
 						sqlite3_bind_int(pStmt,2, callPathID);
 						sqlite3_bind_int(pStmt,3, processID);
 						sqlite3_bind_text(pStmt,4, paramName.c_str(), -1, SQLITE_TRANSIENT);
@@ -313,7 +314,7 @@ namespace treetimer
 
 
 				void writeAggregateParameterFloatData(TTSQLite3& dataAccess,
-						   int runID, int callPathID, int processID, std::string paramName,
+						   int callPathID, int processID, std::string paramName,
 						   double minValue, double avgValue, double maxValue, double stddev, int count,
 						   int * aggParamFloatID)
 				{
@@ -322,7 +323,8 @@ namespace treetimer
 
 					// Check for existing entry
 					int tmpID;
-					findAggregateParameterFloatDataID(dataAccess, runID, callPathID, processID,paramName,
+					findAggregateParameterFloatDataID(dataAccess, 
+													callPathID, processID,paramName,
 												    minValue, avgValue, maxValue, stddev, count,
 												    &tmpID);
 
@@ -330,7 +332,7 @@ namespace treetimer
 					{
 						err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterFloat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
-						sqlite3_bind_int(pStmt,1, runID);
+						sqlite3_bind_int(pStmt,1, dataAccess.runID);
 						sqlite3_bind_int(pStmt,2, callPathID);
 						sqlite3_bind_int(pStmt,3, processID);
 						sqlite3_bind_text(pStmt,4, paramName.c_str(), -1, SQLITE_TRANSIENT);
@@ -366,7 +368,7 @@ namespace treetimer
 
 
 				void writeAggregateParameterBoolData(TTSQLite3& dataAccess,
-						   int runID, int callPathID, int processID, std::string paramName,
+						   int callPathID, int processID, std::string paramName,
 						   int minValue, double avgValue, int maxValue, double stddev, int count,
 						   int * aggParamBoolID)
 				{
@@ -375,7 +377,8 @@ namespace treetimer
 
 					// Check for existing entry
 					int tmpID;
-					findAggregateParameterBoolDataID(dataAccess, runID, callPathID, processID,paramName,
+					findAggregateParameterBoolDataID(dataAccess, 
+													callPathID, processID,paramName,
 												    minValue, avgValue, maxValue, stddev, count,
 												    &tmpID);
 
@@ -383,7 +386,7 @@ namespace treetimer
 					{
 						err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterBool VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
-						sqlite3_bind_int(pStmt,1, runID);
+						sqlite3_bind_int(pStmt,1, dataAccess.runID);
 						sqlite3_bind_int(pStmt,2, callPathID);
 						sqlite3_bind_int(pStmt,3, processID);
 						sqlite3_bind_text(pStmt,4, paramName.c_str(), -1, SQLITE_TRANSIENT);

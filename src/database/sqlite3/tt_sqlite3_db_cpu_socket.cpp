@@ -36,7 +36,7 @@ namespace treetimer
 					int err = sqlite3_exec(dataAccess.db, stmt.c_str(), NULL, 0, &zErrMsg);
 				}
 
-				void findCPUSocketDataID(TTSQLite3& dataAccess, int computeNodeID, int cpuID, int phySocketNum, int * cpuSocketID)
+				void findCPUSocketDataID(TTSQLite3& dataAccess, int computeNodeID, int cpuID, TT_Socket d, int * cpuSocketID)
 				{
 					sqlite3_stmt * pStmt;
 					char * zErrMsg = 0;
@@ -50,49 +50,58 @@ namespace treetimer
 
 					sqlite3_bind_int(pStmt,1, computeNodeID);
 					sqlite3_bind_int(pStmt,2, cpuID);
-					sqlite3_bind_int(pStmt,3, phySocketNum);
+					sqlite3_bind_int(pStmt,3, d.phySocketNum);
 					err = sqlite3_step(pStmt);
 
-					if(err == SQLITE_ERROR)
-					{
-						std::cout << "SQL Error encountered in findCPUSocketDataID\n";
+					if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
+						if (err == SQLITE_ERROR) {
+							std::cout << "SQL Error encountered in findCPUSocketDataID\n";
+						} else if (err = SQLITE_MISUSE) {
+							std::cout << "SQL Error encountered in findCPUSocketDataID - misuse\n";
+						} else {
+							std::cout << "SQL Error encountered in findCPUSocketDataID - unknown error code " << err << std::endl;
+						}
 						char * expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
 						sqlite3_free(expandedQuery);
 					}
-					else if(err == SQLITE_ROW)
-					{
+					else if(err == SQLITE_ROW) {
 						*cpuSocketID = sqlite3_column_int(pStmt, 0);
 					}
-					else
-					{
+					else {
 						*cpuSocketID = -1;
 					}
 
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeCPUSocketData(TTSQLite3& dataAccess, int computeNodeID, int cpuID, int phySocketNum, int * cpuSocketID)
+				void writeCPUSocketData(TTSQLite3& dataAccess, int computeNodeID, int cpuID, TT_Socket d, int * cpuSocketID)
 				{
 					sqlite3_stmt * pStmt;
 					int err;
 
 					// Check for existing entry
 					int tmpID;
-					findCPUSocketDataID(dataAccess, computeNodeID, cpuID, phySocketNum, &tmpID);
+					findCPUSocketDataID(dataAccess, computeNodeID, cpuID, d, &tmpID);
 
 					if(tmpID == -1)
 					{
 						sqlite3_prepare(dataAccess.db,"INSERT INTO CPUSocketData VALUES(NULL, ?, ?, ?)", -1, &pStmt, NULL);
 						sqlite3_bind_int(pStmt,1, computeNodeID);
 						sqlite3_bind_int(pStmt,2, cpuID);
-						sqlite3_bind_int(pStmt,3, phySocketNum);
+						sqlite3_bind_int(pStmt,3, d.phySocketNum);
 						err = sqlite3_step(pStmt);
 
-						if(err == SQLITE_ERROR)
-						{
+						if (err != SQLITE_OK && err != SQLITE_DONE) {
+							if (err == SQLITE_ERROR) {
+								std::cout << "SQL Error encountered in writeCPUSocketData\n";
+							} else if (err = SQLITE_MISUSE) {
+								std::cout << "SQL Error encountered in writeCPUSocketData - misuse\n";
+							} else {
+								std::cout << "SQL Error encountered in writeCPUSocketData - unknown error code " << err << std::endl;
+							}
 							std::cout << "SQL Error encountered in writeCPUSocketData\n";
 							char * expandedQuery = sqlite3_expanded_sql(pStmt);
 							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
@@ -101,8 +110,7 @@ namespace treetimer
 							sqlite3_free(expandedQuery);
 							*cpuSocketID = -1;
 						}
-						else
-						{
+						else {
 							*cpuSocketID = sqlite3_last_insert_rowid(dataAccess.db);
 						}
 

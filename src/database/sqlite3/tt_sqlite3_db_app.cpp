@@ -21,92 +21,94 @@ namespace treetimer
 		{
 			namespace drivers
 			{
-				void writeSchemaApplicationData(TTSQLite3& dataAccess)
-				{
-					char * zErrMsg = 0;
-					std::string stmt = "CREATE TABLE IF NOT EXISTS ApplicationData(ApplicationID INTEGER, "
-																				  "ApplicationName TEXT, "
-																				  "ApplicationVersion TEXT, "
-																				  "PRIMARY KEY(ApplicationID));";
+				// Useless table!
 
-					int err = sqlite3_exec(dataAccess.db, stmt.c_str(), NULL, 0, &zErrMsg);
-				}
+				// void writeSchemaApplicationData(TTSQLite3& dataAccess)
+				// {
+				// 	char * zErrMsg = 0;
+				// 	std::string stmt = "CREATE TABLE IF NOT EXISTS ApplicationData(ApplicationID INTEGER, "
+				// 																  "ApplicationName TEXT, "
+				// 																  "ApplicationVersion TEXT, "
+				// 																  "PRIMARY KEY(ApplicationID));";
 
-				void findApplicationDataID(TTSQLite3& dataAccess, std::string appName, std::string appVer, int * applicationID)
-				{
-					sqlite3_stmt * pStmt;
-					char * zErrMsg = 0;
+				// 	int err = sqlite3_exec(dataAccess.db, stmt.c_str(), NULL, 0, &zErrMsg);
+				// }
 
-					int err = sqlite3_prepare(dataAccess.db,
-											  "SELECT ApplicationID FROM ApplicationData WHERE "
-										      "ApplicationName LIKE ? AND "
-											  "ApplicationVersion LIKE ?",
-											  -1, &pStmt, NULL);
+				// void findApplicationDataID(TTSQLite3& dataAccess, std::string appName, std::string appVer, int * applicationID)
+				// {
+				// 	sqlite3_stmt * pStmt;
+				// 	char * zErrMsg = 0;
 
-					sqlite3_bind_text(pStmt,1, appName.c_str(), -1, SQLITE_TRANSIENT);
-					sqlite3_bind_text(pStmt,2, appVer.c_str(), -1, SQLITE_TRANSIENT);
-					err = sqlite3_step(pStmt);
+				// 	int err = sqlite3_prepare(dataAccess.db,
+				// 							  "SELECT ApplicationID FROM ApplicationData WHERE "
+				// 						      "ApplicationName LIKE ? AND "
+				// 							  "ApplicationVersion LIKE ?",
+				// 							  -1, &pStmt, NULL);
 
-					if(err == SQLITE_ERROR)
-					{
-						std::cout << "SQL Error encountered in findApplicationDataID\n";
-						char * expandedQuery = sqlite3_expanded_sql(pStmt);
-						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+				// 	sqlite3_bind_text(pStmt,1, appName.c_str(), -1, SQLITE_TRANSIENT);
+				// 	sqlite3_bind_text(pStmt,2, appVer.c_str(), -1, SQLITE_TRANSIENT);
+				// 	err = sqlite3_step(pStmt);
 
-						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-						sqlite3_free(expandedQuery);
-					}
-					else if(err == SQLITE_ROW)
-					{
-						*applicationID = sqlite3_column_int(pStmt, 0);
-					}
-					else
-					{
-						*applicationID = -1;
-					}
+				// 	if(err == SQLITE_ERROR)
+				// 	{
+				// 		std::cout << "SQL Error encountered in findApplicationDataID\n";
+				// 		char * expandedQuery = sqlite3_expanded_sql(pStmt);
+				// 		std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
-					sqlite3_finalize(pStmt);
-				}
+				// 		// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
+				// 		sqlite3_free(expandedQuery);
+				// 	}
+				// 	else if(err == SQLITE_ROW)
+				// 	{
+				// 		*applicationID = sqlite3_column_int(pStmt, 0);
+				// 	}
+				// 	else
+				// 	{
+				// 		*applicationID = -1;
+				// 	}
 
-				void writeApplicationData(TTSQLite3& dataAccess, std::string appName, std::string appVer, int * applicationID)
-				{
-					sqlite3_stmt * pStmt;
-					int err;
+				// 	sqlite3_finalize(pStmt);
+				// }
 
-					// Check for existing entry
-					int tmpID;
-					findApplicationDataID(dataAccess, appName, appVer, &tmpID);
+				// void writeApplicationData(TTSQLite3& dataAccess, std::string appName, std::string appVer, int * applicationID)
+				// {
+				// 	sqlite3_stmt * pStmt;
+				// 	int err;
 
-					if(tmpID == -1)
-					{
-						sqlite3_prepare(dataAccess.db,"INSERT INTO ApplicationData VALUES(NULL, ?, ?)", -1, &pStmt, NULL);
+				// 	// Check for existing entry
+				// 	int tmpID;
+				// 	findApplicationDataID(dataAccess, appName, appVer, &tmpID);
 
-						sqlite3_bind_text(pStmt,1, appName.c_str(), -1, SQLITE_TRANSIENT);
-						sqlite3_bind_text(pStmt,2, appVer.c_str(), -1, SQLITE_TRANSIENT);
-						err = sqlite3_step(pStmt);
+				// 	if(tmpID == -1)
+				// 	{
+				// 		sqlite3_prepare(dataAccess.db,"INSERT INTO ApplicationData VALUES(NULL, ?, ?)", -1, &pStmt, NULL);
 
-						if(err == SQLITE_ERROR)
-						{
-							std::cout << "SQL Error encountered in writeApplicationData\n";
-							char * expandedQuery = sqlite3_expanded_sql(pStmt);
-							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+				// 		sqlite3_bind_text(pStmt,1, appName.c_str(), -1, SQLITE_TRANSIENT);
+				// 		sqlite3_bind_text(pStmt,2, appVer.c_str(), -1, SQLITE_TRANSIENT);
+				// 		err = sqlite3_step(pStmt);
 
-							// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-							sqlite3_free(expandedQuery);
-							*applicationID = -1;
-						}
-						else
-						{
-							*applicationID = sqlite3_last_insert_rowid(dataAccess.db);
-						}
+				// 		if(err == SQLITE_ERROR)
+				// 		{
+				// 			std::cout << "SQL Error encountered in writeApplicationData\n";
+				// 			char * expandedQuery = sqlite3_expanded_sql(pStmt);
+				// 			std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
-						sqlite3_finalize(pStmt);
-					}
-					else
-					{
-						*applicationID = tmpID;
-					}
-				}
+				// 			// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
+				// 			sqlite3_free(expandedQuery);
+				// 			*applicationID = -1;
+				// 		}
+				// 		else
+				// 		{
+				// 			*applicationID = sqlite3_last_insert_rowid(dataAccess.db);
+				// 		}
+
+				// 		sqlite3_finalize(pStmt);
+				// 	}
+				// 	else
+				// 	{
+				// 		*applicationID = tmpID;
+				// 	}
+				// }
 			}
 		}
 	}

@@ -28,33 +28,33 @@ namespace treetimer
 				void writeSchemaAggregateParameterData(TTSQLite3& dataAccess);
 
 				void findAggregateParameterIntDataID(TTSQLite3& dataAccess,
-										   int runID, int callPathID, int processID, std::string paramName,
+										   int callPathID, int processID, std::string paramName,
 										   int minValue, double avgValue, int maxValue, double stddev, int count,
 										   int * aggParamIntID);
 
 
 				void findAggregateParameterFloatDataID(TTSQLite3& dataAccess,
-										   int runID, int callPathID, int processID, std::string paramName,
+										   int callPathID, int processID, std::string paramName,
 										   double minValue, double avgValue, double maxValue, double stddev, int count,
 										   int * aggParamFloatID);
 
 				void findAggregateParameterBoolDataID(TTSQLite3& dataAccess,
-										   int runID, int callPathID, int processID, std::string paramName,
+										   int callPathID, int processID, std::string paramName,
 										   int minValue, double avgValue, int maxValue, double stddev, int count,
 										   int * aggParamBoolID);
 
 				void writeAggregateParameterIntData(TTSQLite3& dataAccess,
-						   int runID, int callPathID, int processID, std::string paramName,
+						   int callPathID, int processID, std::string paramName,
 						   int minValue, double avgValue, int maxValue, double stddev, int count,
 						   int * aggParamIntID);
 
 				void writeAggregateParameterFloatData(TTSQLite3& dataAccess,
-						   int runID, int callPathID, int processID, std::string paramName,
+						   int callPathID, int processID, std::string paramName,
 						   double minValue, double avgValue, double maxValue, double stddev, int count,
 						   int * aggParamFloatID);
 
 				void writeAggregateParameterBoolData(TTSQLite3& dataAccess,
-						   int runID, int callPathID, int processID, std::string paramName,
+						   int callPathID, int processID, std::string paramName,
 						   int minValue, double avgValue, int maxValue, double stddev, int count,
 						   int * aggParamBoolID);
 			}

@@ -83,7 +83,7 @@ namespace treetimer
 				}
 
 				void findTraceParameterIntDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, 
+												 int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamIntID)
 				{
@@ -113,7 +113,7 @@ namespace treetimer
 						return;
 					}
 
-					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
 					sqlite3_bind_int(pStmt,4, nodeEntryID);
@@ -153,7 +153,7 @@ namespace treetimer
 
 
 				void findTraceParameterFloatDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, 
+												 int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, double paramValue,
 												 int * traceParamDoubleID)
 				{
@@ -183,7 +183,7 @@ namespace treetimer
 						return;
 					}
 
-					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
 					sqlite3_bind_int(pStmt,4, nodeEntryID);
@@ -223,7 +223,7 @@ namespace treetimer
 
 
 				void findTraceParameterBoolDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, 
+												 int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamBoolID)
 				{
@@ -253,7 +253,7 @@ namespace treetimer
 						return;
 					}
 
-					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
 					sqlite3_bind_int(pStmt,4, nodeEntryID);
@@ -293,7 +293,7 @@ namespace treetimer
 
 
 				void findTraceParameterStringDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, 
+												 int processID, int callPathID, int nodeEntryID, 
 												 std::string paramName, std::string paramValue,
 												 int * traceParamStringID)
 				{
@@ -323,7 +323,7 @@ namespace treetimer
 						return;
 					}
 
-					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
 					sqlite3_bind_int(pStmt,4, nodeEntryID);
@@ -362,7 +362,7 @@ namespace treetimer
 				}
 
 				void writeTraceParameterIntData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID, 
+												 int processID, int callPathID, int nodeEntryID, int nodeExitID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamIntID)
 				{
@@ -384,7 +384,7 @@ namespace treetimer
 						return;
 					}
 
-					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
 					sqlite3_bind_int(pStmt,4, nodeEntryID);
@@ -419,7 +419,7 @@ namespace treetimer
 				}
 
 				void writeTraceParameterFloatData(TTSQLite3& dataAccess,
-											 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID, 
+											 int processID, int callPathID, int nodeEntryID, int nodeExitID, 
 											 std::string paramName, double paramValue,
 											 int * traceParamFloatID)
 				{
@@ -441,7 +441,7 @@ namespace treetimer
 						return;
 					}
 
-					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
 					sqlite3_bind_int(pStmt,4, nodeEntryID);
@@ -476,7 +476,7 @@ namespace treetimer
 				}
 
 				void writeTraceParameterBoolData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID, 
+												 int processID, int callPathID, int nodeEntryID, int nodeExitID, 
 												 std::string paramName, int paramValue,
 												 int * traceParamBoolID)
 				{
@@ -498,7 +498,7 @@ namespace treetimer
 						return;
 					}
 
-					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
 					sqlite3_bind_int(pStmt,4, nodeEntryID);
@@ -534,7 +534,7 @@ namespace treetimer
 
 
 				void writeTraceParameterStringData(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, int nodeExitID, 
+												 int processID, int callPathID, int nodeEntryID, int nodeExitID, 
 												 std::string paramName, std::string paramValue,
 												 int * traceParamStringID)
 				{
@@ -556,7 +556,7 @@ namespace treetimer
 						return;
 					}
 
-					sqlite3_bind_int(pStmt,1, runID);
+					sqlite3_bind_int(pStmt,1, dataAccess.runID);
 					sqlite3_bind_int(pStmt,2, processID);
 					sqlite3_bind_int(pStmt,3, callPathID);
 					sqlite3_bind_int(pStmt,4, nodeEntryID);

@@ -38,9 +38,11 @@
 #include "mpi.h"
 
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <unistd.h>
 #include <vector>
+#include <map>
 
 namespace tt_sql = treetimer::database::tt_sqlite3;
 
@@ -48,6 +50,8 @@ namespace tt_sql = treetimer::database::tt_sqlite3;
 // MPI tags will be used to distinguish between different DB tables.
 #define TAG_AGG 0
 #define TAG_TRC 1
+#define TAG_HWINFO 2
+#define TAG_CALLPATH 3
 
 namespace treetimer
 {
@@ -66,30 +70,36 @@ namespace treetimer
 					if(config.sqlIOSetup == false)
 					{
 						// Setup the Database Schemas
-						// (a) Block Types
-						tt_sql::drivers::writeSchemaProfileNodeTypeData(*dataAccess);
 
-						// (b) Library Configuration
-						tt_sql::drivers::writeSchemaLibraryConfigData(*dataAccess);
+						if (!dataAccess->gatherIntraNode || dataAccess->rankLocal==0) {
+							// (a) Block Types
+							tt_sql::drivers::writeSchemaProfileNodeTypeData(*dataAccess);
+
+							// (b) Library Configuration
+							tt_sql::drivers::writeSchemaLibraryConfigData(*dataAccess);
+						}
 
 						// (c) Singular Parameters (used for Global Parameter Storage)
 						tt_sql::drivers::writeSchemaParameterData(*dataAccess);
 
-						// (d) Application Data
-						tt_sql::drivers::writeSchemaApplicationData(*dataAccess);
+						// Disabled tables:
+						// // (d) Application Data
+						// tt_sql::drivers::writeSchemaApplicationData(*dataAccess);
 
-						// (e) Application Configuration Data (Links Combinations of Global Parameters)
-						tt_sql::drivers::writeSchemaApplicationConfigData(*dataAccess);
+						// // (e) Application Configuration Data (Links Combinations of Global Parameters)
+						// tt_sql::drivers::writeSchemaApplicationConfigData(*dataAccess);
+
+						// (n) Run Data (Configurations, Process Count etc)
+						tt_sql::drivers::writeSchemaProfileRunConfigData(*dataAccess);
 
 						// (f) Profile Nodes
 						tt_sql::drivers::writeSchemaProfileNodeData(*dataAccess);
 
-						// (g) CPU Data
-						tt_sql::drivers::writeSchemaCPUData(*dataAccess);
-
 						// (h) Machine Data
 						tt_sql::drivers::writeSchemaMachineData(*dataAccess);
 
+						// (g) CPU Data
+						tt_sql::drivers::writeSchemaCPUData(*dataAccess);
 						// (i) Compute Node Data
 						tt_sql::drivers::writeSchemaComputeNodeData(*dataAccess);
 
@@ -104,9 +114,6 @@ namespace treetimer
 
 						// (m) MPI Process Data
 						tt_sql::drivers::writeSchemaProcessData(*dataAccess);
-
-						// (n) Run Data (Configurations, Process Count etc)
-						tt_sql::drivers::writeSchemaProfileRunConfigData(*dataAccess);
 
 						// (o) Aggregate Parameter Data (Run Specific)
 						tt_sql::drivers::writeSchemaAggregateParameterData(*dataAccess);
@@ -139,128 +146,262 @@ namespace treetimer
 					if(config.sqlIORunConfig == false)
 					{
 						// Profile Node Type Data
-
-						for(int i = 0; i < TT_CODE_BLOCK_COUNT; i++)
-						{
-							int dbID;
-							tt_sql::drivers::writeProfileNodeTypeData(*dataAccess, codeBlockNames[i], &dbID);
+						if (!dataAccess->gatherIntraNode || dataAccess->rankLocal==0) {
+							// This data identical across ranks, no comms needed
+							for(int i = 0; i < TT_CODE_BLOCK_COUNT; i++)
+							{
+								int dbID;
+								tt_sql::drivers::writeProfileNodeTypeData(*dataAccess, codeBlockNames[i], &dbID);
+							}
 						}
 
 						// Library Config Data
-						int libConfigID;
-						tt_sql::drivers::writeLibraryConfigID(*dataAccess, config.libVerMajor, config.libVerMinor,
-																config.eATimers, config.eTTimers,
-																config.eAParam, config.eTParam,
-																config.eAPAPI, config.eTPAPI,
-																config.eMPIHooks, &libConfigID);
-						// Application Data
-						int appID;
-						tt_sql::drivers::writeApplicationData(*dataAccess, config.appName, config.appVersion, &appID);
+						if (!dataAccess->gatherIntraNode || dataAccess->rankLocal==0) {
+							// Assume identical across ranks - why would user configure different ranks 
+							// differently?! So assume no comms needed.
+
+							int libConfigID = -1;
+							tt_sql::drivers::writeLibraryConfigID(*dataAccess, config.libVerMajor, config.libVerMinor,
+																	config.eATimers, config.eTTimers,
+																	config.eAParam, config.eTParam,
+																	config.eAPAPI, config.eTPAPI,
+																	config.eMPIHooks, &libConfigID);
+
+							// Run Config Data (Runs are always recorded as new)
+							int processCount;
+							int runID;
+							// Trimmed-down table should be identical across ranks, because 
+							// it only contains rank count. So no comms needed. 
+							// If 'appConfigID' is restored then re-evaluate decision.
+							MPI_Comm_size(MPI_COMM_WORLD, &processCount);
+							tt_sql::drivers::writeProfileRunConfigData(*dataAccess,
+																		// appConfigID,
+																		libConfigID,
+																		processCount,
+																		&runID);
+							dataAccess->runID = runID;
+						}
+
+						// Useless table!
+						// // Application Data
+						// int appID;
+						// tt_sql::drivers::writeApplicationData(*dataAccess, config.appName, config.appVersion, &appID);
 
 						// Machine Data
-						int machineID;
-						tt_sql::drivers::writeMachineData(*dataAccess, config.machineName, &machineID);
-
-						// CPU Data
-						int cpuID;
-						std::string cpuModel = "Unknown";
-						tt_sql::drivers::writeCPUData(*dataAccess, cpuModel, &cpuID);
-
-						// Compute Node Data
-						int computeNodeID;
-						std::string nodeName = "Unknown";
-						int socketCount = -1;
-						tt_sql::drivers::writeComputeNodeData(*dataAccess, machineID, nodeName,
-																socketCount, &computeNodeID);
-
-						// CPU Socket Data
-						int cpuSocketID;
-						int phySocketNum = -1;
-						tt_sql::drivers::writeCPUSocketData(*dataAccess, computeNodeID, cpuID, phySocketNum, &cpuSocketID);
-
-						// CPU Core Data
-						int cpuCoreID;
-						int physicalCoreNum = -1;
-						tt_sql::drivers::writeCPUCoreData(*dataAccess, cpuSocketID, physicalCoreNum, &cpuCoreID);
-
-						// ProcessID
-						int processID;
-						int rank;
-						MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-						tt_sql::drivers::writeProcessData(*dataAccess, cpuCoreID,  rank, &processID);
-
-						// App Config Data
-						// Build Vectors of the global parameters
-						std::vector<std::string> intParamNames;
-						std::vector<int> intParamValues;
-
-						std::vector<std::string> doubleParamNames;
-						std::vector<double> doubleParamValues;
-
-						std::vector<std::string> boolParamNames;
-						std::vector<bool> boolParamValues;
-
-						std::vector<std::string> stringParamNames;
-						std::vector<std::string> stringParamValues;
-
-						std::unordered_map<std::string, treetimer::parameters::ParameterSingular<int> *>::iterator it1;
-						for(it1 = config.intGlobalParams.begin(); it1 != config.intGlobalParams.end(); it1++)
-						{
-							intParamNames.push_back(it1->first);
-							intParamValues.push_back(it1->second->value);
+						if (!dataAccess->gatherIntraNode || dataAccess->rankLocal==0) {
+							// MachineName is global and constant.
+							int machineID;
+							tt_sql::drivers::writeMachineData(*dataAccess, config.machineName, &machineID);
 						}
 
-						std::unordered_map<std::string, treetimer::parameters::ParameterSingular<double> *>::iterator it2;
-						for(it2 = config.doubleGlobalParams.begin(); it2 != config.doubleGlobalParams.end(); it2++)
-						{
-							doubleParamNames.push_back(it2->first);
-							doubleParamValues.push_back(it2->second->value);
-						}
+						prepareAndWriteExecutionData(dataAccess);
 
-						std::unordered_map<std::string, treetimer::parameters::ParameterSingular<bool> *>::iterator it3;
-						for(it3 = config.boolGlobalParams.begin(); it3 != config.boolGlobalParams.end(); it3++)
-						{
-							boolParamNames.push_back(it3->first);
-							boolParamValues.push_back(it3->second->value);
-						}
+						// // App Config Data
+						// // Build Vectors of the global parameters
+						// std::vector<std::string> intParamNames;
+						// std::vector<int> intParamValues;
 
-						std::unordered_map<std::string, treetimer::parameters::ParameterSingular<std::string> *>::iterator it4;
-						for(it4 = config.stringGlobalParams.begin(); it4 != config.stringGlobalParams.end(); it4++)
-						{
-							stringParamNames.push_back(it4->first);
-							stringParamValues.push_back(it4->second->value);
-						}
+						// std::vector<std::string> doubleParamNames;
+						// std::vector<double> doubleParamValues;
 
-						// Application Config Data
-						int appConfigID;
-						tt_sql::drivers::writeApplicationConfigData(*dataAccess,
-																	appID,
-																	intParamNames, intParamValues,
-																	doubleParamNames, doubleParamValues,
-																	boolParamNames, boolParamValues,
-																	stringParamNames, stringParamValues,
-																	&appConfigID);
+						// std::vector<std::string> boolParamNames;
+						// std::vector<bool> boolParamValues;
 
-						// Run Config Data (Runs are always recorded as new)
-						int processCount;
-						int runID;
-						MPI_Comm_size(MPI_COMM_WORLD, &processCount);
-						tt_sql::drivers::writeProfileRunConfigData(*dataAccess,
-																	appConfigID,
-																	libConfigID,
-																	processCount,
-																	&runID);
+						// std::vector<std::string> stringParamNames;
+						// std::vector<std::string> stringParamValues;
 
-						config.sqlIORunID = runID;
-						config.sqlIOProcessID = processID;
+						// std::unordered_map<std::string, treetimer::parameters::ParameterSingular<int> *>::iterator it1;
+						// for(it1 = config.intGlobalParams.begin(); it1 != config.intGlobalParams.end(); it1++)
+						// {
+						// 	intParamNames.push_back(it1->first);
+						// 	intParamValues.push_back(it1->second->value);
+						// }
+
+						// std::unordered_map<std::string, treetimer::parameters::ParameterSingular<double> *>::iterator it2;
+						// for(it2 = config.doubleGlobalParams.begin(); it2 != config.doubleGlobalParams.end(); it2++)
+						// {
+						// 	doubleParamNames.push_back(it2->first);
+						// 	doubleParamValues.push_back(it2->second->value);
+						// }
+
+						// std::unordered_map<std::string, treetimer::parameters::ParameterSingular<bool> *>::iterator it3;
+						// for(it3 = config.boolGlobalParams.begin(); it3 != config.boolGlobalParams.end(); it3++)
+						// {
+						// 	boolParamNames.push_back(it3->first);
+						// 	boolParamValues.push_back(it3->second->value);
+						// }
+
+						// std::unordered_map<std::string, treetimer::parameters::ParameterSingular<std::string> *>::iterator it4;
+						// for(it4 = config.stringGlobalParams.begin(); it4 != config.stringGlobalParams.end(); it4++)
+						// {
+						// 	stringParamNames.push_back(it4->first);
+						// 	stringParamValues.push_back(it4->second->value);
+						// }
+
+						// Useless table!
+						// // Application Config Data
+						// int appConfigID;
+						// tt_sql::drivers::writeApplicationConfigData(*dataAccess,
+						// 											appID,
+						// 											intParamNames, intParamValues,
+						// 											doubleParamNames, doubleParamValues,
+						// 											boolParamNames, boolParamValues,
+						// 											stringParamNames, stringParamValues,
+						// 											&appConfigID);
+
+						// config.sqlIORunID = runID;
+						// config.sqlIOProcessID = processID;
 
 						config.sqlIORunConfig = true;
 					}
 				}
 
-				void writeAggData(treetimer::config::Config& config,
-								  treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
-								  tt_sql::TTSQLite3* dataAccess)
+				// int 
+				void 
+				prepareAndWriteExecutionData(tt_sql::TTSQLite3* dataAccess)
+				{
+					int processID = -1;
+
+					std::string cpuModel = "Unknown";
+					// std::string nodeName = "Unknown";
+					char nodeNameStr[MAX_STRING_LENGTH];
+					gethostname(nodeNameStr, MAX_STRING_LENGTH);
+					std::string nodeName = nodeNameStr;
+					// int socketCount = -1;
+					// int phySocketNum = -1;
+					// int physicalCoreNum = -1;
+					int socketCount = 1;
+					int phySocketNum = 0;
+					// int physicalCoreNum = 2;
+					int physicalCoreNum = sched_getcpu();
+					int thread = 0;
+
+					if (!dataAccess->gatherIntraNode || dataAccess->rankLocal == 0) {
+						// CPU Data
+						int cpuID;
+						tt_sql::TT_Cpu d;
+						// d.rank = dataAccess->rankGlobal;
+						strncpy(d.cpuModel, cpuModel.c_str(), MAX_STRING_LENGTH);
+						tt_sql::drivers::writeCPUData(*dataAccess, d, &cpuID);
+
+						// Compute Node Data
+						int computeNodeID;
+						tt_sql::TT_ComputeNode d_cn;
+						strncpy(d_cn.nodeName, nodeName.c_str(), MAX_STRING_LENGTH);
+						d_cn.socketCount = socketCount;
+						tt_sql::drivers::writeComputeNodeData(*dataAccess, 
+																// machineID, 
+																d_cn,
+																&computeNodeID);
+						// CPU Socket Data
+						int cpuSocketID;
+						tt_sql::TT_Socket d_skt;
+						d_skt.phySocketNum = phySocketNum;
+						tt_sql::drivers::writeCPUSocketData(*dataAccess, computeNodeID, cpuID, d_skt, &cpuSocketID);
+
+						// CPU Core Data
+						int cpuCoreID;
+						tt_sql::TT_CpuCore d_cc;
+						d_cc.physicalCoreNum = physicalCoreNum;
+						tt_sql::drivers::writeCPUCoreData(*dataAccess, cpuSocketID, d_cc, &cpuCoreID);
+
+						// ProcessID
+						int rank;
+						MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+						tt_sql::drivers::writeProcessData(*dataAccess, cpuCoreID, rank, thread, &processID);
+
+						dataAccess->processID = processID;
+						dataAccess->rankLocalToProcessID[0] = processID;
+					}
+
+					if (dataAccess->gatherIntraNode) {
+						tt_sql::TT_HwInfo d;
+						d.rankGlobal = dataAccess->rankGlobal;
+						strncpy(d.cpuModel, cpuModel.c_str(), MAX_STRING_LENGTH);
+						strncpy(d.nodeName, nodeName.c_str(), MAX_STRING_LENGTH);
+						d.socketCount = socketCount;
+						d.phySocketNum = phySocketNum;
+						d.physicalCoreNum = physicalCoreNum;
+						d.thread = thread;
+
+						MPI_Datatype hwInfoRecord_MPI = tt_sql::drivers::createHwInfoMpiType();
+
+						// Perform intra-node gather-at-root:
+						int err;
+						if (dataAccess->nRanksLocal > 1) {
+							if (dataAccess->rankLocal == 0) {
+								int n = dataAccess->nRanksLocal;
+
+								int nReceives = 0;
+								int hwInfoId;
+								tt_sql::TT_HwInfo* records = NULL;
+								int nRecords = 0;
+								int srcRank;
+								while (nReceives != (n-1)) {
+									err = fetchNextGatheredRecord(*dataAccess, (void**)&records, &nRecords, &srcRank, 
+																	sizeof(tt_sql::TT_HwInfo), hwInfoRecord_MPI, TAG_HWINFO);
+									if (err != 0) {
+										fprintf(stderr, "Root failed on fetchNextGatheredRecord()\n");
+										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE); fflush(stdout);
+									}
+									nReceives++;
+									for (int i=0; i<nRecords; i++) {
+										tt_sql::TT_HwInfo r = records[i];
+										dataAccess->rankLocalToRankGlobal[srcRank] = r.rankGlobal;
+
+										int cpuID;
+										tt_sql::TT_Cpu d;
+										strcpy(d.cpuModel, r.cpuModel);
+										tt_sql::drivers::writeCPUData(*dataAccess, d, &cpuID);
+
+										// Compute Node Data
+										int computeNodeID;
+										tt_sql::TT_ComputeNode d_cn;
+										strcpy(d_cn.nodeName, r.nodeName);
+										d_cn.socketCount = r.socketCount;
+										tt_sql::drivers::writeComputeNodeData(*dataAccess, 
+																				d_cn,
+																				&computeNodeID);
+
+										// CPU Socket Data
+										int cpuSocketID;
+										tt_sql::TT_Socket d_skt;
+										d_skt.phySocketNum = r.phySocketNum;
+										tt_sql::drivers::writeCPUSocketData(*dataAccess, computeNodeID, cpuID, d_skt, &cpuSocketID);
+
+										// CPU Core Data
+										int cpuCoreID;
+										tt_sql::TT_CpuCore d_cc;
+										d_cc.physicalCoreNum = r.physicalCoreNum;
+										tt_sql::drivers::writeCPUCoreData(*dataAccess, cpuSocketID, d_cc, &cpuCoreID);
+
+										// ProcessID
+										int rank;
+										MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+										tt_sql::drivers::writeProcessData(*dataAccess, cpuCoreID, r.rankGlobal, thread, &processID);
+										dataAccess->rankLocalToProcessID[srcRank] = processID;
+
+									}
+									free(records); records=NULL; nRecords=0;
+								}
+							}
+							else {
+								// Send to local root
+								err = sendRecordsToRoot(*dataAccess, &d, 1, 
+														sizeof(tt_sql::TT_HwInfo), hwInfoRecord_MPI, TAG_HWINFO);
+								if (err != 0) {
+									fprintf(stderr, "Rank %d failed on sendRecordsToRoot()\n", dataAccess->rankGlobal);
+									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+								}
+							}
+						}
+					}
+				}
+
+				void prepareAndWriteAggData(treetimer::config::Config& config,
+											treetimer::data_structures::Tree<std::string, 
+											treetimer::measurement::InstrumentationData>& callTree,
+											tt_sql::TTSQLite3* dataAccess)
 				{
 					// ToDo: Error Check - ensure database has been setup
 
@@ -275,39 +416,70 @@ namespace treetimer
 					}
 
 					// Start at the root of the tree - there is no valid parentID so pass as -1
-					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeAggInstrumentationData, config.sqlIORunID, config.sqlIOProcessID, -1, config);
+					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeAggInstrumentationData, 
+										dataAccess->processID, 
+										-1, config);
 
 					if (dataAccess->gatherIntraNode) {
-						// Create MPI type for a AggregateTime record:
 						int err;
-						MPI_Datatype aggTimeRecord_MPI;
-						int lengths[9] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
-						MPI_Aint displacements[9];
-						displacements[0] = offsetof(tt_sql::TTAggTiming, runID);
-						displacements[1] = offsetof(tt_sql::TTAggTiming, rank);
-						displacements[2] = offsetof(tt_sql::TTAggTiming, callPathID);
-						displacements[3] = offsetof(tt_sql::TTAggTiming, processID);
-						displacements[4] = offsetof(tt_sql::TTAggTiming, minWallTime);
-						displacements[5] = offsetof(tt_sql::TTAggTiming, avgWallTime);
-						displacements[6] = offsetof(tt_sql::TTAggTiming, maxWallTime);
-						displacements[7] = offsetof(tt_sql::TTAggTiming, stdev);
-						displacements[8] = offsetof(tt_sql::TTAggTiming, count);
-						MPI_Datatype types[9] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, 
-													MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE, 
-													MPI_INT };
-						err = MPI_Type_create_struct(9, lengths, displacements, types, &aggTimeRecord_MPI);
-						if (err != MPI_SUCCESS) {
-							fprintf(stderr, "Rank %d failed to create custom type for aggTimeRecord\n", dataAccess->rankGlobal);
-							MPI_Abort(MPI_COMM_WORLD, err);
-							exit(EXIT_FAILURE);
-						}
-						err = MPI_Type_commit(&aggTimeRecord_MPI);
-						if (err != MPI_SUCCESS) {
-							fprintf(stderr, "Rank %d failed to commit custom type for aggTimeRecord\n", dataAccess->rankGlobal);
-							MPI_Abort(MPI_COMM_WORLD, err);
-							exit(EXIT_FAILURE);
+
+						// Before gather/writing any performance data, must first 
+						// gather callpath data and adjust id's for different ranks 
+						// having different callpath trees.
+						std::map<int, int> callpathNodeIdRemap[dataAccess->nRanksLocal];
+						MPI_Datatype callpathNodeRecord_MPI = tt_sql::drivers::createCallpathNodeMpiType();
+						// Perform intra-node gather-at-root:
+						if (dataAccess->nRanksLocal > 1) {
+							if (dataAccess->rankLocal == 0) {
+								int n = dataAccess->nRanksLocal;
+
+								int nReceives = 0;
+								int callpathNodeID;
+								tt_sql::TT_CallPathNode* records = NULL;
+								int nRecords = 0;
+								int srcRank;
+								while (nReceives != (n-1)) {
+									err = fetchNextGatheredRecord(*dataAccess, (void**)&records, &nRecords, &srcRank, 
+																	sizeof(tt_sql::TT_CallPathNode), callpathNodeRecord_MPI, TAG_CALLPATH);
+									if (err != 0) {
+										fprintf(stderr, "Root failed on fetchNextGatheredRecord()\n");
+										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+									}
+									nReceives++;
+									for (int i=0; i<nRecords; i++) {
+										tt_sql::TT_CallPathNode r = records[i];
+
+										// Apply remap:
+										if (r.parentID != -1 && callpathNodeIdRemap[srcRank].find(r.parentID) != callpathNodeIdRemap[srcRank].end()) {
+											r.parentID = callpathNodeIdRemap[srcRank][r.parentID];
+										}
+										
+										int blockTypeID;
+										tt_sql::drivers::findProfileNodeTypeID(*dataAccess, codeBlockNames[r.blockType], &blockTypeID);
+										int profileNodeID;
+										tt_sql::drivers::writeTreeNodeProfileNodeData(*dataAccess, r.nodeName, blockTypeID, &profileNodeID);
+										int callPathID;
+										tt_sql::drivers::writeCallPathData(*dataAccess, r.rank, profileNodeID, r.parentID, &callPathID);
+
+										// Store the remap:
+										callpathNodeIdRemap[srcRank][r.callPathID] = callPathID;
+									}
+									free(records); records=NULL; nRecords=0;
+								}
+							}
+							else {
+								// Send to local root
+								err = sendRecordsToRoot(*dataAccess, dataAccess->callPathNodeRecords.data(), dataAccess->callPathNodeRecords.size(), 
+														sizeof(tt_sql::TT_CallPathNode), callpathNodeRecord_MPI, TAG_CALLPATH);
+								if (err != 0) {
+									fprintf(stderr, "Rank %d failed on sendRecordsToRoot()\n", dataAccess->rankGlobal);
+									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+								}
+								dataAccess->callPathNodeRecords.clear();
+							}
 						}
 
+						MPI_Datatype aggTimeRecord_MPI = tt_sql::drivers::createAggregateTimeMpiType();
 						// Perform intra-node gather-at-root:
 						if (dataAccess->nRanksLocal > 1) {
 							if (dataAccess->rankLocal == 0) {
@@ -315,18 +487,24 @@ namespace treetimer
 
 								int nReceives = 0;
 								int aggTimeID;
-								tt_sql::TTAggTiming* records = NULL;
+								tt_sql::TT_AggTiming* records = NULL;
 								int nRecords = 0;
 								int srcRank;
 								while (nReceives != (n-1)) {
 									err = fetchNextGatheredRecord(*dataAccess, (void**)&records, &nRecords, &srcRank, 
-																	sizeof(tt_sql::TTAggTiming), aggTimeRecord_MPI, TAG_AGG);
+																	sizeof(tt_sql::TT_AggTiming), aggTimeRecord_MPI, TAG_AGG);
 									if (err != 0) {
 										fprintf(stderr, "Root failed on fetchNextGatheredRecord()\n");
 										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 									}
 									nReceives++;
 									for (int i=0; i<nRecords; i++) {
+										// Add in processID, which only root will know from earlier:
+										records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
+
+										// Todo: remap callpath ids
+										records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+
 										tt_sql::drivers::writeAggregateTimeData(*dataAccess, records[i], &aggTimeID);
 									}
 									free(records); records=NULL; nRecords=0;
@@ -335,7 +513,7 @@ namespace treetimer
 							else {
 								// Send to local root
 								err = sendRecordsToRoot(*dataAccess, dataAccess->aggTimeRecords.data(), dataAccess->aggTimeRecords.size(), 
-														sizeof(tt_sql::TTAggTiming), aggTimeRecord_MPI, TAG_AGG);
+														sizeof(tt_sql::TT_AggTiming), aggTimeRecord_MPI, TAG_AGG);
 								if (err != 0) {
 									fprintf(stderr, "Rank %d failed on sendRecordsToRoot()\n", dataAccess->rankGlobal);
 									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
@@ -349,9 +527,9 @@ namespace treetimer
 					config.sqlIOAggData = true;
 				}
 
-				void writeTraceData(treetimer::config::Config& config,
-									treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
-									tt_sql::TTSQLite3* dataAccess)
+				void prepareAndWriteTraceData(treetimer::config::Config& config,
+											treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
+											tt_sql::TTSQLite3* dataAccess)
 				{
 					// ToDo: Error Check - ensure database has been setup
 
@@ -361,100 +539,109 @@ namespace treetimer
 					}
 
 					// Start at the root of the tree - there is no valid parentID so pass as -1
-					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeTraceInstrumentationData, config.sqlIORunID, config.sqlIOProcessID, -1, config);
+					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeTraceInstrumentationData, 
+										config.sqlIOProcessID, -1, config);
 
 					if (dataAccess->gatherIntraNode) {
-						// Create MPI type for a TraceTime record:
 						int err;
-						MPI_Datatype traceTimeRecord_MPI;
-						int lengths[7] = {1, 1, 1, 1, 1, 1, 1};
-						MPI_Aint displacements[9];
-						displacements[0] = offsetof(tt_sql::TTTraceTiming, runID);
-						displacements[1] = offsetof(tt_sql::TTTraceTiming, rank);
-						displacements[2] = offsetof(tt_sql::TTTraceTiming, callPathID);
-						displacements[3] = offsetof(tt_sql::TTTraceTiming, processID);
-						displacements[4] = offsetof(tt_sql::TTTraceTiming, nodeEntryID);
-						displacements[5] = offsetof(tt_sql::TTTraceTiming, nodeExitID);
-						displacements[6] = offsetof(tt_sql::TTTraceTiming, walltime);
-						MPI_Datatype types[7] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, 
-													MPI_INT, MPI_INT, MPI_DOUBLE };
-						err = MPI_Type_create_struct(7, lengths, displacements, types, &traceTimeRecord_MPI);
-						if (err != MPI_SUCCESS) {
-							fprintf(stderr, "Rank %d failed to create custom type for traceTimeRecord\n", dataAccess->rankGlobal);
-							MPI_Abort(MPI_COMM_WORLD, err);
-							exit(EXIT_FAILURE);
+
+						// Before gather/writing any performance data, must first 
+						// gather callpath data and adjust id's for different ranks 
+						// having different callpath trees.
+						std::map<int, int> callpathNodeIdRemap[dataAccess->nRanksLocal];
+						MPI_Datatype callpathNodeRecord_MPI = tt_sql::drivers::createCallpathNodeMpiType();
+						// Perform intra-node gather-at-root:
+						if (dataAccess->nRanksLocal > 1) {
+							if (dataAccess->rankLocal == 0) {
+								int n = dataAccess->nRanksLocal;
+
+								int nReceives = 0;
+								int callpathNodeID;
+								tt_sql::TT_CallPathNode* records = NULL;
+								int nRecords = 0;
+								int srcRank;
+								while (nReceives != (n-1)) {
+									err = fetchNextGatheredRecord(*dataAccess, (void**)&records, &nRecords, &srcRank, 
+																	sizeof(tt_sql::TT_CallPathNode), callpathNodeRecord_MPI, TAG_CALLPATH);
+									if (err != 0) {
+										fprintf(stderr, "Root failed on fetchNextGatheredRecord()\n");
+										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+									}
+									nReceives++;
+									for (int i=0; i<nRecords; i++) {
+										tt_sql::TT_CallPathNode r = records[i];
+
+										// Apply remap:
+										if (r.parentID != -1 && callpathNodeIdRemap[srcRank].find(r.parentID) != callpathNodeIdRemap[srcRank].end()) {
+											r.parentID = callpathNodeIdRemap[srcRank][r.parentID];
+										}
+										
+										int blockTypeID;
+										tt_sql::drivers::findProfileNodeTypeID(*dataAccess, codeBlockNames[r.blockType], &blockTypeID);
+										int profileNodeID;
+										tt_sql::drivers::writeTreeNodeProfileNodeData(*dataAccess, r.nodeName, blockTypeID, &profileNodeID);
+										int callPathID;
+										tt_sql::drivers::writeCallPathData(*dataAccess, r.rank, profileNodeID, r.parentID, &callPathID);
+
+										// Store the remap:
+										callpathNodeIdRemap[srcRank][r.callPathID] = callPathID;
+									}
+									free(records); records=NULL; nRecords=0;
+								}
+							}
+							else {
+								// Send to local root
+								err = sendRecordsToRoot(*dataAccess, dataAccess->callPathNodeRecords.data(), dataAccess->callPathNodeRecords.size(), 
+														sizeof(tt_sql::TT_CallPathNode), callpathNodeRecord_MPI, TAG_CALLPATH);
+								if (err != 0) {
+									fprintf(stderr, "Rank %d failed on sendRecordsToRoot()\n", dataAccess->rankGlobal);
+									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+								}
+								dataAccess->callPathNodeRecords.clear();
+							}
 						}
-						err = MPI_Type_commit(&traceTimeRecord_MPI);
-						if (err != MPI_SUCCESS) {
-							fprintf(stderr, "Rank %d failed to commit custom type for traceTimeRecord\n", dataAccess->rankGlobal);
-							MPI_Abort(MPI_COMM_WORLD, err);
-							exit(EXIT_FAILURE);
-						}
+
+						// Create MPI type for a TraceTime record:
+						MPI_Datatype traceTimeRecord_MPI = tt_sql::drivers::createTraceTimeMpiType();
 
 						// Perform intra-node gather-at-root:
 						if (dataAccess->nRanksLocal > 1) {
 							if (dataAccess->rankLocal == 0) {
 								int n = dataAccess->nRanksLocal;
 
-								// New gather logic: switch probe to non-blocking. Above use of blocking probe
-								// was prevening any async comms from occurring.
 								int nReceives = 0;
-								bool workDone = false;
-								int ready = 0;
-								MPI_Status stat;
-								MPI_Request req;
-								int bufferSize = 0;
-								tt_sql::TTTraceTiming* buffer = NULL;
 								int traceTimeID;
+								tt_sql::TT_TraceTiming* records = NULL;
+								int nRecords = 0;
+								int srcRank;
 								while (nReceives != (n-1)) {
-									for (int r=1; r<n; r++) {
-										err = MPI_Iprobe(r, TAG_TRC, dataAccess->nodeComm, &ready, &stat);
-										if (err != MPI_SUCCESS) {
-											fprintf(stderr, "Gather rank failed to probe msg from %d\n", r);
-											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
-										}
-
-										if (ready == 1) {
-											workDone = true;
-											nReceives++;
-
-											err = MPI_Get_count(&stat, traceTimeRecord_MPI, &bufferSize);
-											if (err != MPI_SUCCESS) {
-												fprintf(stderr, "Gather rank failed on MPI_Get_count(rank=%d)\n", r);
-												MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
-											}
-
-											if (bufferSize == 0) {
-												buffer = (tt_sql::TTTraceTiming*)malloc(1 * sizeof(tt_sql::TTTraceTiming));
-											} else {
-												buffer = (tt_sql::TTTraceTiming*)malloc(bufferSize * sizeof(tt_sql::TTTraceTiming));
-											}
-											err = MPI_Recv(buffer, bufferSize, traceTimeRecord_MPI, r, TAG_TRC, dataAccess->nodeComm, &stat);
-											if (err != MPI_SUCCESS) {
-												fflush(stdout); sleep(1);
-												fprintf(stderr, "Root failed on MPI_Recv(rank=%d)\n", r);
-												MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
-											}
-
-											for (int i=0; i<bufferSize; i++) {
-												tt_sql::drivers::writeTraceTimeData(*dataAccess, buffer[i], &traceTimeID);
-											}
-											free(buffer); buffer = NULL; bufferSize = 0;
-										}
+									err = fetchNextGatheredRecord(*dataAccess, (void**)&records, &nRecords, &srcRank, 
+																	sizeof(tt_sql::TT_TraceTiming), traceTimeRecord_MPI, TAG_TRC);
+									if (err != 0) {
+										fprintf(stderr, "Root failed on fetchNextGatheredRecord()\n");
+										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 									}
-									if (!workDone) sleep(1);
+									nReceives++;
+									for (int i=0; i<nRecords; i++) {
+										// Add in processID, which only root will know from earlier:
+										records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
+
+										// Todo: remap callpath ids
+										records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+										
+										tt_sql::drivers::writeTraceTimeData(*dataAccess, records[i], &traceTimeID);
+									}
+									free(records); records=NULL; nRecords=0;
 								}
 							}
 							else {
 								// Send to local root
-								MPI_Request r;
-								MPI_Status s;
-								err = MPI_Isend(dataAccess->traceTimeRecords.data(), dataAccess->traceTimeRecords.size(), traceTimeRecord_MPI, 0, TAG_TRC, dataAccess->nodeComm, &r);
-								if (err != MPI_SUCCESS) {
-									fprintf(stderr, "Rankd %d failed Isend\n", r);
+								err = sendRecordsToRoot(*dataAccess, dataAccess->traceTimeRecords.data(), dataAccess->traceTimeRecords.size(), 
+														sizeof(tt_sql::TT_TraceTiming), traceTimeRecord_MPI, TAG_TRC);
+								if (err != 0) {
+									fprintf(stderr, "Rank %d failed on sendRecordsToRoot()\n", dataAccess->rankGlobal);
 									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 								}
-								MPI_Wait(&r, &s);
 								dataAccess->traceTimeRecords.clear();
 							}
 						}
@@ -481,22 +668,27 @@ namespace treetimer
 								workDone = false;
 								
 								for (int r=1; r<n; r++) {
+									// printf("Root is probing %d ...\n", r); fflush(stdout);
 									err = MPI_Iprobe(r, mpiTag, dataAccess.nodeComm, &ready, &stat);
 									if (err != MPI_SUCCESS) {
 										fprintf(stderr, "Root rank failed to probe msg from %d\n", r);
 										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 									}
+									// printf("Root probe complete\n"); fflush(stdout);
 
 									if (ready == 1) {
 										workDone = true;
 										nReceives++;
 										*srcRank = r;
 
+										// printf("Root is getting count ...\n"); fflush(stdout);
 										err = MPI_Get_count(&stat, elemType, nRecords);
 										if (err != MPI_SUCCESS) {
 											fprintf(stderr, "Root failed on MPI_Get_count(rank=%d)\n", r);
 											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
+
+										// printf("Root is receiving %d records from %d\n", *nRecords, r); fflush(stdout);
 
 										if (*nRecords == 0) {
 											*records = malloc(1 * elemBytes);
@@ -513,7 +705,10 @@ namespace treetimer
 									}
 								}
 
-								if (!workDone) sleep(1);
+								if (!workDone) {
+									// printf("Root got nothing to do, sleeping\n"); fflush(stdout);
+									sleep(1);
+								}
 							}
 						}
 					}
@@ -534,6 +729,7 @@ namespace treetimer
 								fprintf(stderr, "Rank %d failed Isend\n", dataAccess.rankGlobal);
 								MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 							}
+							// printf("Rank %d sent %d records to root (elemBytes = %d)\n", dataAccess.rankGlobal, nElems, elemBytes); fflush(stdout);
 							MPI_Wait(&req, &stat);
 						}
 					}
@@ -543,7 +739,7 @@ namespace treetimer
 
 				void writeTreeNodeAggInstrumentationData(tt_sql::TTSQLite3& dataAccess,
 														treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node,
-														int runID, int processID, int parentID, int * callPathID, treetimer::config::Config& config)
+														int processID, int parentID, int * callPathID, treetimer::config::Config& config)
 				{
 
 					// Instrumentation Data can include:
@@ -562,34 +758,53 @@ namespace treetimer
 					// Each of the pieces of data have their own insertion function for their relevant piece of data, but they may have
 					// differing requirements for existing data (i.e. they may need to be provided foreign key values)
 
-					// Retrieve this node's block type ID
-					int blockTypeID;
-					tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.nodeData.blockType], &blockTypeID);
+					int blockTypeID = -1;
+					int profileNodeID = -1;
 
-					// (a) Profile Nodes
-					int profileNodeID;
-					tt_sql::drivers::writeTreeNodeProfileNodeData(dataAccess, node.key, blockTypeID, &profileNodeID);
+					if (!dataAccess.gatherIntraNode || dataAccess.rankLocal==0) {
+						// Retrieve this node's block type ID
+						tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.nodeData.blockType], &blockTypeID);
 
-					// (b) Call Path Data
-					// CallPath Data should have been written for the parent as part of the tree traversal, and identified by parentID.
+						// (a) Profile Nodes
+						tt_sql::drivers::writeTreeNodeProfileNodeData(dataAccess, node.key, blockTypeID, &profileNodeID);
 
-					// ToDo: Is there a better way of handling no parent (i.e. root node?) - NULL would be equivalent.
-					// Could create an 'unknown' profile node to point to, that has a profile node entry but no callpath node entry
-					if(node.parent != nullptr)
-					{
-						// Get details of parent
-						//int parentNodeID;
-						//int parentBlockType;
+						// (b) Call Path Data
+						// CallPath Data should have been written for the parent as part of the tree traversal, and identified by parentID.
 
-						//std::string parentName = node.parent->key;
-						//tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.parent->nodeData.blockType], &parentBlockType);
-						//tt_sql::drivers::findProfileNodeID(dataAccess, parentName, parentBlockType, &parentNodeID);
+						// ToDo: Is there a better way of handling no parent (i.e. root node?) - NULL would be equivalent.
+						// Could create an 'unknown' profile node to point to, that has a profile node entry but no callpath node entry
+						if(node.parent != nullptr)
+						{
+							// Get details of parent
+							//int parentNodeID;
+							//int parentBlockType;
 
-						tt_sql::drivers::writeCallPathData(dataAccess, profileNodeID, parentID, callPathID);
+							//std::string parentName = node.parent->key;
+							//tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.parent->nodeData.blockType], &parentBlockType);
+							//tt_sql::drivers::findProfileNodeID(dataAccess, parentName, parentBlockType, &parentNodeID);
+
+							tt_sql::drivers::writeCallPathData(dataAccess, dataAccess.rankGlobal, profileNodeID, parentID, callPathID);
+						}
+						else
+						{
+							tt_sql::drivers::writeCallPathData(dataAccess, dataAccess.rankGlobal, profileNodeID, -1, callPathID);
+						}
 					}
-					else
-					{
-						tt_sql::drivers::writeCallPathData(dataAccess, profileNodeID, -1, callPathID);
+					else {
+						// Write to local cache, to be sent to local root rank for writing:
+						tt_sql::TT_CallPathNode r;
+						strncpy(r.nodeName, node.key.c_str(), MAX_STRING_LENGTH);
+						r.rank = dataAccess.rankGlobal;
+						r.blockType = node.nodeData.blockType;
+						if(node.parent != nullptr) {
+							r.parentID = parentID;
+						} else {
+							r.parentID = -1;
+						}
+
+						*callPathID = dataAccess.callPathNodeRecords.size()+1;
+						r.callPathID = *callPathID;
+						dataAccess.callPathNodeRecords.push_back(r);
 					}
 
 					// (c) Aggregate Time Data
@@ -598,8 +813,7 @@ namespace treetimer
 					if(config.eATimers)
 					{
 						int aggTimeID;
-						tt_sql::TTAggTiming d;
-						d.runID = runID;
+						tt_sql::TT_AggTiming d;
 						d.rank = dataAccess.rankGlobal;
 						d.callPathID = *callPathID;
 						d.processID = processID;
@@ -624,7 +838,8 @@ namespace treetimer
 						{
 							int aggParamID;
 							tt_sql::drivers::writeAggregateParameterIntData(
-													   dataAccess, runID, *callPathID, processID, it_int->first,
+													   dataAccess, 
+													   *callPathID, processID, it_int->first,
 													   it_int->second->aggParam.minVal,
 													   it_int->second->aggParam.avgVal,
 													   it_int->second->aggParam.maxVal,
@@ -640,7 +855,8 @@ namespace treetimer
 						{
 							int aggParamID;
 							tt_sql::drivers::writeAggregateParameterFloatData(
-													   dataAccess, runID, *callPathID, processID, it_float->first,
+													   dataAccess, 
+													   *callPathID, processID, it_float->first,
 													   it_float->second->aggParam.minVal,
 													   it_float->second->aggParam.avgVal,
 													   it_float->second->aggParam.maxVal,
@@ -656,7 +872,8 @@ namespace treetimer
 						{
 							int aggParamID;
 							tt_sql::drivers::writeAggregateParameterBoolData(
-													   dataAccess, runID, *callPathID, processID, it_bool->first,
+													   dataAccess, 
+													   *callPathID, processID, it_bool->first,
 													   it_bool->second->aggParam.minVal,
 													   it_bool->second->aggParam.avgVal,
 													   it_bool->second->aggParam.maxVal,
@@ -671,7 +888,7 @@ namespace treetimer
 
 				void writeTreeNodeTraceInstrumentationData(tt_sql::TTSQLite3& dataAccess,
 													  treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node,
-													  int runID, int processID, int parentID, int * callPathID, treetimer::config::Config& config)
+													  int processID, int parentID, int * callPathID, treetimer::config::Config& config)
 				{
 
 					// Instrumentation Data can include:
@@ -690,26 +907,45 @@ namespace treetimer
 					// Each of the pieces of data have their own insertion function for their relevant piece of data, but they may have
 					// differing requirements for existing data (i.e. they may need to be provided foreign key values)
 
-					// Retrieve this node's block type ID
-					int blockTypeID;
-					tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.nodeData.blockType], &blockTypeID);
+					int blockTypeID = -1;
+					int profileNodeID = -1;
 
-					// (a) Profile Nodes
-					int profileNodeID;
-					tt_sql::drivers::writeTreeNodeProfileNodeData(dataAccess, node.key, blockTypeID, &profileNodeID);
+					if (!dataAccess.gatherIntraNode || dataAccess.rankLocal==0) {
+						// Retrieve this node's block type ID
+						tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.nodeData.blockType], &blockTypeID);
 
-					// (b) Call Path Data
-					// CallPath Data should have been written for the parent as part of the tree traversal, and identified by parentID.
+						// (a) Profile Nodes
+						tt_sql::drivers::writeTreeNodeProfileNodeData(dataAccess, node.key, blockTypeID, &profileNodeID);
 
-					// ToDo: Is there a better way of handling no parent (i.e. root node?) - NULL would be equivalent.
-					// Could create an 'unknown' profile node to point to, that has a profile node entry but no callpath node entry
-					if(node.parent != nullptr)
-					{
-						tt_sql::drivers::writeCallPathData(dataAccess, profileNodeID, parentID, callPathID);
+						// (b) Call Path Data
+						// CallPath Data should have been written for the parent as part of the tree traversal, and identified by parentID.
+
+						// ToDo: Is there a better way of handling no parent (i.e. root node?) - NULL would be equivalent.
+						// Could create an 'unknown' profile node to point to, that has a profile node entry but no callpath node entry
+						if(node.parent != nullptr)
+						{
+							tt_sql::drivers::writeCallPathData(dataAccess, dataAccess.rankGlobal, profileNodeID, parentID, callPathID);
+						}
+						else
+						{
+							tt_sql::drivers::writeCallPathData(dataAccess, dataAccess.rankGlobal, profileNodeID, -1, callPathID);
+						}
 					}
-					else
-					{
-						tt_sql::drivers::writeCallPathData(dataAccess, profileNodeID, -1, callPathID);
+					else {
+						// Write to local cache, to be sent to local root rank for writing:
+						tt_sql::TT_CallPathNode r;
+						strncpy(r.nodeName, node.key.c_str(), MAX_STRING_LENGTH);
+						r.rank = dataAccess.rankGlobal;
+						r.blockType = node.nodeData.blockType;
+						if(node.parent != nullptr) {
+							r.parentID = parentID;
+						} else {
+							r.parentID = -1;
+						}
+
+						*callPathID = dataAccess.callPathNodeRecords.size()+1;
+						r.callPathID = *callPathID;
+						dataAccess.callPathNodeRecords.push_back(r);
 					}
 
 					// (c) Trace Times
@@ -722,8 +958,7 @@ namespace treetimer
 						while(ptr != nullptr)
 						{
 							int traceTimeID;
-							tt_sql::TTTraceTiming d;
-							d.runID = runID;
+							tt_sql::TT_TraceTiming d;
 							d.rank = dataAccess.rankGlobal;
 							d.callPathID = *callPathID;
 							d.processID = processID;
@@ -752,11 +987,11 @@ namespace treetimer
 							{
 								int traceParamID;
 								tt_sql::drivers::writeTraceParameterIntData(dataAccess,
-										 runID, processID, *callPathID,
-										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
-										 it_int->first,
-										 ptr->data.val,
-										 &traceParamID);
+										processID, *callPathID,
+										ptr->data.nodeEntryID, ptr->data.nodeExitID,
+										it_int->first,
+										ptr->data.val,
+										&traceParamID);
 
 								ptr = ptr->next;
 							}
@@ -775,11 +1010,11 @@ namespace treetimer
 							{
 								int traceParamID;
 								tt_sql::drivers::writeTraceParameterFloatData(dataAccess,
-										 runID, processID, *callPathID,
-										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
-										 it_double->first,
-										 ptr->data.val,
-										 &traceParamID);
+										processID, *callPathID,
+										ptr->data.nodeEntryID, ptr->data.nodeExitID,
+										it_double->first,
+										ptr->data.val,
+										&traceParamID);
 
 								ptr = ptr->next;
 							}
@@ -797,11 +1032,11 @@ namespace treetimer
 							{
 								int traceParamID;
 								tt_sql::drivers::writeTraceParameterBoolData(dataAccess,
-										 runID, processID, *callPathID,
-										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
-										 it_bool->first,
-										 ptr->data.val,
-										 &traceParamID);
+										processID, *callPathID,
+										ptr->data.nodeEntryID, ptr->data.nodeExitID,
+										it_bool->first,
+										ptr->data.val,
+										&traceParamID);
 
 								ptr = ptr->next;
 							}
@@ -819,11 +1054,11 @@ namespace treetimer
 							{
 								int traceParamID;
 								tt_sql::drivers::writeTraceParameterStringData(dataAccess,
-										 runID, processID, *callPathID,
-										 ptr->data.nodeEntryID, ptr->data.nodeExitID,
-										 it_string->first,
-										 ptr->data.val,
-										 &traceParamID);
+										processID, *callPathID,
+										ptr->data.nodeEntryID, ptr->data.nodeExitID,
+										it_string->first,
+										ptr->data.val,
+										&traceParamID);
 
 								ptr = ptr->next;
 							}
@@ -836,22 +1071,24 @@ namespace treetimer
 									   treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node,
 									   void (*func)(tt_sql::TTSQLite3& dataAccess,
 											   		treetimer::data_structures::TreeNode<std::string, treetimer::measurement::InstrumentationData>& node,
-													int runID, int processID,
+													int processID,
 													int parentID, int * callPathID,
 													treetimer::config::Config& config),
-													int runID, int processID, int parentID, treetimer::config::Config& config)
+													int processID, int parentID, treetimer::config::Config& config)
 				{
 					// Run function on current node
 					// The retrived callPathID will be reused as the parentID for the child nodes.
 					int callPathID;
-					(*func)(dataAccess, node, runID, processID, parentID, &callPathID, config);
+					(*func)(dataAccess, node, 
+						processID, parentID, &callPathID, config);
 
 					std::unordered_map<std::string, treetimer::data_structures::TreeNode<std::string,treetimer::measurement::InstrumentationData> *>::iterator it;
 
 					// Loop over child nodes
 					for(it = node.childNodes.begin(); it != node.childNodes.end(); it ++)
 					{
-						callTreeTraversal(dataAccess, *(it->second), func, runID, processID, callPathID, config);
+						callTreeTraversal(dataAccess, *(it->second), func, 
+							processID, callPathID, config);
 					}
 				}
 			}

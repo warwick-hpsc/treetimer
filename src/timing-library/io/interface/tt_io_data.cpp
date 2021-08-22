@@ -169,14 +169,14 @@ namespace treetimer
 							  treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
 							  tt_sql::TTSQLite3* access)
 			{
-				treetimer::io::tt_sqlite3::drivers::writeAggData(config, callTree, access);
+				treetimer::io::tt_sqlite3::drivers::prepareAndWriteAggData(config, callTree, access);
 			}
 
 			void writeTraceData(treetimer::config::Config& config,
 								treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
 								tt_sql::TTSQLite3* access)
 			{
-				treetimer::io::tt_sqlite3::drivers::writeTraceData(config, callTree, access);
+				treetimer::io::tt_sqlite3::drivers::prepareAndWriteTraceData(config, callTree, access);
 			}
 		}
 	}

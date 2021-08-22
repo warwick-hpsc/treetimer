@@ -27,9 +27,9 @@ namespace treetimer
 			{
 				void writeSchemaProcessData(TTSQLite3& dataAccess);
 
-				void findProcessDataID(TTSQLite3& dataAccess, int cpuCoreID,  int mpiRank, int * processID);
+				void findProcessDataID(TTSQLite3& dataAccess, int cpuCoreID, int mpiRank, int thread, int * processID);
 
-				void writeProcessData(TTSQLite3& dataAccess, int cpuCoreID,  int mpiRank, int * processID);
+				void writeProcessData(TTSQLite3& dataAccess, int cpuCoreID, int mpiRank, int thread, int * processID);
 			}
 		}
 	}

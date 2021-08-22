@@ -26,6 +26,8 @@
 	#endif
 #endif
 
+#define MAX_STRING_LENGTH 256
+
 namespace treetimer
 {
 	namespace core

@@ -21,6 +21,7 @@
 #include "tt_config.h"
 #include "tt_instrumentation_data.h"
 
+namespace tt_cfg = treetimer::config;
 namespace tt_sql = treetimer::database::tt_sqlite3;
 namespace tt_ds = treetimer::data_structures;
 namespace tt_m = treetimer::measurement;
@@ -33,25 +34,27 @@ namespace treetimer
 		{
 			namespace drivers
 			{
-				tt_sql::TTSQLite3* setupOutput(treetimer::config::Config& config);
+				tt_sql::TTSQLite3* setupOutput(tt_cfg::Config& config);
 
-				void writeRunConfigData(treetimer::config::Config& config, tt_sql::TTSQLite3* access);
+				void writeRunConfigData(tt_cfg::Config& config, tt_sql::TTSQLite3* access);
 
-				void writeAggData(treetimer::config::Config& config,
-								  tt_ds::Tree<std::string, tt_m::InstrumentationData>& callTree,
-								  tt_sql::TTSQLite3* access);
+				void prepareAndWriteExecutionData(tt_sql::TTSQLite3* dataAccess);
 
-				void writeTraceData(treetimer::config::Config& config,
-									tt_ds::Tree<std::string, tt_m::InstrumentationData>& callTree,
-									tt_sql::TTSQLite3* access);
+				void prepareAndWriteAggData(tt_cfg::Config& config,
+											tt_ds::Tree<std::string, tt_m::InstrumentationData>& callTree,
+											tt_sql::TTSQLite3* access);
+
+				void prepareAndWriteTraceData(tt_cfg::Config& config,
+												tt_ds::Tree<std::string, tt_m::InstrumentationData>& callTree,
+												tt_sql::TTSQLite3* access);
 
 				void writeTreeNodeAggInstrumentationData(tt_sql::TTSQLite3& dataAccess,
 											          tt_ds::TreeNode<std::string, tt_m::InstrumentationData>& node,
-													  int runID, int processID, int parentID, int * callPathID, treetimer::config::Config& config);
+													  int processID, int parentID, int * callPathID, tt_cfg::Config& config);
 
 				void writeTreeNodeTraceInstrumentationData(tt_sql::TTSQLite3& dataAccess,
 											          tt_ds::TreeNode<std::string, tt_m::InstrumentationData>& node,
-													  int runID, int processID, int parentID, int * callPathID, treetimer::config::Config& config);
+													  int processID, int parentID, int * callPathID, tt_cfg::Config& config);
 
 				int fetchNextGatheredRecord(tt_sql::TTSQLite3& dataAccess, void** records, int* nRecords, int* srcRank,
 											int elemBytes, MPI_Datatype elemType, int mpiTag);
@@ -62,10 +65,10 @@ namespace treetimer
 									   tt_ds::TreeNode<std::string, tt_m::InstrumentationData>& node,
 									   void (*func)(tt_sql::TTSQLite3& dataAccess,
 											   	    tt_ds::TreeNode<std::string, tt_m::InstrumentationData>& node,
-													int runID, int processID,
+													int processID,
 													int parentID, int * callPathID,
-													treetimer::config::Config& config),
-													int runID, int processID, int parentID, treetimer::config::Config& config);
+													tt_cfg::Config& config),
+													int processID, int parentID, tt_cfg::Config& config);
 			}
 		}
 	}

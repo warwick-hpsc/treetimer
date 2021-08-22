@@ -54,6 +54,14 @@ namespace treetimer
 				// This fixes push_back() seg-fault:
 				this->aggTimeRecords.resize(0);
 				this->traceTimeRecords.resize(0);
+				this->callPathNodeRecords.resize(0);
+
+				this->rankLocalToProcessID.resize(nRanksLocal);
+				this->rankLocalToRankGlobal.resize(nRanksLocal);
+				for (int i=0; i<nRanksLocal; i++) {
+					this->rankLocalToProcessID[i]  = -1;
+					this->rankLocalToRankGlobal[i] = -1;
+				}
 			}
 
 			TTSQLite3::~TTSQLite3()

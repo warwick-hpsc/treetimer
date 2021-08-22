@@ -22,9 +22,11 @@ namespace treetimer
 		{
 			namespace drivers
 			{
-				void writeSchemaApplicationData(TTSQLite3& dataAccess);
-				void findApplicationDataID(TTSQLite3& dataAccess, std::string appName, std::string appVer, int * applicationID);
-				void writeApplicationData(TTSQLite3& dataAccess, std::string appName, std::string appVer, int * applicationID);
+				// Useless table!
+
+				// void writeSchemaApplicationData(TTSQLite3& dataAccess);
+				// void findApplicationDataID(TTSQLite3& dataAccess, std::string appName, std::string appVer, int * applicationID);
+				// void writeApplicationData(TTSQLite3& dataAccess, std::string appName, std::string appVer, int * applicationID);
 			}
 		}
 	}

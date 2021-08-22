@@ -27,9 +27,13 @@ namespace treetimer
 			{
 				void writeSchemaAggregateTimeData(TTSQLite3& dataAccess);
 
-				void findAggregateTimeDataID(TTSQLite3& dataAccess, TTAggTiming d, int * aggTimeID);
+				void findAggregateTimeDataID(TTSQLite3& dataAccess, TT_AggTiming d, int * aggTimeID);
 
-				void writeAggregateTimeData(TTSQLite3& dataAccess, TTAggTiming d, int * aggTimeID);
+				void writeAggregateTimeData(TTSQLite3& dataAccess, TT_AggTiming d, int * aggTimeID);
+
+				MPI_Datatype createAggregateTimeMpiType();
+
+				MPI_Datatype createHwInfoMpiType();
 			}
 		}
 	}

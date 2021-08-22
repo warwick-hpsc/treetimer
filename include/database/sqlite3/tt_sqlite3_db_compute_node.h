@@ -28,16 +28,14 @@ namespace treetimer
 				void writeSchemaComputeNodeData(TTSQLite3& dataAccess);
 
 				void findComputeNodeDataID(TTSQLite3& dataAccess,
-										   int machineID,
-										   std::string nodeName,
-										   int socketCount,
-										   int * computeNodeID);
+											// int machineID,
+											TT_ComputeNode d,
+											int * computeNodeID);
 
 				void writeComputeNodeData(TTSQLite3& dataAccess,
-										   int machineID,
-										   std::string nodeName,
-										   int socketCount,
-										   int * computeNodeID);
+											// int machineID,
+											TT_ComputeNode d,
+											int * computeNodeID);
 			}
 		}
 	}
