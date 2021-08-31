@@ -52,9 +52,10 @@ namespace treetimer
 				this->nodeComm = nodeComm;
 
 				// This fixes push_back() seg-fault:
+				this->callPathNodeRecords.resize(0);
 				this->aggTimeRecords.resize(0);
 				this->traceTimeRecords.resize(0);
-				this->callPathNodeRecords.resize(0);
+				this->aggParamIntRecords.resize(0);
 
 				this->rankLocalToProcessID.resize(nRanksLocal);
 				this->rankLocalToRankGlobal.resize(nRanksLocal);

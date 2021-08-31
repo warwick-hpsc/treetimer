@@ -45,6 +45,13 @@ namespace treetimer
 			} TT_TraceTiming;
 
 			typedef struct {
+				int rank, callPathID, processID;
+				char paramName[MAX_STRING_LENGTH];
+				int minValue, maxValue, count;
+				double avgValue, stdev;
+			} TT_AggParamInt;
+
+			typedef struct {
 				int rank;
 				char nodeName[MAX_STRING_LENGTH];
 				int blockType;
@@ -97,6 +104,7 @@ namespace treetimer
 					std::vector<TT_CallPathNode> callPathNodeRecords;
 					std::vector<TT_AggTiming> aggTimeRecords;
 					std::vector<TT_TraceTiming> traceTimeRecords;
+					std::vector<TT_AggParamInt> aggParamIntRecords;
 
 					std::vector<int> rankLocalToProcessID;
 					std::vector<int> rankLocalToRankGlobal;

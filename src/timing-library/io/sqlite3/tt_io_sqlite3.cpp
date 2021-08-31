@@ -48,10 +48,11 @@ namespace tt_sql = treetimer::database::tt_sqlite3;
 
 // Note! When performing intra-node gather of database records,
 // MPI tags will be used to distinguish between different DB tables.
-#define TAG_AGG 0
-#define TAG_TRC 1
-#define TAG_HWINFO 2
-#define TAG_CALLPATH 3
+#define TAG_CALLPATH 0
+#define TAG_HWINFO 1
+#define TAG_AGG 11
+#define TAG_AGG_PARAM_INT 12
+#define TAG_TRC 21
 
 namespace treetimer
 {
@@ -145,9 +146,8 @@ namespace treetimer
 
 					if(config.sqlIORunConfig == false)
 					{
-						// Profile Node Type Data
+						// Profile Node Type Data - identical across ranks so no comms needed
 						if (!dataAccess->gatherIntraNode || dataAccess->rankLocal==0) {
-							// This data identical across ranks, no comms needed
 							for(int i = 0; i < TT_CODE_BLOCK_COUNT; i++)
 							{
 								int dbID;
@@ -155,11 +155,9 @@ namespace treetimer
 							}
 						}
 
-						// Library Config Data
+						// Library Config Data - assume identical across ranks, why would user 
+						// configure different ranks differently? So assume no comms needed.
 						if (!dataAccess->gatherIntraNode || dataAccess->rankLocal==0) {
-							// Assume identical across ranks - why would user configure different ranks 
-							// differently?! So assume no comms needed.
-
 							int libConfigID = -1;
 							tt_sql::drivers::writeLibraryConfigID(*dataAccess, config.libVerMajor, config.libVerMinor,
 																	config.eATimers, config.eTTimers,
@@ -187,9 +185,8 @@ namespace treetimer
 						// int appID;
 						// tt_sql::drivers::writeApplicationData(*dataAccess, config.appName, config.appVersion, &appID);
 
-						// Machine Data
+						// Machine Data - machineName is global and constant.
 						if (!dataAccess->gatherIntraNode || dataAccess->rankLocal==0) {
-							// MachineName is global and constant.
 							int machineID;
 							tt_sql::drivers::writeMachineData(*dataAccess, config.machineName, &machineID);
 						}
@@ -425,7 +422,7 @@ namespace treetimer
 
 						// Before gather/writing any performance data, must first 
 						// gather callpath data and adjust id's for different ranks 
-						// having different callpath trees.
+						// potentially having different callpath trees.
 						std::map<int, int> callpathNodeIdRemap[dataAccess->nRanksLocal];
 						MPI_Datatype callpathNodeRecord_MPI = tt_sql::drivers::createCallpathNodeMpiType();
 						// Perform intra-node gather-at-root:
@@ -502,7 +499,7 @@ namespace treetimer
 										// Add in processID, which only root will know from earlier:
 										records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 
-										// Todo: remap callpath ids
+										// Remap callpath ids
 										records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
 
 										tt_sql::drivers::writeAggregateTimeData(*dataAccess, records[i], &aggTimeID);
@@ -520,6 +517,52 @@ namespace treetimer
 								}
 								dataAccess->aggTimeRecords.clear();
 							}
+						}
+
+						if(config.eAParam) {
+							MPI_Datatype aggParamIntRecord_MPI = tt_sql::drivers::createAggregateParamIntMpiType();
+							// Perform intra-node gather-at-root:
+							if (dataAccess->nRanksLocal > 1) {
+								if (dataAccess->rankLocal == 0) {
+									int n = dataAccess->nRanksLocal;
+
+									int nReceives = 0;
+									int aggParamIntID;
+									tt_sql::TT_AggParamInt* records = NULL;
+									int nRecords = 0;
+									int srcRank;
+									while (nReceives != (n-1)) {
+										err = fetchNextGatheredRecord(*dataAccess, (void**)&records, &nRecords, &srcRank, 
+																		sizeof(tt_sql::TT_AggParamInt), aggParamIntRecord_MPI, TAG_AGG_PARAM_INT);
+										if (err != 0) {
+											fprintf(stderr, "Root failed on fetchNextGatheredRecord()\n");
+											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+										}
+										nReceives++;
+										for (int i=0; i<nRecords; i++) {
+											// Add in processID, which only root will know from earlier:
+											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
+
+											// Remap callpath ids
+											records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+
+											tt_sql::drivers::writeAggregateParameterIntData(*dataAccess, records[i], &aggParamIntID);
+										}
+										free(records); records=NULL; nRecords=0;
+									}
+								}
+								else {
+									// Send to local root
+									err = sendRecordsToRoot(*dataAccess, dataAccess->aggParamIntRecords.data(), dataAccess->aggParamIntRecords.size(), 
+															sizeof(tt_sql::TT_AggParamInt), aggParamIntRecord_MPI, TAG_AGG_PARAM_INT);
+									if (err != 0) {
+										fprintf(stderr, "Rank %d failed on sendRecordsToRoot()\n", dataAccess->rankGlobal);
+										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+									}
+									dataAccess->aggParamIntRecords.clear();
+								}
+							}
+
 						}
 					}
 
@@ -793,8 +836,8 @@ namespace treetimer
 					else {
 						// Write to local cache, to be sent to local root rank for writing:
 						tt_sql::TT_CallPathNode r;
-						strncpy(r.nodeName, node.key.c_str(), MAX_STRING_LENGTH);
 						r.rank = dataAccess.rankGlobal;
+						strncpy(r.nodeName, node.key.c_str(), MAX_STRING_LENGTH);
 						r.blockType = node.nodeData.blockType;
 						if(node.parent != nullptr) {
 							r.parentID = parentID;
@@ -837,15 +880,17 @@ namespace treetimer
 						for(it_int = node.nodeData.intParameters.begin(); it_int != node.nodeData.intParameters.end(); it_int++)
 						{
 							int aggParamID;
-							tt_sql::drivers::writeAggregateParameterIntData(
-													   dataAccess, 
-													   *callPathID, processID, it_int->first,
-													   it_int->second->aggParam.minVal,
-													   it_int->second->aggParam.avgVal,
-													   it_int->second->aggParam.maxVal,
-													   sqrt(it_int->second->aggParam.variance),
-													   it_int->second->aggParam.count,
-													   &aggParamID);
+							tt_sql::TT_AggParamInt p;
+							p.rank = dataAccess.rankGlobal;
+							p.callPathID = *callPathID;
+							p.processID = processID;
+							strncpy(p.paramName, it_int->first.c_str(), MAX_STRING_LENGTH);
+							p.minValue = it_int->second->aggParam.minVal;
+							p.maxValue = it_int->second->aggParam.maxVal;
+							p.avgValue = it_int->second->aggParam.avgVal;
+							p.stdev    = sqrt(it_int->second->aggParam.variance);
+							p.count    = it_int->second->aggParam.count;
+							tt_sql::drivers::writeAggregateParameterIntData(dataAccess, p, &aggParamID);
 						}
 
 						std::unordered_map<std::string, treetimer::parameters::Parameter<double> *>::iterator it_float;

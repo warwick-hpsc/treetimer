@@ -72,21 +72,24 @@ namespace treetimer
 					sqlite3_bind_int(   pStmt,9, d.count);
 					err = sqlite3_step(pStmt);
 
-					if(err == SQLITE_ERROR)
-					{
-						std::cout << "SQL Error encountered in findAggregateTimeDataID\n";
+					if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
+						if (err == SQLITE_ERROR) {
+							std::cout << "SQL Error encountered in findAggregateTimeDataID\n";
+						} else if (err = SQLITE_MISUSE) {
+							std::cout << "SQL Error encountered in findAggregateTimeDataID - misuse\n";
+						} else {
+							std::cout << "SQL Error encountered in findAggregateTimeDataID - unknown error code " << err << std::endl;
+						}
 						char * expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
 						sqlite3_free(expandedQuery);
 					}
-					else if(err == SQLITE_ROW)
-					{
+					else if(err == SQLITE_ROW) {
 						*aggTimeID = sqlite3_column_int(pStmt, 0);
 					}
-					else
-					{
+					else {
 						*aggTimeID = -1;
 					}
 
@@ -131,9 +134,14 @@ namespace treetimer
 						err = sqlite3_step(pStmt);
 
 
-						if(err == SQLITE_ERROR)
-						{
-							std::cout << "SQL Error encountered in writeAggregateTimeData\n";
+						if (err != SQLITE_OK && err != SQLITE_DONE) {
+							if (err == SQLITE_ERROR) {
+								std::cout << "SQL Error encountered in writeAggregateTimeData\n";
+							} else if (err = SQLITE_MISUSE) {
+								std::cout << "SQL Error encountered in writeAggregateTimeData - misuse\n";
+							} else {
+								std::cout << "SQL Error encountered in writeAggregateTimeData - unknown error code " << err << std::endl;
+							}
 							char * expandedQuery = sqlite3_expanded_sql(pStmt);
 							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
@@ -141,8 +149,7 @@ namespace treetimer
 							sqlite3_free(expandedQuery);
 							*aggTimeID = -1;
 						}
-						else
-						{
+						else {
 							*aggTimeID = sqlite3_last_insert_rowid(dataAccess.db);
 						}
 

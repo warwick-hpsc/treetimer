@@ -27,10 +27,7 @@ namespace treetimer
 			{
 				void writeSchemaAggregateParameterData(TTSQLite3& dataAccess);
 
-				void findAggregateParameterIntDataID(TTSQLite3& dataAccess,
-										   int callPathID, int processID, std::string paramName,
-										   int minValue, double avgValue, int maxValue, double stddev, int count,
-										   int * aggParamIntID);
+				void findAggregateParameterIntDataID(TTSQLite3& dataAccess, TT_AggParamInt d, int* aggParamIntID);
 
 
 				void findAggregateParameterFloatDataID(TTSQLite3& dataAccess,
@@ -43,10 +40,7 @@ namespace treetimer
 										   int minValue, double avgValue, int maxValue, double stddev, int count,
 										   int * aggParamBoolID);
 
-				void writeAggregateParameterIntData(TTSQLite3& dataAccess,
-						   int callPathID, int processID, std::string paramName,
-						   int minValue, double avgValue, int maxValue, double stddev, int count,
-						   int * aggParamIntID);
+				void writeAggregateParameterIntData(TTSQLite3& dataAccess, TT_AggParamInt d, int* aggParamIntID);
 
 				void writeAggregateParameterFloatData(TTSQLite3& dataAccess,
 						   int callPathID, int processID, std::string paramName,
@@ -57,6 +51,8 @@ namespace treetimer
 						   int callPathID, int processID, std::string paramName,
 						   int minValue, double avgValue, int maxValue, double stddev, int count,
 						   int * aggParamBoolID);
+
+				MPI_Datatype createAggregateParamIntMpiType();
 			}
 		}
 	}
