@@ -94,7 +94,7 @@ namespace treetimer
 					}
 				}
 
-				void findAggregateParameterIntDataID(TTSQLite3& dataAccess, TT_AggParamInt d, int* aggParamIntID)
+				void findAggregateParameterIntDataID(TTSQLite3& dataAccess, TT_AggParamInt p, int* aggParamIntID)
 				{
 					sqlite3_stmt * pStmt;
 					char * zErrMsg = 0;
@@ -113,14 +113,14 @@ namespace treetimer
 											  -1, &pStmt, NULL);
 
 					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
-					sqlite3_bind_int   (pStmt,2, d.callPathID);
-					sqlite3_bind_int   (pStmt,3, d.processID);
-					sqlite3_bind_text  (pStmt,4, d.paramName, -1, SQLITE_TRANSIENT);
-					sqlite3_bind_int   (pStmt,5, d.minValue);
-					sqlite3_bind_double(pStmt,6, d.avgValue);
-					sqlite3_bind_int   (pStmt,7, d.maxValue);
-					sqlite3_bind_double(pStmt,8, d.stdev);
-					sqlite3_bind_int   (pStmt,9, d.count);
+					sqlite3_bind_int   (pStmt,2, p.callPathID);
+					sqlite3_bind_int   (pStmt,3, p.processID);
+					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
+					sqlite3_bind_int   (pStmt,5, p.minValue);
+					sqlite3_bind_double(pStmt,6, p.avgValue);
+					sqlite3_bind_int   (pStmt,7, p.maxValue);
+					sqlite3_bind_double(pStmt,8, p.stdev);
+					sqlite3_bind_int   (pStmt,9, p.count);
 
 					err = sqlite3_step(pStmt);
 
@@ -149,11 +149,7 @@ namespace treetimer
 				}
 
 
-
-				void findAggregateParameterFloatDataID(TTSQLite3& dataAccess,
-										   int callPathID, int processID, std::string paramName,
-										   double minValue, double avgValue, double maxValue, double stddev, int count,
-										   int * aggParamFloatID)
+				void findAggregateParameterFloatDataID(TTSQLite3& dataAccess, TT_AggParamFloat p, int* aggParamFloatID)
 				{
 					sqlite3_stmt * pStmt;
 					char * zErrMsg = 0;
@@ -171,33 +167,36 @@ namespace treetimer
 											  "Count = ?",
 											  -1, &pStmt, NULL);
 
-					sqlite3_bind_int(pStmt,1, dataAccess.runID);
-					sqlite3_bind_int(pStmt,2, callPathID);
-					sqlite3_bind_int(pStmt,3, processID);
-					sqlite3_bind_text(pStmt,4, paramName.c_str(), -1, SQLITE_TRANSIENT);
-					sqlite3_bind_double(pStmt,5, minValue);
-					sqlite3_bind_double(pStmt,6, avgValue);
-					sqlite3_bind_double(pStmt,7, maxValue);
-					sqlite3_bind_double(pStmt,8, stddev);
-					sqlite3_bind_int(pStmt,9, count);
+					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
+					sqlite3_bind_int   (pStmt,2, p.callPathID);
+					sqlite3_bind_int   (pStmt,3, p.processID);
+					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
+					sqlite3_bind_double(pStmt,5, p.minValue);
+					sqlite3_bind_double(pStmt,6, p.avgValue);
+					sqlite3_bind_double(pStmt,7, p.maxValue);
+					sqlite3_bind_double(pStmt,8, p.stdev);
+					sqlite3_bind_int   (pStmt,9, p.count);
 
 					err = sqlite3_step(pStmt);
 
-					if(err == SQLITE_ERROR)
-					{
-						std::cout << "SQL Error encountered in findAggregateParameterFloatDataID\n";
+					if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
+						if (err == SQLITE_ERROR) {
+							std::cout << "SQL Error encountered in findAggregateParameterFloatDataID\n";
+						} else if (err = SQLITE_MISUSE) {
+							std::cout << "SQL Error encountered in findAggregateParameterFloatDataID - misuse\n";
+						} else {
+							std::cout << "SQL Error encountered in findAggregateParameterFloatDataID - unknown error code " << err << std::endl;
+						}
 						char * expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
 						sqlite3_free(expandedQuery);
 					}
-					else if(err == SQLITE_ROW)
-					{
+					else if(err == SQLITE_ROW) {
 						*aggParamFloatID = sqlite3_column_int(pStmt, 0);
 					}
-					else
-					{
+					else {
 						*aggParamFloatID = -1;
 					}
 
@@ -205,10 +204,7 @@ namespace treetimer
 				}
 
 
-				void findAggregateParameterBoolDataID(TTSQLite3& dataAccess,
-										   int callPathID, int processID, std::string paramName,
-										   int minValue, double avgValue, int maxValue, double stddev, int count,
-										   int * aggParamBoolID)
+				void findAggregateParameterBoolDataID(TTSQLite3& dataAccess, TT_AggParamBool p, int* aggParamBoolID)
 				{
 					sqlite3_stmt * pStmt;
 					char * zErrMsg = 0;
@@ -226,43 +222,46 @@ namespace treetimer
 											  "Count = ?",
 											  -1, &pStmt, NULL);
 
-					sqlite3_bind_int(pStmt,1, dataAccess.runID);
-					sqlite3_bind_int(pStmt,2, callPathID);
-					sqlite3_bind_int(pStmt,3, processID);
-					sqlite3_bind_text(pStmt,4, paramName.c_str(), -1, SQLITE_TRANSIENT);
-					sqlite3_bind_double(pStmt,5, minValue);
-					sqlite3_bind_double(pStmt,6, avgValue);
-					sqlite3_bind_double(pStmt,7, maxValue);
-					sqlite3_bind_double(pStmt,8, stddev);
-					sqlite3_bind_int(pStmt,9, count);
+					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
+					sqlite3_bind_int   (pStmt,2, p.callPathID);
+					sqlite3_bind_int   (pStmt,3, p.processID);
+					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
+					sqlite3_bind_double(pStmt,5, p.minValue);
+					sqlite3_bind_double(pStmt,6, p.avgValue);
+					sqlite3_bind_double(pStmt,7, p.maxValue);
+					sqlite3_bind_double(pStmt,8, p.stdev);
+					sqlite3_bind_int   (pStmt,9, p.count);
 
 					err = sqlite3_step(pStmt);
 
-					if(err == SQLITE_ERROR)
-					{
-						std::cout << "SQL Error encountered in findAggregateParameterBoolDataID\n";
+					if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
+						if (err == SQLITE_ERROR) {
+							std::cout << "SQL Error encountered in findAggregateParameterBoolDataID\n";
+						} else if (err = SQLITE_MISUSE) {
+							std::cout << "SQL Error encountered in findAggregateParameterBoolDataID - misuse\n";
+						} else {
+							std::cout << "SQL Error encountered in findAggregateParameterBoolDataID - unknown error code " << err << std::endl;
+						}
 						char * expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
 						sqlite3_free(expandedQuery);
 					}
-					else if(err == SQLITE_ROW)
-					{
+					else if(err == SQLITE_ROW) {
 						*aggParamBoolID = sqlite3_column_int(pStmt, 0);
 					}
-					else
-					{
+					else {
 						*aggParamBoolID = -1;
 					}
 
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeAggregateParameterIntData(TTSQLite3& dataAccess, TT_AggParamInt d, int* aggParamIntID)
+				void writeAggregateParameterIntData(TTSQLite3& dataAccess, TT_AggParamInt p, int* aggParamIntID)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
-						dataAccess.aggParamIntRecords.push_back(d);
+						dataAccess.aggParamIntRecords.push_back(p);
 						*aggParamIntID = -1;
 						return;
 					}
@@ -272,21 +271,21 @@ namespace treetimer
 
 					// Check for existing entry
 					int tmpID;
-					findAggregateParameterIntDataID(dataAccess, d, &tmpID);
+					findAggregateParameterIntDataID(dataAccess, p, &tmpID);
 
 					if(tmpID == -1)
 					{
 						err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterInt VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
 						sqlite3_bind_int   (pStmt,1, dataAccess.runID);
-						sqlite3_bind_int   (pStmt,2, d.callPathID);
-						sqlite3_bind_int   (pStmt,3, d.processID);
-						sqlite3_bind_text  (pStmt,4, d.paramName, -1, SQLITE_TRANSIENT);
-						sqlite3_bind_int   (pStmt,5, d.minValue);
-						sqlite3_bind_double(pStmt,6, d.avgValue);
-						sqlite3_bind_int   (pStmt,7, d.maxValue);
-						sqlite3_bind_double(pStmt,8, d.stdev);
-						sqlite3_bind_int   (pStmt,9, d.count);
+						sqlite3_bind_int   (pStmt,2, p.callPathID);
+						sqlite3_bind_int   (pStmt,3, p.processID);
+						sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
+						sqlite3_bind_int   (pStmt,5, p.minValue);
+						sqlite3_bind_double(pStmt,6, p.avgValue);
+						sqlite3_bind_int   (pStmt,7, p.maxValue);
+						sqlite3_bind_double(pStmt,8, p.stdev);
+						sqlite3_bind_int   (pStmt,9, p.count);
 						err = sqlite3_step(pStmt);
 
 						if (err != SQLITE_OK && err != SQLITE_DONE) {
@@ -304,53 +303,56 @@ namespace treetimer
 							sqlite3_free(expandedQuery);
 							*aggParamIntID = -1;
 						}
-						else
-						{
+						else {
 							*aggParamIntID = sqlite3_last_insert_rowid(dataAccess.db);
 						}
 
 						sqlite3_finalize(pStmt);
 					}
-					else
-					{
+					else {
 						*aggParamIntID = tmpID;
 					}
 				}
 
 
-				void writeAggregateParameterFloatData(TTSQLite3& dataAccess,
-						   int callPathID, int processID, std::string paramName,
-						   double minValue, double avgValue, double maxValue, double stddev, int count,
-						   int * aggParamFloatID)
+				void writeAggregateParameterFloatData(TTSQLite3& dataAccess, TT_AggParamFloat p, int* aggParamFloatID)
 				{
+					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
+						dataAccess.aggParamFloatRecords.push_back(p);
+						*aggParamFloatID = -1;
+						return;
+					}
+
 					sqlite3_stmt * pStmt;
 					int err;
 
 					// Check for existing entry
 					int tmpID;
-					findAggregateParameterFloatDataID(dataAccess, 
-													callPathID, processID,paramName,
-												    minValue, avgValue, maxValue, stddev, count,
-												    &tmpID);
+					findAggregateParameterFloatDataID(dataAccess, p, &tmpID);
 
 					if(tmpID == -1)
 					{
 						err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterFloat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
-						sqlite3_bind_int(pStmt,1, dataAccess.runID);
-						sqlite3_bind_int(pStmt,2, callPathID);
-						sqlite3_bind_int(pStmt,3, processID);
-						sqlite3_bind_text(pStmt,4, paramName.c_str(), -1, SQLITE_TRANSIENT);
-						sqlite3_bind_double(pStmt,5, minValue);
-						sqlite3_bind_double(pStmt,6, avgValue);
-						sqlite3_bind_double(pStmt,7, maxValue);
-						sqlite3_bind_double(pStmt,8, stddev);
-						sqlite3_bind_int(pStmt,9, count);
+						sqlite3_bind_int   (pStmt,1, dataAccess.runID);
+						sqlite3_bind_int   (pStmt,2, p.callPathID);
+						sqlite3_bind_int   (pStmt,3, p.processID);
+						sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
+						sqlite3_bind_double(pStmt,5, p.minValue);
+						sqlite3_bind_double(pStmt,6, p.avgValue);
+						sqlite3_bind_double(pStmt,7, p.maxValue);
+						sqlite3_bind_double(pStmt,8, p.stdev);
+						sqlite3_bind_int   (pStmt,9, p.count);
 						err = sqlite3_step(pStmt);
 
-						if(err == SQLITE_ERROR)
-						{
-							std::cout << "SQL Error encountered in writeAggregateParameterFloatData\n";
+						if (err != SQLITE_OK && err != SQLITE_DONE) {
+							if (err == SQLITE_ERROR) {
+								std::cout << "SQL Error encountered in writeAggregateParameterFloatData\n";
+							} else if (err = SQLITE_MISUSE) {
+								std::cout << "SQL Error encountered in writeAggregateParameterFloatData - misuse\n";
+							} else {
+								std::cout << "SQL Error encountered in writeAggregateParameterFloatData - unknown error code " << err << std::endl;
+							}
 							char * expandedQuery = sqlite3_expanded_sql(pStmt);
 							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
@@ -358,53 +360,56 @@ namespace treetimer
 							sqlite3_free(expandedQuery);
 							*aggParamFloatID = -1;
 						}
-						else
-						{
+						else {
 							*aggParamFloatID = sqlite3_last_insert_rowid(dataAccess.db);
 						}
 
 						sqlite3_finalize(pStmt);
 					}
-					else
-					{
+					else {
 						*aggParamFloatID = tmpID;
 					}
 				}
 
 
-				void writeAggregateParameterBoolData(TTSQLite3& dataAccess,
-						   int callPathID, int processID, std::string paramName,
-						   int minValue, double avgValue, int maxValue, double stddev, int count,
-						   int * aggParamBoolID)
+				void writeAggregateParameterBoolData(TTSQLite3& dataAccess, TT_AggParamBool p,  int* aggParamBoolID)
 				{
+					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
+						dataAccess.aggParamBoolRecords.push_back(p);
+						*aggParamBoolID = -1;
+						return;
+					}
+
 					sqlite3_stmt * pStmt;
 					int err;
 
 					// Check for existing entry
 					int tmpID;
-					findAggregateParameterBoolDataID(dataAccess, 
-													callPathID, processID,paramName,
-												    minValue, avgValue, maxValue, stddev, count,
-												    &tmpID);
+					findAggregateParameterBoolDataID(dataAccess, p, &tmpID);
 
 					if(tmpID == -1)
 					{
 						err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterBool VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
-						sqlite3_bind_int(pStmt,1, dataAccess.runID);
-						sqlite3_bind_int(pStmt,2, callPathID);
-						sqlite3_bind_int(pStmt,3, processID);
-						sqlite3_bind_text(pStmt,4, paramName.c_str(), -1, SQLITE_TRANSIENT);
-						sqlite3_bind_int(pStmt,5, minValue);
-						sqlite3_bind_double(pStmt,6, avgValue);
-						sqlite3_bind_int(pStmt,7, maxValue);
-						sqlite3_bind_double(pStmt,8, stddev);
-						sqlite3_bind_int(pStmt,9, count);
+						sqlite3_bind_int   (pStmt,1, dataAccess.runID);
+						sqlite3_bind_int   (pStmt,2, p.callPathID);
+						sqlite3_bind_int   (pStmt,3, p.processID);
+						sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
+						sqlite3_bind_int   (pStmt,5, p.minValue);
+						sqlite3_bind_double(pStmt,6, p.avgValue);
+						sqlite3_bind_int   (pStmt,7, p.maxValue);
+						sqlite3_bind_double(pStmt,8, p.stdev);
+						sqlite3_bind_int   (pStmt,9, p.count);
 						err = sqlite3_step(pStmt);
 
-						if(err == SQLITE_ERROR)
-						{
-							std::cout << "SQL Error encountered in writeAggregateParameterBoolData\n";
+						if (err != SQLITE_OK && err != SQLITE_DONE) {
+							if (err == SQLITE_ERROR) {
+								std::cout << "SQL Error encountered in writeAggregateParameterBoolData\n";
+							} else if (err = SQLITE_MISUSE) {
+								std::cout << "SQL Error encountered in writeAggregateParameterBoolData - misuse\n";
+							} else {
+								std::cout << "SQL Error encountered in writeAggregateParameterBoolData - unknown error code " << err << std::endl;
+							}
 							char * expandedQuery = sqlite3_expanded_sql(pStmt);
 							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
@@ -412,15 +417,13 @@ namespace treetimer
 							sqlite3_free(expandedQuery);
 							*aggParamBoolID = -1;
 						}
-						else
-						{
+						else {
 							*aggParamBoolID = sqlite3_last_insert_rowid(dataAccess.db);
 						}
 
 						sqlite3_finalize(pStmt);
 					}
-					else
-					{
+					else {
 						*aggParamBoolID = tmpID;
 					}
 				}
@@ -474,6 +477,108 @@ namespace treetimer
 					}
 
 					return aggParamIntRecord_MPI;
+				}
+
+				MPI_Datatype createAggregateParamFloatMpiType()
+				{
+					// Create MPI type for a AggParamFloat record:
+					int err;
+					MPI_Datatype aggParamFloatRecord_MPI, tmpType;
+
+					int lengths[9] = {1, 1, 1, MAX_STRING_LENGTH, 1, 1, 1, 1, 1};
+					MPI_Aint displacements[9];
+					displacements[0] = offsetof(TT_AggParamFloat, rank);
+					displacements[1] = offsetof(TT_AggParamFloat, callPathID);
+					displacements[2] = offsetof(TT_AggParamFloat, processID);
+					displacements[3] = offsetof(TT_AggParamFloat, paramName);
+					displacements[4] = offsetof(TT_AggParamFloat, minValue);
+					displacements[5] = offsetof(TT_AggParamFloat, maxValue);
+					displacements[6] = offsetof(TT_AggParamFloat, count);
+					displacements[7] = offsetof(TT_AggParamFloat, avgValue);
+					displacements[8] = offsetof(TT_AggParamFloat, stdev);
+					MPI_Datatype types[9] = { MPI_INT, MPI_INT, MPI_INT, 
+												MPI_CHAR, 
+												MPI_DOUBLE, MPI_DOUBLE, MPI_INT, 
+												MPI_DOUBLE, MPI_DOUBLE };
+					err = MPI_Type_create_struct(9, lengths, displacements, types, &tmpType);
+
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to create custom type for aggParamFloatRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					MPI_Aint lb, extent;
+					err = MPI_Type_get_extent(tmpType, &lb, &extent);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to get extent of custom type for aggParamFloatRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					err = MPI_Type_create_resized(tmpType, lb, extent, &aggParamFloatRecord_MPI);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to resize custom type for aggParamFloatRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					err = MPI_Type_commit(&aggParamFloatRecord_MPI);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to commit custom type for aggParamFloatRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+
+					return aggParamFloatRecord_MPI;
+				}
+
+				MPI_Datatype createAggregateParamBoolMpiType()
+				{
+					// Create MPI type for a AggParamBool record:
+					int err;
+					MPI_Datatype aggParamBoolRecord_MPI, tmpType;
+
+					int lengths[9] = {1, 1, 1, MAX_STRING_LENGTH, 1, 1, 1, 1, 1};
+					MPI_Aint displacements[9];
+					displacements[0] = offsetof(TT_AggParamBool, rank);
+					displacements[1] = offsetof(TT_AggParamBool, callPathID);
+					displacements[2] = offsetof(TT_AggParamBool, processID);
+					displacements[3] = offsetof(TT_AggParamBool, paramName);
+					displacements[4] = offsetof(TT_AggParamBool, minValue);
+					displacements[5] = offsetof(TT_AggParamBool, maxValue);
+					displacements[6] = offsetof(TT_AggParamBool, count);
+					displacements[7] = offsetof(TT_AggParamBool, avgValue);
+					displacements[8] = offsetof(TT_AggParamBool, stdev);
+					MPI_Datatype types[9] = { MPI_INT, MPI_INT, MPI_INT, 
+												MPI_CHAR, 
+												MPI_INT, MPI_INT, MPI_INT, 
+												MPI_DOUBLE, MPI_DOUBLE };
+					err = MPI_Type_create_struct(9, lengths, displacements, types, &tmpType);
+
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to create custom type for aggParamBoolRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					MPI_Aint lb, extent;
+					err = MPI_Type_get_extent(tmpType, &lb, &extent);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to get extent of custom type for aggParamBoolRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					err = MPI_Type_create_resized(tmpType, lb, extent, &aggParamBoolRecord_MPI);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to resize custom type for aggParamBoolRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					err = MPI_Type_commit(&aggParamBoolRecord_MPI);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to commit custom type for aggParamBoolRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+
+					return aggParamBoolRecord_MPI;
 				}
 			}
 		}
