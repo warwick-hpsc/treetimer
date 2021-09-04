@@ -34,7 +34,7 @@ namespace treetimer
 				CodeBlockType blockType;
 
 				// ========= Instrumentation Data =================
-				treetimer::timers::Timer * blockTimer;			// Timers
+				treetimer::timers::Timer *blockTimer;			// Timers
 
 				// Parameters
 				// Multiple parameters of the same type are permitted per node

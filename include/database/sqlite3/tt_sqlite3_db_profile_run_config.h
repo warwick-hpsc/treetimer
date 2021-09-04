@@ -28,8 +28,8 @@ namespace treetimer
 				// Most of table is useless, trim it down!
 				void writeSchemaProfileRunConfigData(TTSQLite3& dataAccess);
 
-				// void writeProfileRunConfigData(TTSQLite3& dataAccess, int appConfigID, int libConfigID, int processCount, int * runID);
-				void writeProfileRunConfigData(TTSQLite3& dataAccess, int libConfigID, int processCount, int * runID);
+				// void writeProfileRunConfigData(TTSQLite3& dataAccess, int appConfigID, int libConfigID, int processCount, int *runID);
+				void writeProfileRunConfigData(TTSQLite3& dataAccess, int libConfigID, int processCount, int *runID);
 			}
 		}
 	}

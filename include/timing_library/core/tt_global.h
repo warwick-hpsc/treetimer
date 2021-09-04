@@ -34,7 +34,7 @@ namespace treetimer
 	{
 		// Store as a global reference for the library state.
 		// Needed in instances to access global config, current tree state etc
-		extern treetimer::config::State * instrumState;
+		extern treetimer::config::State *instrumState;
 		extern bool libInit;
 	}
 }

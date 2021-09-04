@@ -27,8 +27,8 @@ namespace treetimer
 			{
 				void writeSchemaCPUData(TTSQLite3& dataAccess);
 
-				void findCPUDataID(TTSQLite3& dataAccess, TT_Cpu d, int* cpuID);
-				void writeCPUData(TTSQLite3& dataAccess, TT_Cpu d, int* cpuID);
+				void findCPUDataID(TTSQLite3& dataAccess, TT_Cpu d, int *cpuID);
+				void writeCPUData(TTSQLite3& dataAccess, TT_Cpu d, int *cpuID);
 			}
 		}
 	}

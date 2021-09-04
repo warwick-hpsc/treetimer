@@ -19,7 +19,7 @@ namespace treetimer
 	{
 		namespace drivers
 		{
-			inline void set_timers(double * cpu_time, double * elapsed_time)
+			inline void set_timers(double *cpu_time, double *elapsed_time)
 			{
 				struct timespec ts;
 				struct timespec cpu_ts;

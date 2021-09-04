@@ -36,45 +36,46 @@ namespace treetimer
 					data.root["ApplicationData"]["ApplicationVersion"] = config.appVersion;
 				}
 
-				void storeGlobalIntParameters(TTJson& data, treetimer::config::Config& config)
-				{
-					std::unordered_map<std::string, treetimer::parameters::ParameterSingular<int> *>::iterator it;
+				// Update: What is the purpose of "global" parameters? Codebase only sets them, never uses them.
+				// void storeGlobalIntParameters(TTJson& data, treetimer::config::Config& config)
+				// {
+				// 	std::unordered_map<std::string, treetimer::parameters::ParameterSingular<int> *>::iterator it;
 
-					for(it = config.intGlobalParams.begin(); it != config.intGlobalParams.end(); it++)
-					{
-						data.root["GlobalParameters"]["Integers"][it->first] = it->second->value;
-					}
-				}
+				// 	for(it = config.intGlobalParams.begin(); it != config.intGlobalParams.end(); it++)
+				// 	{
+				// 		data.root["GlobalParameters"]["Integers"][it->first] = it->second->value;
+				// 	}
+				// }
 
-				void storeGlobalDoubleParameters(TTJson& data, treetimer::config::Config& config)
-				{
-					std::unordered_map<std::string, treetimer::parameters::ParameterSingular<double> *>::iterator it;
+				// void storeGlobalDoubleParameters(TTJson& data, treetimer::config::Config& config)
+				// {
+				// 	std::unordered_map<std::string, treetimer::parameters::ParameterSingular<double> *>::iterator it;
 
-					for(it = config.doubleGlobalParams.begin(); it != config.doubleGlobalParams.end(); it++)
-					{
-						data.root["GlobalParameters"]["Doubles"][it->first] = it->second->value;
-					}
-				}
+				// 	for(it = config.doubleGlobalParams.begin(); it != config.doubleGlobalParams.end(); it++)
+				// 	{
+				// 		data.root["GlobalParameters"]["Doubles"][it->first] = it->second->value;
+				// 	}
+				// }
 
-				void storeGlobalBoolParameters(TTJson& data, treetimer::config::Config& config)
-				{
-					std::unordered_map<std::string, treetimer::parameters::ParameterSingular<bool> *>::iterator it;
+				// void storeGlobalBoolParameters(TTJson& data, treetimer::config::Config& config)
+				// {
+				// 	std::unordered_map<std::string, treetimer::parameters::ParameterSingular<bool> *>::iterator it;
 
-					for(it = config.boolGlobalParams.begin(); it != config.boolGlobalParams.end(); it++)
-					{
-						data.root["GlobalParameters"]["Bools"][it->first] = it->second->value;
-					}
-				}
+				// 	for(it = config.boolGlobalParams.begin(); it != config.boolGlobalParams.end(); it++)
+				// 	{
+				// 		data.root["GlobalParameters"]["Bools"][it->first] = it->second->value;
+				// 	}
+				// }
 
-				void storeGlobalStringParameters(TTJson& data, treetimer::config::Config& config)
-				{
-					std::unordered_map<std::string, treetimer::parameters::ParameterSingular<std::string> *>::iterator it;
+				// void storeGlobalStringParameters(TTJson& data, treetimer::config::Config& config)
+				// {
+				// 	std::unordered_map<std::string, treetimer::parameters::ParameterSingular<std::string> *>::iterator it;
 
-					for(it = config.stringGlobalParams.begin(); it != config.stringGlobalParams.end(); it++)
-					{
-						data.root["GlobalParameters"]["Strings"][it->first] = it->second->value;
-					}
-				}
+				// 	for(it = config.stringGlobalParams.begin(); it != config.stringGlobalParams.end(); it++)
+				// 	{
+				// 		data.root["GlobalParameters"]["Strings"][it->first] = it->second->value;
+				// 	}
+				// }
 
 				void storeProcessCount(TTJson& data, treetimer::config::Config& config)
 				{

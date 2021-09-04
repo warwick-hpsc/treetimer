@@ -30,12 +30,12 @@ namespace treetimer
 				void findComputeNodeDataID(TTSQLite3& dataAccess,
 											// int machineID,
 											TT_ComputeNode d,
-											int * computeNodeID);
+											int *computeNodeID);
 
 				void writeComputeNodeData(TTSQLite3& dataAccess,
 											// int machineID,
 											TT_ComputeNode d,
-											int * computeNodeID);
+											int *computeNodeID);
 			}
 		}
 	}

@@ -27,9 +27,9 @@ namespace treetimer
 			{
 				void writeSchemaTraceTimeData(TTSQLite3& dataAccess);
 
-				void findTraceTimeDataID(TTSQLite3& dataAccess, TT_TraceTiming d, int * traceTimeID);
+				void findTraceTimeDataID(TTSQLite3& dataAccess, TT_TraceTiming d, int *traceTimeID);
 
-				void writeTraceTimeData(TTSQLite3& dataAccess, TT_TraceTiming d, int * traceTimeID);
+				void writeTraceTimeData(TTSQLite3& dataAccess, TT_TraceTiming d, int *traceTimeID);
 
 				MPI_Datatype createTraceTimeMpiType();
 			}

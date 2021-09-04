@@ -23,7 +23,7 @@ namespace treetimer
 			{
 				void writeSchemaTraceTimeData(TTSQLite3& dataAccess)
 				{
-					char * zErrMsg = 0;
+					char *zErrMsg = 0;
 					std::string stmt = "CREATE TABLE IF NOT EXISTS TraceTimeData(TraceTimeID INTEGER, "
 																			"RunID INTEGER, "
 																			"Rank INTEGER, "
@@ -40,12 +40,15 @@ namespace treetimer
 																		 	");";
 
 					int err = sqlite3_exec(dataAccess.db, stmt.c_str(), NULL, 0, &zErrMsg);
+					if(err == SQLITE_ERROR) {
+						std::cout << "SQL Error encountered in writeSchemaTraceTimeData\n";
+						std::cout << "Failed query: " << std::string(stmt) << "\n";
+					}
 				}
 
-				void findTraceTimeDataID(TTSQLite3& dataAccess, TT_TraceTiming d, int * traceTimeID)
+				void findTraceTimeDataID(TTSQLite3& dataAccess, TT_TraceTiming d, int *traceTimeID)
 				{
-					sqlite3_stmt * pStmt;
-					char * zErrMsg = 0;
+					sqlite3_stmt *pStmt = nullptr;
 
 					int err = sqlite3_prepare(dataAccess.db,
 											  "SELECT TraceTimeID FROM TraceTimeData WHERE "
@@ -68,34 +71,40 @@ namespace treetimer
 
 					err = sqlite3_step(pStmt);
 
-					if(err == SQLITE_ERROR)
-					{
-						std::cout << "SQL Error encountered in findTraceTimeDataID\n";
-						char * expandedQuery = sqlite3_expanded_sql(pStmt);
+					if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
+						if (err == SQLITE_ERROR) {
+							std::cout << "SQL Error encountered in findTraceParameterIntDataID\n";
+						} else if (err == SQLITE_MISUSE) {
+							std::cout << "SQL Error encountered in findTraceParameterIntDataID - misuse\n";
+						} else {
+							std::cout << "SQL Error encountered in findTraceParameterIntDataID - unknown error code " << err << std::endl;
+						}
+						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+
 						sqlite3_free(expandedQuery);
+
+						if(traceTimeID!=nullptr) *traceTimeID = -1;
 					}
-					else if(err == SQLITE_ROW)
-					{
-						*traceTimeID = sqlite3_column_int(pStmt, 0);
+					else if(err == SQLITE_ROW) {
+						if(traceTimeID!=nullptr) *traceTimeID = sqlite3_column_int(pStmt, 0);
 					}
-					else
-					{
-						*traceTimeID = -1;
+					else {
+						if(traceTimeID!=nullptr) *traceTimeID = -1;
 					}
 
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeTraceTimeData(TTSQLite3& dataAccess, TT_TraceTiming d, int * traceTimeID)
+				void writeTraceTimeData(TTSQLite3& dataAccess, TT_TraceTiming d, int *traceTimeID)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
 						dataAccess.traceTimeRecords.push_back(d);
-						*traceTimeID = -1;
+						if(traceTimeID!=nullptr) *traceTimeID = -1;
 						return;
 					}
 
-					sqlite3_stmt * pStmt;
+					sqlite3_stmt *pStmt = nullptr;
 					int err;
 
 					// Check for existing entry
@@ -115,24 +124,27 @@ namespace treetimer
 						sqlite3_bind_double(pStmt,7, d.walltime);
 						err = sqlite3_step(pStmt);
 
-						if(err == SQLITE_ERROR)
-						{
-							std::cout << "SQL Error encountered in writeTraceTimeData\n";
-							char * expandedQuery = sqlite3_expanded_sql(pStmt);
+						if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
+							if (err == SQLITE_ERROR) {
+								std::cout << "SQL Error encountered in writeTraceTimeData\n";
+							} else if (err == SQLITE_MISUSE) {
+								std::cout << "SQL Error encountered in writeTraceTimeData - misuse\n";
+							} else {
+								std::cout << "SQL Error encountered in writeTraceTimeData - unknown error code " << err << std::endl;
+							}
+							char *expandedQuery = sqlite3_expanded_sql(pStmt);
 							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-							sqlite3_free(expandedQuery);
-							*traceTimeID = -1;
+
+							if(traceTimeID!=nullptr) *traceTimeID = -1;
 						}
-						else
-						{
-							*traceTimeID = sqlite3_last_insert_rowid(dataAccess.db);
+						else {
+							if(traceTimeID!=nullptr) *traceTimeID = sqlite3_last_insert_rowid(dataAccess.db);
 						}
 
 						sqlite3_finalize(pStmt);
 					}
-					else
-					{
-						*traceTimeID = tmpID;
+					else {
+						if(traceTimeID!=nullptr) *traceTimeID = tmpID;
 					}
 				}
 

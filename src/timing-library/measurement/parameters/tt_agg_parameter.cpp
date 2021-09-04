@@ -25,7 +25,6 @@ namespace treetimer
 			this->minVal = INT_MAX;
 			this->maxVal = INT_MIN;
 			this->avgVal = 0.0;
-			//this->stdDev = 0.0;
 			this->variance = 0.0;
 			this->count = 0;
 		}
@@ -36,7 +35,6 @@ namespace treetimer
 			this->minVal = LONG_MAX;
 			this->maxVal = LONG_MIN;
 			this->avgVal = 0.0;
-			//this->stdDev = 0.0;
 			this->variance = 0.0;
 			this->count = 0;
 		}
@@ -47,7 +45,6 @@ namespace treetimer
 			this->minVal = DBL_MAX;
 			this->maxVal = DBL_MIN;
 			this->avgVal = 0.0;
-			//this->stdDev = 0.0;
 			this->variance = 0.0;
 			this->count = 0;
 		}
@@ -59,7 +56,6 @@ namespace treetimer
 			this->minVal = 1;
 			this->maxVal = 0;
 			this->avgVal = 0.0;
-			//this->stdDev = 0.0;
 			this->variance = 0.0;
 			this->count = 0;
 		}
@@ -70,7 +66,6 @@ namespace treetimer
 			this->minVal = "";
 			this->maxVal = "";
 			this->avgVal = 0.0;
-			//this->stdDev = 0.0;
 			this->variance = 0.0;
 			this->count = 0;
 		}
@@ -86,18 +81,8 @@ namespace treetimer
 			template <class T>
 			void updateValue(AggParameter<T>& param, T value)
 			{
-
-				// Minval
-				if(value < param.minVal)
-				{
-					param.minVal = value;
-				}
-
-				// Maxval
-				if(value > param.maxVal)
-				{
-					param.maxVal = value;
-				}
+				if(value < param.minVal) param.minVal = value;
+				if(value > param.maxVal) param.maxVal = value;
 
 				// Welford's Online Algorithm
 
@@ -110,35 +95,17 @@ namespace treetimer
 				param.variance = ((param.variance * param.count) + ((value - oldMean) * (value - param.avgVal))) / (param.count + 1);
 
 				// Count
-				param.count = param.count + 1;
+				param.count++;
 
 			}
 
 			template <>
 			void updateValue(AggParameter<bool>& param, bool value)
 			{
-				int tmp;
+				int tmp = value ? 1 : 0;
 
-				if(value)
-				{
-					tmp = 1;
-				}
-				else
-				{
-					tmp = 0;
-				}
-
-				// Minval
-				if(tmp < param.minVal)
-				{
-					param.minVal = tmp;
-				}
-
-				// Maxval
-				if(tmp > param.maxVal)
-				{
-					param.maxVal = tmp;
-				}
+				if(tmp < param.minVal) param.minVal = tmp;
+				if(tmp > param.maxVal) param.maxVal = tmp;
 
 				// Avg(Mean) Val
 				// Welford's Online Algorithm
@@ -149,7 +116,7 @@ namespace treetimer
 				param.variance = ((param.variance * param.count) + ((tmp - oldMean) * (tmp - param.avgVal))) / (param.count + 1);
 
 				// Count
-				param.count = param.count + 1;
+				param.count++;
 			}
 
 			template <>
@@ -160,7 +127,7 @@ namespace treetimer
 				// the template, since the log function should not call this function.
 
 				// Count
-				param.count = param.count + 1;
+				param.count++;
 			}
 		}
 	}

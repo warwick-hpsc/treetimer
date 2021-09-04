@@ -30,8 +30,8 @@ namespace treetimer
 
 				bool sleeping; // If true, don't store any measured data. Call-tree traversal unaffected.
 
-				Config * config;
-				treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData> * callTree;
+				Config *config;
+				treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData> *callTree;
 
 				std::string traceConductorNodeName;
 				int traceCallInterval;
@@ -41,7 +41,7 @@ namespace treetimer
 
 		namespace drivers
 		{
-			void resetState(State* state);
+			void resetState(State *state);
 		}
 	}
 }

@@ -27,7 +27,7 @@ namespace treetimer
 
 				// void writeSchemaApplicationConfigData(TTSQLite3& dataAccess)
 				// {
-				// 	char * zErrMsg = 0;
+				// 	char *zErrMsg = 0;
 				// 	std::string stmt;
 				// 	int err;
 
@@ -87,10 +87,10 @@ namespace treetimer
 				// 								 std::vector<std::string> floatingParamNames,  std::vector<double> floatingParamValues,
 				// 								 std::vector<std::string> boolParamNames,  std::vector<bool> boolParamValues,
 				// 								 std::vector<std::string> stringParamNames,  std::vector<std::string> stringParamValues,
-				// 								 int * applicationConfigID)
+				// 								 int *applicationConfigID)
 				// {
-				// 	sqlite3_stmt * pStmt;
-				// 	char * zErrMsg = 0;
+				// 	sqlite3_stmt *pStmt = nullptr;
+				// 	char *zErrMsg = 0;
 				// 	std::string stmt;
 				// 	int err;
 
@@ -138,7 +138,7 @@ namespace treetimer
 				// 			if(err == SQLITE_ERROR)
 				// 			{
 				// 				std::cout << "SQL Error encountered in findApplicationConfigDataID  \n";
-				// 				char * expandedQuery = sqlite3_expanded_sql(pStmt);
+				// 				char *expandedQuery = sqlite3_expanded_sql(pStmt);
 				// 				std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 				// 				sqlite3_free(expandedQuery);
 				// 			}
@@ -168,7 +168,7 @@ namespace treetimer
 				// 			if(err == SQLITE_ERROR)
 				// 			{
 				// 				std::cout << "SQL Error encountered in findApplicationConfigDataID  \n";
-				// 				char * expandedQuery = sqlite3_expanded_sql(pStmt);
+				// 				char *expandedQuery = sqlite3_expanded_sql(pStmt);
 				// 				std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 				// 				sqlite3_free(expandedQuery);
 				// 			}
@@ -198,7 +198,7 @@ namespace treetimer
 				// 			if(err == SQLITE_ERROR)
 				// 			{
 				// 				std::cout << "SQL Error encountered in findApplicationConfigDataID  \n";
-				// 				char * expandedQuery = sqlite3_expanded_sql(pStmt);
+				// 				char *expandedQuery = sqlite3_expanded_sql(pStmt);
 				// 				std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 				// 				sqlite3_free(expandedQuery);
 				// 			}
@@ -228,7 +228,7 @@ namespace treetimer
 				// 			if(err == SQLITE_ERROR)
 				// 			{
 				// 				std::cout << "SQL Error encountered in findApplicationConfigDataID  \n";
-				// 				char * expandedQuery = sqlite3_expanded_sql(pStmt);
+				// 				char *expandedQuery = sqlite3_expanded_sql(pStmt);
 				// 				std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 				// 				sqlite3_free(expandedQuery);
 				// 			}
@@ -552,9 +552,9 @@ namespace treetimer
 				// 		 std::vector<std::string> floatingParamNames,  std::vector<double> floatingParamValues,
 				// 		 std::vector<std::string> boolParamNames,  std::vector<bool> boolParamValues,
 				// 		 std::vector<std::string> stringParamNames,  std::vector<std::string> stringParamValues,
-				// 		 int * applicationConfigID)
+				// 		 int *applicationConfigID)
 				// {
-				// 	sqlite3_stmt * pStmt;
+				// 	sqlite3_stmt *pStmt = nullptr;
 				// 	int err;
 
 				// 	// Error Check: Pair Vectors should be of same size
@@ -585,7 +585,7 @@ namespace treetimer
 				// 		if(err == SQLITE_ERROR)
 				// 		{
 				// 			std::cout << "SQL Error encountered in writeApplicationConfigData\n";
-				// 			char * expandedQuery = sqlite3_expanded_sql(pStmt);
+				// 			char *expandedQuery = sqlite3_expanded_sql(pStmt);
 				// 			std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 				// 			// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
@@ -613,7 +613,7 @@ namespace treetimer
 				// 			if(err == SQLITE_ERROR)
 				// 			{
 				// 				std::cout << "SQL Error encountered in writeApplicationConfigData\n";
-				// 				char * expandedQuery = sqlite3_expanded_sql(pStmt);
+				// 				char *expandedQuery = sqlite3_expanded_sql(pStmt);
 				// 				std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 				// 				// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
@@ -636,7 +636,7 @@ namespace treetimer
 				// 			if(err == SQLITE_ERROR)
 				// 			{
 				// 				std::cout << "SQL Error encountered in writeApplicationConfigData\n";
-				// 				char * expandedQuery = sqlite3_expanded_sql(pStmt);
+				// 				char *expandedQuery = sqlite3_expanded_sql(pStmt);
 				// 				std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 				// 				// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
@@ -659,7 +659,7 @@ namespace treetimer
 				// 			if(err == SQLITE_ERROR)
 				// 			{
 				// 				std::cout << "SQL Error encountered in writeApplicationConfigData\n";
-				// 				char * expandedQuery = sqlite3_expanded_sql(pStmt);
+				// 				char *expandedQuery = sqlite3_expanded_sql(pStmt);
 				// 				std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 				// 				// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
@@ -682,7 +682,7 @@ namespace treetimer
 				// 			if(err == SQLITE_ERROR)
 				// 			{
 				// 				std::cout << "SQL Error encountered in writeApplicationConfigData\n";
-				// 				char * expandedQuery = sqlite3_expanded_sql(pStmt);
+				// 				char *expandedQuery = sqlite3_expanded_sql(pStmt);
 				// 				std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 				// 				// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)

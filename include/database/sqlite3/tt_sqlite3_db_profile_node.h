@@ -31,14 +31,14 @@ namespace treetimer
 
 				// ========================================================================================================================
 
-				void findProfileNodeID(TTSQLite3& dataAccess, std::string profileNodeName, int profileNodeTypeID, int * profileNodeID);
+				void findProfileNodeID(TTSQLite3& dataAccess, std::string profileNodeName, int profileNodeTypeID, int *profileNodeID);
 
 				// ========================================================================================================================
 
 				void writeTreeNodeProfileNodeData(TTSQLite3& dataAccess,
 												  std::string profileNodeName,
 												  int profileNodeTypeID,
-												  int * profileNodeID);
+												  int *profileNodeID);
 
 				// ========================================================================================================================
 			}

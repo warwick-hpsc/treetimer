@@ -32,13 +32,13 @@ namespace treetimer
 		}
 
 		template <class K, class T>
-		void TreeNode<K,T>::setParent(TreeNode<K,T> * parentNode)
+		void TreeNode<K,T>::setParent(TreeNode<K,T> *parentNode)
 		{
 			this->parent = parentNode;
 		}
 
 		template <class K, class T>
-		void TreeNode<K,T>::addChild(K nodeID, TreeNode<K,T> * childNode)
+		void TreeNode<K,T>::addChild(K nodeID, TreeNode<K,T> *childNode)
 		{
 			std::pair<K, TreeNode<K,T> *> insertPair(nodeID, childNode);
 			this->childNodes.insert(insertPair);

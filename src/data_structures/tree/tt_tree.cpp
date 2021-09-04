@@ -63,7 +63,7 @@ namespace treetimer
 			{
 				// Node does not exist, create a new one
 				this->uniqueNodeCount++;
-				TreeNode<K,T> * node = new TreeNode<K,T>(key, this->uniqueNodeCount);
+				TreeNode<K,T> *node = new TreeNode<K,T>(key, this->uniqueNodeCount);
 
 				// Add node as child of current node
 				pos->addChild(key, node);

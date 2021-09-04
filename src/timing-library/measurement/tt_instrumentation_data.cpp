@@ -92,7 +92,7 @@ namespace treetimer
 
 					if(search == node.intParameters.end()) {
 						// Not found, create a new parameter
-						treetimer::parameters::Parameter<int> * store = new treetimer::parameters::Parameter<int>(name);
+						treetimer::parameters::Parameter<int> *store = new treetimer::parameters::Parameter<int>(name);
 						std::pair<std::string, treetimer::parameters::Parameter<int> *> insertPair(name, store);
 
 						node.intParameters.insert(insertPair);
@@ -111,7 +111,7 @@ namespace treetimer
 
 					typename std::unordered_map<std::string, treetimer::parameters::Parameter<long> *>::const_iterator search = node.longParameters.find(name);
 					if(search == node.longParameters.end()) {
-						treetimer::parameters::Parameter<long> * store = new treetimer::parameters::Parameter<long>(name);
+						treetimer::parameters::Parameter<long> *store = new treetimer::parameters::Parameter<long>(name);
 						std::pair<std::string, treetimer::parameters::Parameter<long> *> insertPair(name, store);
 						node.longParameters.insert(insertPair);
 						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
@@ -128,7 +128,7 @@ namespace treetimer
 
 					typename std::unordered_map<std::string, treetimer::parameters::Parameter<double> *>::const_iterator search = node.doubleParameters.find(name);
 					if(search == node.doubleParameters.end()) {
-						treetimer::parameters::Parameter<double> * store = new treetimer::parameters::Parameter<double>(name);
+						treetimer::parameters::Parameter<double> *store = new treetimer::parameters::Parameter<double>(name);
 						std::pair<std::string, treetimer::parameters::Parameter<double> *> insertPair(name, store);
 						node.doubleParameters.insert(insertPair);
 						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
@@ -145,7 +145,7 @@ namespace treetimer
 
 					typename std::unordered_map<std::string, treetimer::parameters::Parameter<bool> *>::const_iterator search = node.boolParameters.find(name);
 					if(search == node.boolParameters.end()) {
-						treetimer::parameters::Parameter<bool> * store = new treetimer::parameters::Parameter<bool>(name);
+						treetimer::parameters::Parameter<bool> *store = new treetimer::parameters::Parameter<bool>(name);
 						std::pair<std::string, treetimer::parameters::Parameter<bool> *> insertPair(name, store);
 						node.boolParameters.insert(insertPair);
 						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
@@ -162,7 +162,7 @@ namespace treetimer
 
 					typename std::unordered_map<std::string, treetimer::parameters::Parameter<std::string> *>::const_iterator search = node.stringParameters.find(name);
 					if(search == node.stringParameters.end()) {
-						treetimer::parameters::Parameter<std::string> * store = new treetimer::parameters::Parameter<std::string>(name);
+						treetimer::parameters::Parameter<std::string> *store = new treetimer::parameters::Parameter<std::string>(name);
 						std::pair<std::string, treetimer::parameters::Parameter<std::string> *> insertPair(name, store);
 						node.stringParameters.insert(insertPair);
 						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);

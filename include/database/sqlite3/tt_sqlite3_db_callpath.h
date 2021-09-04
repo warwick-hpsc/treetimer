@@ -26,8 +26,8 @@ namespace treetimer
 			namespace drivers
 			{
 				void writeSchemaCallPathData(TTSQLite3& dataAccess);
-				void findCallPathDataID(TTSQLite3& dataAccess, int rank, int profileNodeID, int parentNodeID, int * callPathID);
-				void writeCallPathData(TTSQLite3& dataAccess, int rank, int profileNodeID, int parentNodeID, int * callPathID);
+				void findCallPathDataID(TTSQLite3& dataAccess, int rank, int profileNodeID, int parentNodeID, int *callPathID);
+				void writeCallPathData(TTSQLite3& dataAccess, int rank, int profileNodeID, int parentNodeID, int *callPathID);
 				MPI_Datatype createCallpathNodeMpiType();
 			}
 		}

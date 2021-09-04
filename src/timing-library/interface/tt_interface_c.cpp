@@ -36,117 +36,118 @@ void TreeTimerWake()
 	treetimer::core::drivers::TreeTimerWake();
 }
 
-void TreeTimerEnterTraceConductor(const char * name, int traceCallInterval)
+void TreeTimerEnterTraceConductor(const char *name, int traceCallInterval)
 {
 	treetimer::core::drivers::TreeTimerEnterTraceConductor(name, traceCallInterval);
 }
 
-void TreeTimerEnterMethod(const char * blockName)
+void TreeTimerEnterMethod(const char *blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_METHOD);
 }
 
-void TreeTimerEnterLoop(const char * blockName)
+void TreeTimerEnterLoop(const char *blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_LOOP);
 }
 
-void TreeTimerEnterCompute(const char * blockName)
+void TreeTimerEnterCompute(const char *blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_COMPUTE);
 }
 
-void TreeTimerEnterBlock(const char * blockName)
+void TreeTimerEnterBlock(const char *blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_BLOCK);
 }
 
-void TreeTimerEnterMPICommCall(const char * blockName)
+void TreeTimerEnterMPICommCall(const char *blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_MPI_COMM_CALL);
 }
 
-void TreeTimerEnterMPISyncCall(const char * blockName)
+void TreeTimerEnterMPISyncCall(const char *blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_MPI_SYNC_CALL);
 }
 
-void TreeTimerEnterMPICollectiveCall(const char * blockName)
+void TreeTimerEnterMPICollectiveCall(const char *blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_MPI_COLLECTIVE_CALL);
 }
 
-void TreeTimerEnterIOCall(const char * blockName)
+void TreeTimerEnterIOCall(const char *blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_IO_CALL);
 }
 
-void TreeTimerEnterLibraryCall(const char * blockName)
+void TreeTimerEnterLibraryCall(const char *blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerEnterBlock(strName, TT_NODE_TYPE_LIB_CALL);
 }
 
-void TreeTimerExit(const char * blockName)
+void TreeTimerExit(const char *blockName)
 {
 	std::string strName(blockName);
 	treetimer::core::drivers::TreeTimerExit(strName);
 }
 
-void TreeTimerLogParameterInt(const char * paramName, int value)
+void TreeTimerLogParameterInt(const char *paramName, int value)
 {
 	std::string strName(paramName);
 	treetimer::core::drivers::TreeTimerLogParameter(strName, value);
 }
-void TreeTimerLogParameterLong(const char * paramName, long value)
-{
-	std::string strName(paramName);
-	treetimer::core::drivers::TreeTimerLogParameter(strName, value);
-}
-
-void TreeTimerLogParameterDouble(const char * paramName, double value)
+void TreeTimerLogParameterLong(const char *paramName, long value)
 {
 	std::string strName(paramName);
 	treetimer::core::drivers::TreeTimerLogParameter(strName, value);
 }
 
-void TreeTimerLogParameterBool(const char * paramName, int value)
+void TreeTimerLogParameterDouble(const char *paramName, double value)
+{
+	std::string strName(paramName);
+	treetimer::core::drivers::TreeTimerLogParameter(strName, value);
+}
+
+void TreeTimerLogParameterBool(const char *paramName, int value)
 {
 	std::string strName(paramName);
 	treetimer::core::drivers::TreeTimerLogParameter(strName, (bool) value);
 }
 
-void TreeTimerLogGlobalParameterInt(const char * paramName, int value)
-{
-	std::string strName(paramName);
-	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, value);
-}
+// Update: What is the purpose of "global" parameters? Codebase only sets them, never uses them.
+// void TreeTimerLogGlobalParameterInt(const char *paramName, int value)
+// {
+// 	std::string strName(paramName);
+// 	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, value);
+// }
 
-void TreeTimerLogGlobalParameterDouble(const char * paramName, double value)
-{
-	std::string strName(paramName);
-	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, value);
-}
+// void TreeTimerLogGlobalParameterDouble(const char *paramName, double value)
+// {
+// 	std::string strName(paramName);
+// 	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, value);
+// }
 
-void TreeTimerLogGlobalParameterBool(const char * paramName, int value)
-{
-	std::string strName(paramName);
-	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, (bool) value);
-}
+// void TreeTimerLogGlobalParameterBool(const char *paramName, int value)
+// {
+// 	std::string strName(paramName);
+// 	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, (bool) value);
+// }
 
-void TreeTimerLogGlobalParameterString(const char * paramName, const char * value)
-{
-	std::string strName(paramName);
-	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, std::string(value));
-}
+// void TreeTimerLogGlobalParameterString(const char *paramName, const char *value)
+// {
+// 	std::string strName(paramName);
+// 	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, std::string(value));
+// }
 
 void TreeTimerFlushTraceData()
 {

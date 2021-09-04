@@ -32,11 +32,11 @@ module treetimer
 			  TreeTimerLogParameterRealSingle,		&
 			  TreeTimerLogParameterRealDouble,		&
 			  TreeTimerLogParameterLogical,			&
-			  TreeTimerLogGlobalParameterInt,		&
-			  TreeTimerLogGlobalParameterRealSingle,&
-			  TreeTimerLogGlobalParameterRealDouble,&
-			  TreeTimerLogGlobalParameterLogical,	&
-			  TreeTimerLogGlobalParameterString,	&
+!			  TreeTimerLogGlobalParameterInt,		&
+!			  TreeTimerLogGlobalParameterRealSingle,&
+!			  TreeTimerLogGlobalParameterRealDouble,&
+!			  TreeTimerLogGlobalParameterLogical,	&
+!			  TreeTimerLogGlobalParameterString,	&
 			  TreeTimerFlushTraceData
 			  
 	contains
@@ -178,44 +178,45 @@ module treetimer
 	
 	end subroutine
 	
-	subroutine TreeTimerLogGlobalParameterInt(blockName, value)
-		character(len=*)	:: blockName
-		integer				:: value
-		
-		call c_tree_timer_log_global_parameter_int(blockName, len_trim(blockName), value)
-	end subroutine
-	
-	subroutine TreeTimerLogGlobalParameterRealSingle(blockName, value)
-		character(len=*)	:: blockName
-		real(kind=4)		:: value
-		
-		call c_tree_timer_log_global_parameter_double(blockName, len_trim(blockName), REAL(value,8))
-	end subroutine
-
-	subroutine TreeTimerLogGlobalParameterRealDouble(blockName, value)
-		character(len=*)	:: blockName
-		real(kind=8)		:: value
-		
-		call c_tree_timer_log_global_parameter_double(blockName, len_trim(blockName), value)
-	end subroutine
-		
-	subroutine TreeTimerLogGlobalParameterLogical(blockName, value)
-		character(len=*)	:: blockName
-		logical				:: value
-		
-		if(value .eqv. .true.) then
-			call c_tree_timer_log_global_parameter_bool(blockName, len_trim(blockName), 1)
-		else
-			call c_tree_timer_log_global_parameter_bool(blockName, len_trim(blockName), 0)			
-		endif
-	end subroutine
-	
-	subroutine TreeTimerLogGlobalParameterString(blockName, value)
-		character(len=*)	:: blockName
-		character(len=*)	:: value
-		
-		call c_tree_timer_log_global_parameter_string(blockName, len_trim(blockName), value, len_trim(value))
-	end subroutine
+!	Update: What is the purpose of "global" parameters? Codebase only sets them, never uses them.
+!	subroutine TreeTimerLogGlobalParameterInt(blockName, value)
+!		character(len=*)	:: blockName
+!		integer				:: value
+!		
+!		call c_tree_timer_log_global_parameter_int(blockName, len_trim(blockName), value)
+!	end subroutine
+!	
+!	subroutine TreeTimerLogGlobalParameterRealSingle(blockName, value)
+!		character(len=*)	:: blockName
+!		real(kind=4)		:: value
+!		
+!		call c_tree_timer_log_global_parameter_double(blockName, len_trim(blockName), REAL(value,8))
+!	end subroutine
+!
+!	subroutine TreeTimerLogGlobalParameterRealDouble(blockName, value)
+!		character(len=*)	:: blockName
+!		real(kind=8)		:: value
+!		
+!		call c_tree_timer_log_global_parameter_double(blockName, len_trim(blockName), value)
+!	end subroutine
+!		
+!	subroutine TreeTimerLogGlobalParameterLogical(blockName, value)
+!		character(len=*)	:: blockName
+!		logical				:: value
+!		
+!		if(value .eqv. .true.) then
+!			call c_tree_timer_log_global_parameter_bool(blockName, len_trim(blockName), 1)
+!		else
+!			call c_tree_timer_log_global_parameter_bool(blockName, len_trim(blockName), 0)			
+!		endif
+!	end subroutine
+!	
+!	subroutine TreeTimerLogGlobalParameterString(blockName, value)
+!		character(len=*)	:: blockName
+!		character(len=*)	:: value
+!		
+!		call c_tree_timer_log_global_parameter_string(blockName, len_trim(blockName), value, len_trim(value))
+!	end subroutine
 	
 	subroutine TreeTimerFlushTraceData()
 	

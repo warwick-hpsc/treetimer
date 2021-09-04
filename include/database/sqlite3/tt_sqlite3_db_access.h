@@ -67,6 +67,34 @@ namespace treetimer
 			} TT_AggParamBool;
 
 			typedef struct {
+				int rank, callPathID, processID;
+				char paramName[MAX_STRING_LENGTH];
+				int paramValue;
+				int nodeEntryID, nodeExitID;
+			} TT_TraceParamInt;
+
+			typedef struct {
+				int rank, callPathID, processID;
+				char paramName[MAX_STRING_LENGTH];
+				double paramValue;
+				int nodeEntryID, nodeExitID;
+			} TT_TraceParamFloat;
+
+			typedef struct {
+				int rank, callPathID, processID;
+				char paramName[MAX_STRING_LENGTH];
+				bool paramValue;
+				int nodeEntryID, nodeExitID;
+			} TT_TraceParamBool;
+
+			typedef struct {
+				int rank, callPathID, processID;
+				char paramName[MAX_STRING_LENGTH];
+				char paramValue[MAX_STRING_LENGTH];
+				int nodeEntryID, nodeExitID;
+			} TT_TraceParamString;
+
+			typedef struct {
 				int rank;
 				char nodeName[MAX_STRING_LENGTH];
 				int blockType;
@@ -107,7 +135,7 @@ namespace treetimer
 					~TTSQLite3();
 
 					std::string filePath;
-					sqlite3 * db;
+					sqlite3 *db;
 
 					// State for gather-at-root:
 					int rankGlobal = -1;
@@ -118,16 +146,19 @@ namespace treetimer
 
 					std::vector<TT_CallPathNode> callPathNodeRecords;
 					std::vector<TT_AggTiming> aggTimeRecords;
-					std::vector<TT_TraceTiming> traceTimeRecords;
 					std::vector<TT_AggParamInt> aggParamIntRecords;
 					std::vector<TT_AggParamFloat> aggParamFloatRecords;
 					std::vector<TT_AggParamBool> aggParamBoolRecords;
+					std::vector<TT_TraceTiming> traceTimeRecords;
+					std::vector<TT_TraceParamInt> traceParamIntRecords;
+					std::vector<TT_TraceParamFloat> traceParamFloatRecords;
+					std::vector<TT_TraceParamBool> traceParamBoolRecords;
+					std::vector<TT_TraceParamString> traceParamStringRecords;
 
 					std::vector<int> rankLocalToProcessID;
 					std::vector<int> rankLocalToRankGlobal;
 
 					// Global variables:
-					int processID = -1;
 					int runID = -1;
 			};
 

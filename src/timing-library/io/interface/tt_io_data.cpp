@@ -35,7 +35,7 @@ namespace treetimer
 			void writeData(treetimer::config::State& state)
 			{
 				// Run Setup
-				tt_sql::TTSQLite3* dataAccess = setupOutput(*(state.config));
+				tt_sql::TTSQLite3 *dataAccess = setupOutput(*(state.config));
 
 				// Write RunConfig Data
 				writeRunConfigData(*(state.config), dataAccess);
@@ -68,7 +68,7 @@ namespace treetimer
 				// of this, pause any currently active timers, and resume them once it is complete.
 
 				// Run Setup
-				tt_sql::TTSQLite3* dataAccess = setupOutput(*(state.config));
+				tt_sql::TTSQLite3 *dataAccess = setupOutput(*(state.config));
 
 				// Write RunConfig Data
 				writeRunConfigData(*(state.config), dataAccess);
@@ -150,31 +150,30 @@ namespace treetimer
 				int rank;
 				MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-				if(rank == 0)
-				{
+				if(rank == 0) {
 					createResultsDirectory(config);
 				}
 
-				int err = MPI_Barrier(MPI_COMM_WORLD);
+				MPI_Barrier(MPI_COMM_WORLD);
 
 				return treetimer::io::tt_sqlite3::drivers::setupOutput(config);
 			}
 
-			void writeRunConfigData(treetimer::config::Config& config, tt_sql::TTSQLite3* access)
+			void writeRunConfigData(treetimer::config::Config& config, tt_sql::TTSQLite3 *access)
 			{
 				treetimer::io::tt_sqlite3::drivers::writeRunConfigData(config, access);
 			}
 
 			void writeAggData(treetimer::config::Config& config,
 							  treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
-							  tt_sql::TTSQLite3* access)
+							  tt_sql::TTSQLite3 *access)
 			{
 				treetimer::io::tt_sqlite3::drivers::prepareAndWriteAggData(config, callTree, access);
 			}
 
 			void writeTraceData(treetimer::config::Config& config,
 								treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
-								tt_sql::TTSQLite3* access)
+								tt_sql::TTSQLite3 *access)
 			{
 				treetimer::io::tt_sqlite3::drivers::prepareAndWriteTraceData(config, callTree, access);
 			}

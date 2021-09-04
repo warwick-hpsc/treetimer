@@ -40,12 +40,16 @@ namespace treetimer
 																				  ");";
 
 					int err = sqlite3_exec(dataAccess.db, stmt.c_str(), NULL, 0, &zErrMsg);
+					if(err == SQLITE_ERROR) {
+						std::cout << "SQL Error encountered in writeSchemaProfileRunConfigData\n";
+						std::cout << "Failed query: " << std::string(stmt) << "\n";
+					}
 				}
 
-				// void writeProfileRunConfigData(TTSQLite3& dataAccess, int appConfigID, int libConfigID, int processCount, int * runID)
-				void writeProfileRunConfigData(TTSQLite3& dataAccess, int libConfigID, int processCount, int * runID)
+				// void writeProfileRunConfigData(TTSQLite3& dataAccess, int appConfigID, int libConfigID, int processCount, int *runID)
+				void writeProfileRunConfigData(TTSQLite3& dataAccess, int libConfigID, int processCount, int *runID)
 				{
-					sqlite3_stmt * pStmt;
+					sqlite3_stmt *pStmt = nullptr;
 					int err;
 
 					// We can have duplicate runs with the same configuration
@@ -61,39 +65,23 @@ namespace treetimer
 
 					err = sqlite3_step(pStmt);
 
-					if(err == SQLITE_ERROR)
-					{
-						std::cout << "SQL Error encountered in writeApplicationData\n";
-						char * expandedQuery = sqlite3_expanded_sql(pStmt);
+					if (err != SQLITE_OK && err != SQLITE_DONE) {
+						if (err == SQLITE_ERROR) {
+							std::cout << "SQL Error encountered in writeProfileRunConfigData\n";
+						} else if (err == SQLITE_MISUSE) {
+							std::cout << "SQL Error encountered in writeProfileRunConfigData - misuse\n";
+						} else {
+							std::cout << "SQL Error encountered in writeProfileRunConfigData - unknown error code " << err << std::endl;
+						}
+						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
 						sqlite3_free(expandedQuery);
-						*runID = -1;
+						if(runID!=nullptr) *runID = -1;
 					}
-					else if(err == SQLITE_MISUSE)
-					{
-						std::cout << "SQL Error encountered in writeApplicationData - misuse\n";
-						char * expandedQuery = sqlite3_expanded_sql(pStmt);
-						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-						sqlite3_free(expandedQuery);
-						*runID = -1;
-					}
-					else if(err != SQLITE_OK && err != SQLITE_DONE)
-					{
-						std::cout << "SQL Error encountered in writeApplicationData - unknown error " << err << std::endl;
-						char * expandedQuery = sqlite3_expanded_sql(pStmt);
-						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-						sqlite3_free(expandedQuery);
-						*runID = -1;
-					}
-					else
-					{
-						*runID = sqlite3_last_insert_rowid(dataAccess.db);
+					else {
+						if(runID!=nullptr) *runID = sqlite3_last_insert_rowid(dataAccess.db);
 					}
 
 					sqlite3_finalize(pStmt);
