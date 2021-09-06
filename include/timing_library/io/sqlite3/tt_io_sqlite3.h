@@ -42,6 +42,9 @@ namespace treetimer
 				void writeProcessHwData(treetimer::config::Config& config, tt_sql::TTSQLite3 *dataAccess, tt_sql::TT_HwInfo hw, int *processID);
 				void gatherWriteProcessData(treetimer::config::Config& config, tt_sql::TTSQLite3 *dataAccess);
 
+				void gatherAndWriteCallPathData(treetimer::config::Config& config, 
+												tt_sql::TTSQLite3 *dataAccess);
+
 				void prepareAndWriteAggData(tt_cfg::Config& config,
 											tt_ds::Tree<std::string, tt_m::InstrumentationData>& callTree,
 											tt_sql::TTSQLite3 *access);

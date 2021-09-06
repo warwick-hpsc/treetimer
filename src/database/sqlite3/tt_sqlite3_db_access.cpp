@@ -38,8 +38,7 @@ namespace treetimer
 				err = MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rankGlobal, info, &nodeComm);
 				if (err != MPI_SUCCESS) {
 					fprintf(stderr, "Rank %d failed to create intra-node MPI communicator\n", rankGlobal);
-					MPI_Abort(MPI_COMM_WORLD, err);
-					exit(EXIT_FAILURE);
+					MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 				}
 				MPI_Comm_rank(nodeComm, &rankLocal);
 				MPI_Comm_size(nodeComm, &nRanksLocal);
@@ -52,17 +51,16 @@ namespace treetimer
 				this->gatherIntraNode = gatherIntraNode;
 				this->nodeComm = nodeComm;
 
-				this->rankLocalToProcessID.resize(nRanksLocal);
-				this->rankLocalToRankGlobal.resize(nRanksLocal);
-				for (int i=0; i<nRanksLocal; i++) {
-					this->rankLocalToProcessID[i]  = -1;
-					this->rankLocalToRankGlobal[i] = -1;
+				if (this->rankLocal == 0) {
+					this->rankLocalToProcessID.resize(nRanksLocal);
+					this->rankLocalToRankGlobal.resize(nRanksLocal);
+					for (int i=0; i<nRanksLocal; i++) {
+						this->rankLocalToProcessID[i]  = -1;
+						this->rankLocalToRankGlobal[i] = -1;
+					}
+
+					this->callpathNodeIdRemap.resize(nRanksLocal);
 				}
-			}
-
-			TTSQLite3::~TTSQLite3()
-			{
-
 			}
 
 			namespace drivers

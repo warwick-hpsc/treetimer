@@ -78,7 +78,7 @@ namespace treetimer
 					if (n >= size) dst[n-1] = '\0';
 				}
 
-				tt_sql::TTSQLite3 *setupOutput(treetimer::config::Config& config)
+				tt_sql::TTSQLite3* setupOutput(treetimer::config::Config& config)
 				{
 					tt_sql::TTSQLite3 *dataAccess = new tt_sql::TTSQLite3(config.outputFolder + "/" + config.sqlIOFilename);
 
@@ -374,6 +374,90 @@ namespace treetimer
 					}
 				}
 
+				void gatherAndWriteCallPathData(treetimer::config::Config& config, 
+												tt_sql::TTSQLite3 *dataAccess)
+				{
+					if (!dataAccess->gatherIntraNode) return;
+					if (dataAccess->callpathNodeIdRemap_created) return;
+
+					// Gather and write callpath data, and adjust ID's for different ranks 
+					// potentially having different callpath trees.
+
+					int err;
+
+					MPI_Datatype callpathNodeRecord_MPI = tt_sql::drivers::createCallpathNodeMpiType();
+					if (dataAccess->nRanksLocal > 1) {
+						if (dataAccess->rankLocal == 0) {
+							int n = dataAccess->nRanksLocal;
+							tt_sql::TT_CallPathNode *records = nullptr; int nRecords = 0;
+							int nReceives = 0; int srcRank = -1;
+							while (nReceives != (n-1)) {
+								srcRank = -1;
+								err = fetchNextGatheredRecord(*dataAccess, (void**)&records, &nRecords, &srcRank, 
+																sizeof(tt_sql::TT_CallPathNode), callpathNodeRecord_MPI, TAG_CALLPATH);
+								if (err != 0) {
+									fprintf(stderr, "Root failed on fetchNextGatheredRecord()\n");
+									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+								}
+								if (srcRank == -1) {
+									fprintf(stderr, "Root failed on fetchNextGatheredRecord() - srcRank = %d\n", srcRank);
+									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+								}
+								if (dataAccess->callpathNodeIdRemap[srcRank].size() > 0) {
+									fprintf(stderr, "Root has already received data from srcRank %d, why receiving %d more?\n", srcRank, nRecords);
+									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+								}
+								nReceives++;
+								for (int i=0; i<nRecords; i++) {
+									tt_sql::TT_CallPathNode r = records[i];
+
+									// Apply remap:
+									if (r.parentID != -1) {
+										// parentID value should be in map
+										if (dataAccess->callpathNodeIdRemap[srcRank].find(r.parentID) == dataAccess->callpathNodeIdRemap[srcRank].end()) {
+											// Oh dear ...
+											fprintf(stderr, "TreeTimer error: encountered a CallPath node before encountering its parent! rank=%d, nodeID=%d, parentID=%d\n", srcRank, r.callPathID, r.parentID);
+											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+										}
+										r.parentID = dataAccess->callpathNodeIdRemap[srcRank][r.parentID];
+									}
+									
+									int blockTypeID;
+									tt_sql::drivers::findProfileNodeTypeID(*dataAccess, codeBlockNames[r.blockType], &blockTypeID);
+									int profileNodeID;
+									tt_sql::drivers::writeTreeNodeProfileNodeData(*dataAccess, r.nodeName, blockTypeID, &profileNodeID);
+									int callPathID;
+									tt_sql::drivers::writeCallPathData(*dataAccess, r.rank, profileNodeID, r.parentID, &callPathID);
+									if (callPathID == 0) {
+										fprintf(stderr, "TreeTimer error: writeCallPathData() has returned callPathID=%d\n", callPathID);
+										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+									}
+
+									// Store the remap:
+									dataAccess->callpathNodeIdRemap[srcRank][r.callPathID] = callPathID;
+								}
+								free(records); records=nullptr; nRecords=0;
+							}
+							if (nReceives != (n-1)) {
+								fprintf(stderr, "Rank %d expected to gather CallPath records from %d ranks but received from %d\n", dataAccess->rankLocal, n-1, nReceives);
+								MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+							}
+						}
+						else {
+							// Send to local root
+							err = sendRecordsToRoot(*dataAccess, dataAccess->callPathNodeRecords.data(), dataAccess->callPathNodeRecords.size(), 
+													sizeof(tt_sql::TT_CallPathNode), callpathNodeRecord_MPI, TAG_CALLPATH);
+							if (err != 0) {
+								fprintf(stderr, "Rank %d failed on sendRecordsToRoot()\n", dataAccess->rankGlobal);
+								MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+							}
+							dataAccess->callPathNodeRecords.clear();
+						}
+					}
+
+					dataAccess->callpathNodeIdRemap_created = true;
+				}
+
 				void prepareAndWriteAggData(treetimer::config::Config& config,
 											treetimer::data_structures::Tree<std::string, 
 											treetimer::measurement::InstrumentationData>& callTree,
@@ -381,10 +465,7 @@ namespace treetimer
 				{
 					// ToDo: Error Check - ensure database has been setup
 
-					if(config.sqlIOAggData == true)
-					{
-						return;
-					}
+					if (config.sqlIOAggData) return;
 
 					if (callTree.root == nullptr) {
 						// Nothing to do
@@ -398,58 +479,7 @@ namespace treetimer
 					if (dataAccess->gatherIntraNode) {
 						int err;
 
-						// Perform intra-node gather-at-root of SQL table data:
-
-						// Before gather/writing any performance data, must first 
-						// gather callpath data and adjust ID's for different ranks 
-						// potentially having different callpath trees.
-						std::map<int, int> callpathNodeIdRemap[dataAccess->nRanksLocal];
-						MPI_Datatype callpathNodeRecord_MPI = tt_sql::drivers::createCallpathNodeMpiType();
-						if (dataAccess->nRanksLocal > 1) {
-							if (dataAccess->rankLocal == 0) {
-								int n = dataAccess->nRanksLocal;
-								tt_sql::TT_CallPathNode *records = nullptr; int nRecords = 0;
-								int nReceives = 0; int srcRank;
-								while (nReceives != (n-1)) {
-									err = fetchNextGatheredRecord(*dataAccess, (void**)&records, &nRecords, &srcRank, 
-																	sizeof(tt_sql::TT_CallPathNode), callpathNodeRecord_MPI, TAG_CALLPATH);
-									if (err != 0) {
-										fprintf(stderr, "Root failed on fetchNextGatheredRecord()\n");
-										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
-									}
-									nReceives++;
-									for (int i=0; i<nRecords; i++) {
-										tt_sql::TT_CallPathNode r = records[i];
-
-										// Apply remap:
-										if (r.parentID != -1 && callpathNodeIdRemap[srcRank].find(r.parentID) != callpathNodeIdRemap[srcRank].end()) {
-											r.parentID = callpathNodeIdRemap[srcRank][r.parentID];
-										}
-										
-										int blockTypeID;
-										tt_sql::drivers::findProfileNodeTypeID(*dataAccess, codeBlockNames[r.blockType], &blockTypeID);
-										int profileNodeID;
-										tt_sql::drivers::writeTreeNodeProfileNodeData(*dataAccess, r.nodeName, blockTypeID, &profileNodeID);
-										int callPathID;
-										tt_sql::drivers::writeCallPathData(*dataAccess, r.rank, profileNodeID, r.parentID, &callPathID);
-
-										// Store the remap:
-										callpathNodeIdRemap[srcRank][r.callPathID] = callPathID;
-									}
-									free(records); records=nullptr; nRecords=0;
-								}
-							}
-							else {
-								// Send to local root
-								err = sendRecordsToRoot(*dataAccess, dataAccess->callPathNodeRecords.data(), dataAccess->callPathNodeRecords.size(), 
-														sizeof(tt_sql::TT_CallPathNode), callpathNodeRecord_MPI, TAG_CALLPATH);
-								if (err != 0) {
-									fprintf(stderr, "Rank %d failed on sendRecordsToRoot()\n", dataAccess->rankGlobal);
-									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
-								}
-								dataAccess->callPathNodeRecords.clear();
-							}
-						}
+						gatherAndWriteCallPathData(config, dataAccess);
 
 						// Gather AggregateTime data (intra-node gather-at-root):
 						MPI_Datatype aggTimeRecord_MPI = tt_sql::drivers::createAggregateTimeMpiType();
@@ -471,7 +501,7 @@ namespace treetimer
 										// Add in processID, which only root will know from earlier:
 										records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 										// Remap callpath IDs:
-										records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+										records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
 										tt_sql::drivers::writeAggregateTimeData(*dataAccess, records[i], &aggTimeID);
 									}
 									free(records); records=nullptr; nRecords=0;
@@ -512,7 +542,7 @@ namespace treetimer
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
-											records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
 											tt_sql::drivers::writeAggregateParameterIntData(*dataAccess, records[i], &aggParamIntID);
 										}
 										free(records); records=nullptr; nRecords=0;
@@ -550,7 +580,7 @@ namespace treetimer
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
-											records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
 											tt_sql::drivers::writeAggregateParameterFloatData(*dataAccess, records[i], &aggParamFloatID);
 										}
 										free(records); records=nullptr; nRecords=0;
@@ -588,7 +618,7 @@ namespace treetimer
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
-											records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
 											tt_sql::drivers::writeAggregateParameterBoolData(*dataAccess, records[i], &aggParamBoolID);
 										}
 										free(records); records=nullptr; nRecords=0;
@@ -630,56 +660,7 @@ namespace treetimer
 					if (dataAccess->gatherIntraNode) {
 						int err;
 
-						// Before gather/writing any performance data, must first 
-						// gather callpath data and adjust ID's for different ranks 
-						// potentially having different callpath trees.
-						std::map<int, int> callpathNodeIdRemap[dataAccess->nRanksLocal];
-						MPI_Datatype callpathNodeRecord_MPI = tt_sql::drivers::createCallpathNodeMpiType();
-						if (dataAccess->nRanksLocal > 1) {
-							if (dataAccess->rankLocal == 0) {
-								int n = dataAccess->nRanksLocal;
-								tt_sql::TT_CallPathNode *records = nullptr; int nRecords = 0;
-								int nReceives = 0; int srcRank;
-								while (nReceives != (n-1)) {
-									err = fetchNextGatheredRecord(*dataAccess, (void**)&records, &nRecords, &srcRank, 
-																	sizeof(tt_sql::TT_CallPathNode), callpathNodeRecord_MPI, TAG_CALLPATH);
-									if (err != 0) {
-										fprintf(stderr, "Root failed on fetchNextGatheredRecord()\n");
-										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
-									}
-									nReceives++;
-									for (int i=0; i<nRecords; i++) {
-										tt_sql::TT_CallPathNode r = records[i];
-
-										// Apply remap:
-										if (r.parentID != -1 && callpathNodeIdRemap[srcRank].find(r.parentID) != callpathNodeIdRemap[srcRank].end()) {
-											r.parentID = callpathNodeIdRemap[srcRank][r.parentID];
-										}
-										
-										int blockTypeID;
-										tt_sql::drivers::findProfileNodeTypeID(*dataAccess, codeBlockNames[r.blockType], &blockTypeID);
-										int profileNodeID;
-										tt_sql::drivers::writeTreeNodeProfileNodeData(*dataAccess, r.nodeName, blockTypeID, &profileNodeID);
-										int callPathID;
-										tt_sql::drivers::writeCallPathData(*dataAccess, r.rank, profileNodeID, r.parentID, &callPathID);
-
-										// Store the remap:
-										callpathNodeIdRemap[srcRank][r.callPathID] = callPathID;
-									}
-									free(records); records=nullptr; nRecords=0;
-								}
-							}
-							else {
-								// Send to local root
-								err = sendRecordsToRoot(*dataAccess, dataAccess->callPathNodeRecords.data(), dataAccess->callPathNodeRecords.size(), 
-														sizeof(tt_sql::TT_CallPathNode), callpathNodeRecord_MPI, TAG_CALLPATH);
-								if (err != 0) {
-									fprintf(stderr, "Rank %d failed on sendRecordsToRoot()\n", dataAccess->rankGlobal);
-									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
-								}
-								dataAccess->callPathNodeRecords.clear();
-							}
-						}
+						gatherAndWriteCallPathData(config, dataAccess);
 
 						// Gather TraceTime data (intra-node gather-at-root):
 						MPI_Datatype traceTimeRecord_MPI = tt_sql::drivers::createTraceTimeMpiType();
@@ -701,7 +682,7 @@ namespace treetimer
 										// Add in processID, which only root will know from earlier:
 										records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 										// Remap callpath IDs:
-										records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+										records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
 										tt_sql::drivers::writeTraceTimeData(*dataAccess, records[i], &traceTimeID);
 									}
 									free(records); records=nullptr; nRecords=0;
@@ -742,7 +723,7 @@ namespace treetimer
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
-											records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
 											tt_sql::drivers::writeTraceParameterIntData(*dataAccess, records[i], &traceParamIntID);
 										}
 										free(records); records=nullptr; nRecords=0;
@@ -780,7 +761,7 @@ namespace treetimer
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
-											records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
 											tt_sql::drivers::writeTraceParameterFloatData(*dataAccess, records[i], &traceParamFloatID);
 										}
 										free(records); records=nullptr; nRecords=0;
@@ -818,7 +799,7 @@ namespace treetimer
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
-											records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
 											tt_sql::drivers::writeTraceParameterBoolData(*dataAccess, records[i], &traceParamBoolID);
 										}
 										free(records); records=nullptr; nRecords=0;
@@ -856,7 +837,7 @@ namespace treetimer
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
-											records[i].callPathID = callpathNodeIdRemap[srcRank][records[i].callPathID];
+											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
 											tt_sql::drivers::writeTraceParameterStringData(*dataAccess, records[i], &traceParamStringID);
 										}
 										free(records); records=nullptr; nRecords=0;
@@ -946,8 +927,6 @@ namespace treetimer
 						return 0;
 					}
 
-					int err;
-
 					if (nElems < 0) {
 						fprintf(stderr, "Rank %d: Isend error: negative nElems=%d\n", dataAccess.rankGlobal, nElems);
 						MPI_Abort(MPI_COMM_WORLD, 1); exit(EXIT_FAILURE);
@@ -958,12 +937,12 @@ namespace treetimer
 							// Send to local root
 							MPI_Request req;
 							MPI_Status stat;
-							err = MPI_Isend(data, nElems, elemType, 0, mpiTag, dataAccess.nodeComm, &req);
+							int err = MPI_Isend(data, nElems, elemType, 0, mpiTag, dataAccess.nodeComm, &req);
 							if (err != MPI_SUCCESS) {
 								fprintf(stderr, "Rank %d failed Isend (nElems=%d, tag=%d)\n", dataAccess.rankGlobal, nElems, mpiTag);
 								MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 							}
-							// printf("Rank %d sent %d records to root (elemBytes = %d)\n", dataAccess.rankGlobal, nElems, elemBytes); fflush(stdout);
+							// printf("Rank %d sent %d records (tag=%d) to root (elemBytes = %d)\n", dataAccess.rankGlobal, nElems, mpiTag, elemBytes); fflush(stdout);
 							MPI_Wait(&req, &stat);
 						}
 					}

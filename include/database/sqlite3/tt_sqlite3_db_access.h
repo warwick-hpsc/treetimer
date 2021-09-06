@@ -13,6 +13,7 @@
 #ifndef TT_DATABASE_SQLITE3_ACCESS_INCLUDE_H
 #define TT_DATABASE_SQLITE3_ACCESS_INCLUDE_H
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -132,7 +133,6 @@ namespace treetimer
 			{
 				public:
 					TTSQLite3(std::string filePath);
-					~TTSQLite3();
 
 					std::string filePath;
 					sqlite3 *db;
@@ -157,6 +157,11 @@ namespace treetimer
 
 					std::vector<int> rankLocalToProcessID;
 					std::vector<int> rankLocalToRankGlobal;
+
+					// For each local rank, store a mapping of old Callpath node ID to new ID.
+					// Only root rank of local communicator creates this.
+					std::vector<std::map<int,int>> callpathNodeIdRemap;
+					bool callpathNodeIdRemap_created = false;
 
 					// Global variables:
 					int runID = -1;
