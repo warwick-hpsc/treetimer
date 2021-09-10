@@ -27,39 +27,45 @@ namespace treetimer
 
 				// To avoid high-rank runs smashing filesystem, perform intra-node gather and write.
 				// Need to decide if will perform gather before traversing Tree.
-				int rankGlobal, nRanksGlobal, err;
+				int rankGlobal;
 				MPI_Comm_rank(MPI_COMM_WORLD, &rankGlobal);
-				MPI_Comm_size(MPI_COMM_WORLD, &nRanksGlobal);
+				this->rankGlobal = rankGlobal;
+
 				// Todo: make 'gatherIntraNode' conditional on number of ranks
 				bool gatherIntraNode = true;
-				MPI_Comm nodeComm;
-				int rankLocal, nRanksLocal;
-				MPI_Info info = 0;
-				err = MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rankGlobal, info, &nodeComm);
-				if (err != MPI_SUCCESS) {
-					fprintf(stderr, "Rank %d failed to create intra-node MPI communicator\n", rankGlobal);
-					MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
-				}
-				MPI_Comm_rank(nodeComm, &rankLocal);
-				MPI_Comm_size(nodeComm, &nRanksLocal);
-				if (nRanksLocal == 1) {
+				if (!config.permitGatherAtRoot) {
 					gatherIntraNode = false;
 				}
-				this->rankGlobal = rankGlobal;
-				this->rankLocal = rankLocal;
-				this->nRanksLocal = nRanksLocal;
 				this->gatherIntraNode = gatherIntraNode;
-				this->nodeComm = nodeComm;
 
-				if (this->rankLocal == 0) {
-					this->rankLocalToProcessID.resize(nRanksLocal);
-					this->rankLocalToRankGlobal.resize(nRanksLocal);
-					for (int i=0; i<nRanksLocal; i++) {
-						this->rankLocalToProcessID[i]  = -1;
-						this->rankLocalToRankGlobal[i] = -1;
+				if (gatherIntraNode) {
+					MPI_Comm nodeComm;
+					int rankLocal, nRanksLocal, err;
+					MPI_Info info = 0;
+					err = MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rankGlobal, info, &nodeComm);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Rank %d failed to create intra-node MPI communicator\n", rankGlobal);
+						MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 					}
+					MPI_Comm_rank(nodeComm, &rankLocal);
+					MPI_Comm_size(nodeComm, &nRanksLocal);
+					if (nRanksLocal == 1) {
+						gatherIntraNode = false;
+					}
+					this->rankLocal = rankLocal;
+					this->nRanksLocal = nRanksLocal;
+					this->nodeComm = nodeComm;
 
-					this->callpathNodeIdRemap.resize(nRanksLocal);
+					if (this->rankLocal == 0) {
+						this->rankLocalToProcessID.resize(nRanksLocal);
+						this->rankLocalToRankGlobal.resize(nRanksLocal);
+						for (int i=0; i<nRanksLocal; i++) {
+							this->rankLocalToProcessID[i]  = -1;
+							this->rankLocalToRankGlobal[i] = -1;
+						}
+
+						this->callpathNodeIdRemap.resize(nRanksLocal);
+					}
 				}
 			}
 

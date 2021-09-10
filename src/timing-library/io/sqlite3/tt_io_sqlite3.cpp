@@ -427,7 +427,9 @@ namespace treetimer
 									int profileNodeID;
 									tt_sql::drivers::writeTreeNodeProfileNodeData(*dataAccess, r.nodeName, blockTypeID, &profileNodeID);
 									int callPathID;
-									tt_sql::drivers::writeCallPathData(*dataAccess, r.rank, profileNodeID, r.parentID, &callPathID);
+									// Get processID, which only root will know from earlier:
+									int processID = dataAccess->rankLocalToProcessID[srcRank];
+									tt_sql::drivers::writeCallPathData(*dataAccess, processID, profileNodeID, r.parentID, &callPathID);
 									if (callPathID == 0) {
 										fprintf(stderr, "TreeTimer error: writeCallPathData() has returned callPathID=%d\n", callPathID);
 										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
@@ -476,10 +478,10 @@ namespace treetimer
 					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeAggInstrumentationData, 
 										config.sqlIOProcessID, -1, config);
 
+					gatherAndWriteCallPathData(config, dataAccess);
+
 					if (dataAccess->gatherIntraNode) {
 						int err;
-
-						gatherAndWriteCallPathData(config, dataAccess);
 
 						// Gather AggregateTime data (intra-node gather-at-root):
 						MPI_Datatype aggTimeRecord_MPI = tt_sql::drivers::createAggregateTimeMpiType();
@@ -488,7 +490,6 @@ namespace treetimer
 								int n = dataAccess->nRanksLocal;
 								tt_sql::TT_AggTiming *records = nullptr; int nRecords = 0;
 								int nReceives = 0; int srcRank;
-								int aggTimeID;
 								while (nReceives != (n-1)) {
 									err = fetchNextGatheredRecord(*dataAccess, (void**)&records, &nRecords, &srcRank, 
 																	sizeof(tt_sql::TT_AggTiming), aggTimeRecord_MPI, TAG_AGG);
@@ -502,7 +503,7 @@ namespace treetimer
 										records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 										// Remap callpath IDs:
 										records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-										tt_sql::drivers::writeAggregateTimeData(*dataAccess, records[i], &aggTimeID);
+										tt_sql::drivers::writeAggregateTimeData(*dataAccess, records[i], nullptr);
 									}
 									free(records); records=nullptr; nRecords=0;
 								}
@@ -527,7 +528,6 @@ namespace treetimer
 							if (dataAccess->nRanksLocal > 1) {
 								if (dataAccess->rankLocal == 0) {
 									int n = dataAccess->nRanksLocal;
-									int aggParamIntID;
 									tt_sql::TT_AggParamInt *records = nullptr; int nRecords = 0;
 									int nReceives = 0; int srcRank;
 									while (nReceives != (n-1)) {
@@ -543,7 +543,7 @@ namespace treetimer
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeAggregateParameterIntData(*dataAccess, records[i], &aggParamIntID);
+											tt_sql::drivers::writeAggregateParameterIntData(*dataAccess, records[i], nullptr);
 										}
 										free(records); records=nullptr; nRecords=0;
 									}
@@ -565,7 +565,6 @@ namespace treetimer
 							if (dataAccess->nRanksLocal > 1) {
 								if (dataAccess->rankLocal == 0) {
 									int n = dataAccess->nRanksLocal;
-									int aggParamFloatID;
 									tt_sql::TT_AggParamFloat *records = nullptr; int nRecords = 0;
 									int nReceives = 0; int srcRank;
 									while (nReceives != (n-1)) {
@@ -581,7 +580,7 @@ namespace treetimer
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeAggregateParameterFloatData(*dataAccess, records[i], &aggParamFloatID);
+											tt_sql::drivers::writeAggregateParameterFloatData(*dataAccess, records[i], nullptr);
 										}
 										free(records); records=nullptr; nRecords=0;
 									}
@@ -603,7 +602,6 @@ namespace treetimer
 							if (dataAccess->nRanksLocal > 1) {
 								if (dataAccess->rankLocal == 0) {
 									int n = dataAccess->nRanksLocal;
-									int aggParamBoolID;
 									tt_sql::TT_AggParamBool *records = nullptr; int nRecords = 0;
 									int nReceives = 0; int srcRank;
 									while (nReceives != (n-1)) {
@@ -619,7 +617,7 @@ namespace treetimer
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeAggregateParameterBoolData(*dataAccess, records[i], &aggParamBoolID);
+											tt_sql::drivers::writeAggregateParameterBoolData(*dataAccess, records[i], nullptr);
 										}
 										free(records); records=nullptr; nRecords=0;
 									}
@@ -657,10 +655,10 @@ namespace treetimer
 					callTreeTraversal(*dataAccess, *(callTree.root), writeTreeNodeTraceInstrumentationData, 
 										config.sqlIOProcessID, -1, config);
 
+					gatherAndWriteCallPathData(config, dataAccess);
+
 					if (dataAccess->gatherIntraNode) {
 						int err;
-
-						gatherAndWriteCallPathData(config, dataAccess);
 
 						// Gather TraceTime data (intra-node gather-at-root):
 						MPI_Datatype traceTimeRecord_MPI = tt_sql::drivers::createTraceTimeMpiType();
@@ -669,7 +667,6 @@ namespace treetimer
 								int n = dataAccess->nRanksLocal;
 								tt_sql::TT_TraceTiming *records = nullptr; int nRecords = 0;
 								int nReceives = 0; int srcRank;
-								int traceTimeID;
 								while (nReceives != (n-1)) {
 									err = fetchNextGatheredRecord(*dataAccess, (void**)&records, &nRecords, &srcRank, 
 																	sizeof(tt_sql::TT_TraceTiming), traceTimeRecord_MPI, TAG_TRACE);
@@ -683,7 +680,7 @@ namespace treetimer
 										records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 										// Remap callpath IDs:
 										records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-										tt_sql::drivers::writeTraceTimeData(*dataAccess, records[i], &traceTimeID);
+										tt_sql::drivers::writeTraceTimeData(*dataAccess, records[i], nullptr);
 									}
 									free(records); records=nullptr; nRecords=0;
 								}
@@ -708,7 +705,6 @@ namespace treetimer
 							if (dataAccess->nRanksLocal > 1) {
 								if (dataAccess->rankLocal == 0) {
 									int n = dataAccess->nRanksLocal;
-									int traceParamIntID;
 									tt_sql::TT_TraceParamInt *records = nullptr; int nRecords = 0;
 									int nReceives = 0; int srcRank;
 									while (nReceives != (n-1)) {
@@ -724,7 +720,7 @@ namespace treetimer
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeTraceParameterIntData(*dataAccess, records[i], &traceParamIntID);
+											tt_sql::drivers::writeTraceParameterIntData(*dataAccess, records[i], nullptr);
 										}
 										free(records); records=nullptr; nRecords=0;
 									}
@@ -746,7 +742,6 @@ namespace treetimer
 							if (dataAccess->nRanksLocal > 1) {
 								if (dataAccess->rankLocal == 0) {
 									int n = dataAccess->nRanksLocal;
-									int traceParamFloatID;
 									tt_sql::TT_TraceParamFloat *records = nullptr; int nRecords = 0;
 									int nReceives = 0; int srcRank;
 									while (nReceives != (n-1)) {
@@ -762,7 +757,7 @@ namespace treetimer
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeTraceParameterFloatData(*dataAccess, records[i], &traceParamFloatID);
+											tt_sql::drivers::writeTraceParameterFloatData(*dataAccess, records[i], nullptr);
 										}
 										free(records); records=nullptr; nRecords=0;
 									}
@@ -784,7 +779,6 @@ namespace treetimer
 							if (dataAccess->nRanksLocal > 1) {
 								if (dataAccess->rankLocal == 0) {
 									int n = dataAccess->nRanksLocal;
-									int traceParamBoolID;
 									tt_sql::TT_TraceParamBool *records = nullptr; int nRecords = 0;
 									int nReceives = 0; int srcRank;
 									while (nReceives != (n-1)) {
@@ -800,7 +794,7 @@ namespace treetimer
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeTraceParameterBoolData(*dataAccess, records[i], &traceParamBoolID);
+											tt_sql::drivers::writeTraceParameterBoolData(*dataAccess, records[i], nullptr);
 										}
 										free(records); records=nullptr; nRecords=0;
 									}
@@ -822,7 +816,6 @@ namespace treetimer
 							if (dataAccess->nRanksLocal > 1) {
 								if (dataAccess->rankLocal == 0) {
 									int n = dataAccess->nRanksLocal;
-									int traceParamStringID;
 									tt_sql::TT_TraceParamString *records = nullptr; int nRecords = 0;
 									int nReceives = 0; int srcRank;
 									while (nReceives != (n-1)) {
@@ -838,7 +831,7 @@ namespace treetimer
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeTraceParameterStringData(*dataAccess, records[i], &traceParamStringID);
+											tt_sql::drivers::writeTraceParameterStringData(*dataAccess, records[i], nullptr);
 										}
 										free(records); records=nullptr; nRecords=0;
 									}
@@ -996,11 +989,11 @@ namespace treetimer
 							//tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.parent->nodeData.blockType], &parentBlockType);
 							//tt_sql::drivers::findProfileNodeID(dataAccess, parentName, parentBlockType, &parentNodeID);
 
-							tt_sql::drivers::writeCallPathData(dataAccess, dataAccess.rankGlobal, profileNodeID, parentID, callPathID);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID);
 						}
 						else
 						{
-							tt_sql::drivers::writeCallPathData(dataAccess, dataAccess.rankGlobal, profileNodeID, -1, callPathID);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID);
 						}
 					}
 					else {
@@ -1143,11 +1136,11 @@ namespace treetimer
 						// Could create an 'unknown' profile node to point to, that has a profile node entry but no callpath node entry
 						if(node.parent != nullptr)
 						{
-							tt_sql::drivers::writeCallPathData(dataAccess, dataAccess.rankGlobal, profileNodeID, parentID, callPathID);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID);
 						}
 						else
 						{
-							tt_sql::drivers::writeCallPathData(dataAccess, dataAccess.rankGlobal, profileNodeID, -1, callPathID);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID);
 						}
 					}
 					else {

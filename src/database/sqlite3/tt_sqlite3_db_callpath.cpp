@@ -25,7 +25,7 @@ namespace treetimer
 				{
 					char *zErrMsg = 0;
 					std::string stmt = "CREATE TABLE IF NOT EXISTS CallPathData(CallPathID INTEGER, "
-																				"Rank INTEGER, "
+																				"ProcessID INTEGER, "
 																				"ProfileNodeID INTEGER, "
 																				"ParentNodeID INTEGER, "
 																				"FOREIGN KEY(ProfileNodeID) REFERENCES ProfileNodeData(ProfileNodeID), "
@@ -39,18 +39,18 @@ namespace treetimer
 					}
 				}
 
-				void findCallPathDataID(TTSQLite3& dataAccess, int rank, int profileNodeID, int parentNodeID, int *callPathID)
+				void findCallPathDataID(TTSQLite3& dataAccess, int processID, int profileNodeID, int parentNodeID, int *callPathID)
 				{
 					sqlite3_stmt *pStmt = nullptr;
 
 					int err = sqlite3_prepare(dataAccess.db,
 												"SELECT CallPathID FROM CallPathData WHERE "
-												"Rank = ? AND "
+												"ProcessID = ? AND "
 												"ProfileNodeID = ? AND "
 												"ParentNodeID = ?",
 												-1, &pStmt, NULL);
 
-					sqlite3_bind_int(pStmt,1, rank);
+					sqlite3_bind_int(pStmt,1, processID);
 					sqlite3_bind_int(pStmt,2, profileNodeID);
 					sqlite3_bind_int(pStmt,3, parentNodeID);
 					err = sqlite3_step(pStmt);
@@ -79,20 +79,20 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeCallPathData(TTSQLite3& dataAccess, int rank, int profileNodeID, int parentNodeID, int *callPathID)
+				void writeCallPathData(TTSQLite3& dataAccess, int processID, int profileNodeID, int parentNodeID, int *callPathID)
 				{
 					sqlite3_stmt *pStmt = nullptr;
 					int err;
 
 					// Check for existing entry
 					int tmpID;
-					findCallPathDataID(dataAccess, rank, profileNodeID, parentNodeID, &tmpID);
+					findCallPathDataID(dataAccess, processID, profileNodeID, parentNodeID, &tmpID);
 
 					if(tmpID == -1)
 					{
 						err = sqlite3_prepare(dataAccess.db,"INSERT INTO CallPathData VALUES(NULL, ?, ?, ?)", -1, &pStmt, NULL);
 
-						sqlite3_bind_int(pStmt,1, rank);
+						sqlite3_bind_int(pStmt,1, processID);
 						sqlite3_bind_int(pStmt,2, profileNodeID);
 						sqlite3_bind_int(pStmt,3, parentNodeID);
 						err = sqlite3_step(pStmt);
