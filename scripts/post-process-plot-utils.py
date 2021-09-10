@@ -64,7 +64,7 @@ def plot_heatmap(df, index_colname, value_colname, fig_filepath):
 		else:
 			cm = 'Blues'
 			nm = plt.Normalize(df[value_colname].min(), 0.0)
-	plt.imshow(df_pvt.values, cmap=cm, norm=nm, extent=[0,99, 0,df["Rank"].max()])
+	plt.imshow(df_pvt.values, cmap=cm, norm=nm, extent=[0,99, 0,df["Rank"].max()], interpolation='none')
 	cb = plt.colorbar()
 
 	plt.savefig(fig_filepath)

@@ -33,9 +33,6 @@ namespace treetimer
 
 				// Todo: make 'gatherIntraNode' conditional on number of ranks
 				bool gatherIntraNode = true;
-				if (!config.permitGatherAtRoot) {
-					gatherIntraNode = false;
-				}
 				this->gatherIntraNode = gatherIntraNode;
 
 				if (gatherIntraNode) {

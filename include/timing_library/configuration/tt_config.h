@@ -53,8 +53,6 @@ namespace treetimer
 				bool eMPIHooksTParam; // Enabling eTParam and eMPIHooks generates ENORMOUS trace logs. Require this new
 									  // bool to enable tracing of parameters in MPI blocks
 
-				bool permitGatherAtRoot;
-
 				// Storage for global parameters that are expected to influence program configuration
 				// Can only hold one value per parameter name
 

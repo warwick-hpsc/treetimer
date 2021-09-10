@@ -62,9 +62,6 @@ namespace treetimer
 				setMPIHooksTParamFromEnv(config);
 
 				// setGlobalParamFromEnv(config);
-
-				char *envVar = getenv("TT_CONFIG_NOGATHER");
-				config.permitGatherAtRoot = (envVar == nullptr) && (strcmp(envVar, "1") != 0);
 			}
 
 			void setAppNameFromEnv(Config& config)
