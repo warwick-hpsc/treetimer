@@ -32,10 +32,11 @@ namespace treetimer
 				void findTraceParameterBoolDataID  (TTSQLite3& dataAccess, TT_TraceParamBool   p, int *traceParamBoolID);
 				void findTraceParameterStringDataID(TTSQLite3& dataAccess, TT_TraceParamString p, int *traceParamStringID);
 
-				void writeTraceParameterIntData   (TTSQLite3& dataAccess, TT_TraceParamInt    p, int *traceParamIntID);
-				void writeTraceParameterFloatData (TTSQLite3& dataAccess, TT_TraceParamFloat  p, int *traceParamFloatID);
-				void writeTraceParameterBoolData  (TTSQLite3& dataAccess, TT_TraceParamBool   p, int *traceParamBoolID);
-				void writeTraceParameterStringData(TTSQLite3& dataAccess, TT_TraceParamString p, int *traceParamStringID);
+				// Note: 'verifyUnique' prevents data duplication, but makes this O(1) insertion a O(N) operation.
+				void writeTraceParameterIntData   (TTSQLite3& dataAccess, TT_TraceParamInt    p, int *traceParamIntID,    bool verifyUnique);
+				void writeTraceParameterFloatData (TTSQLite3& dataAccess, TT_TraceParamFloat  p, int *traceParamFloatID,  bool verifyUnique);
+				void writeTraceParameterBoolData  (TTSQLite3& dataAccess, TT_TraceParamBool   p, int *traceParamBoolID,   bool verifyUnique);
+				void writeTraceParameterStringData(TTSQLite3& dataAccess, TT_TraceParamString p, int *traceParamStringID, bool verifyUnique);
 
 				MPI_Datatype createTraceParamIntMpiType();
 				MPI_Datatype createTraceParamFloatMpiType();

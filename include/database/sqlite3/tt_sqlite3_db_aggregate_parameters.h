@@ -27,13 +27,14 @@ namespace treetimer
 			{
 				void writeSchemaAggregateParameterData(TTSQLite3& dataAccess);
 
-				void findAggregateParameterIntDataID  (TTSQLite3& dataAccess, TT_AggParamInt   p, int* aggParamIntID);
-				void findAggregateParameterFloatDataID(TTSQLite3& dataAccess, TT_AggParamFloat p, int* aggParamFloatID);
-				void findAggregateParameterBoolDataID (TTSQLite3& dataAccess, TT_AggParamBool  p, int* aggParamBoolID);
+				void findAggregateParameterIntDataID  (TTSQLite3& dataAccess, TT_AggParamInt   p, int *aggParamIntID);
+				void findAggregateParameterFloatDataID(TTSQLite3& dataAccess, TT_AggParamFloat p, int *aggParamFloatID);
+				void findAggregateParameterBoolDataID (TTSQLite3& dataAccess, TT_AggParamBool  p, int *aggParamBoolID);
 
-				void writeAggregateParameterIntData   (TTSQLite3& dataAccess, TT_AggParamInt   p, int* aggParamIntID);
-				void writeAggregateParameterFloatData (TTSQLite3& dataAccess, TT_AggParamFloat p, int* aggParamFloatID);
-				void writeAggregateParameterBoolData  (TTSQLite3& dataAccess, TT_AggParamBool  p, int* aggParamBoolID);
+				// Note: 'verifyUnique' prevents data duplication, but makes this O(1) insertion a O(N) operation.
+				void writeAggregateParameterIntData   (TTSQLite3& dataAccess, TT_AggParamInt   p, int *aggParamIntID,   bool verifyUnique);
+				void writeAggregateParameterFloatData (TTSQLite3& dataAccess, TT_AggParamFloat p, int *aggParamFloatID, bool verifyUnique);
+				void writeAggregateParameterBoolData  (TTSQLite3& dataAccess, TT_AggParamBool  p, int *aggParamBoolID,  bool verifyUnique);
 
 				MPI_Datatype createAggregateParamIntMpiType();
 				MPI_Datatype createAggregateParamFloatMpiType();

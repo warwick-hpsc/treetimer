@@ -29,7 +29,8 @@ namespace treetimer
 
 				void findTraceTimeDataID(TTSQLite3& dataAccess, TT_TraceTiming d, int *traceTimeID);
 
-				void writeTraceTimeData(TTSQLite3& dataAccess, TT_TraceTiming d, int *traceTimeID);
+				// Note: 'verifyUnique' prevents data duplication, but makes this O(1) insertion a O(N) operation.
+				void writeTraceTimeData(TTSQLite3& dataAccess, TT_TraceTiming d, int *traceTimeID, bool verifyUnique);
 
 				MPI_Datatype createTraceTimeMpiType();
 			}

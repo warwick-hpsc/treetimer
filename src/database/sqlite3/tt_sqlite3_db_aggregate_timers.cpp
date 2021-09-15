@@ -98,7 +98,7 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeAggregateTimeData(TTSQLite3& dataAccess, TT_AggTiming d, int *aggTimeID)
+				void writeAggregateTimeData(TTSQLite3& dataAccess, TT_AggTiming d, int *aggTimeID, bool verifyUnique)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
 						dataAccess.aggTimeRecords.push_back(d);
@@ -116,50 +116,49 @@ namespace treetimer
 						d.stdev = 0.0;
 					}
 
-					// Check for existing entry
-					int tmpID = -1;
-					findAggregateTimeDataID(dataAccess, d, &tmpID);
+					bool insert = true;
 
-					if(tmpID == -1)
-					{
-						err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateTime VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
-
-						sqlite3_bind_int(   pStmt,1, dataAccess.runID);
-						sqlite3_bind_int(   pStmt,2, d.rank);
-						sqlite3_bind_int(   pStmt,3, d.callPathID);
-						sqlite3_bind_int(   pStmt,4, d.processID);
-						sqlite3_bind_double(pStmt,5, d.minWallTime);
-						sqlite3_bind_double(pStmt,6, d.avgWallTime);
-						sqlite3_bind_double(pStmt,7, d.maxWallTime);
-						sqlite3_bind_double(pStmt,8, d.stdev);
-						sqlite3_bind_int(   pStmt,9, d.count);
-						err = sqlite3_step(pStmt);
-
-						if (err != SQLITE_OK && err != SQLITE_DONE) {
-							if (err == SQLITE_ERROR) {
-								std::cout << "SQL Error encountered in writeAggregateTimeData\n";
-							} else if (err == SQLITE_MISUSE) {
-								std::cout << "SQL Error encountered in writeAggregateTimeData - misuse\n";
-							} else {
-								std::cout << "SQL Error encountered in writeAggregateTimeData - unknown error code " << err << std::endl;
-							}
-							char *expandedQuery = sqlite3_expanded_sql(pStmt);
-							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-							// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-							sqlite3_free(expandedQuery);
-							if(aggTimeID!=nullptr) *aggTimeID = -1;
+					if (verifyUnique) {
+						// Check for existing entry
+						int tmpID = -1;
+						findAggregateTimeDataID(dataAccess, d, &tmpID);
+						if (tmpID != -1) {
+							if(aggTimeID!=nullptr) *aggTimeID = tmpID;
+							return;
 						}
-						else {
-							if(aggTimeID!=nullptr) *aggTimeID = sqlite3_last_insert_rowid(dataAccess.db);
-						}
+					}
 
-						sqlite3_finalize(pStmt);
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateTime VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+					sqlite3_bind_int(   pStmt,1, dataAccess.runID);
+					sqlite3_bind_int(   pStmt,2, d.rank);
+					sqlite3_bind_int(   pStmt,3, d.callPathID);
+					sqlite3_bind_int(   pStmt,4, d.processID);
+					sqlite3_bind_double(pStmt,5, d.minWallTime);
+					sqlite3_bind_double(pStmt,6, d.avgWallTime);
+					sqlite3_bind_double(pStmt,7, d.maxWallTime);
+					sqlite3_bind_double(pStmt,8, d.stdev);
+					sqlite3_bind_int(   pStmt,9, d.count);
+					err = sqlite3_step(pStmt);
+
+					if (err != SQLITE_OK && err != SQLITE_DONE) {
+						if (err == SQLITE_ERROR) {
+							std::cout << "SQL Error encountered in writeAggregateTimeData\n";
+						} else if (err == SQLITE_MISUSE) {
+							std::cout << "SQL Error encountered in writeAggregateTimeData - misuse\n";
+						} else {
+							std::cout << "SQL Error encountered in writeAggregateTimeData - unknown error code " << err << std::endl;
+						}
+						char *expandedQuery = sqlite3_expanded_sql(pStmt);
+						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
+						sqlite3_free(expandedQuery);
+						if(aggTimeID!=nullptr) *aggTimeID = -1;
 					}
-					else
-					{
-						if(aggTimeID!=nullptr) *aggTimeID = tmpID;
+					else {
+						if(aggTimeID!=nullptr) *aggTimeID = sqlite3_last_insert_rowid(dataAccess.db);
 					}
+
+					sqlite3_finalize(pStmt);
 				}
 
 				MPI_Datatype createAggregateTimeMpiType()

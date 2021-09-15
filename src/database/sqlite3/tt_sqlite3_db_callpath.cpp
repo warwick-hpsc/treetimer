@@ -79,48 +79,48 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeCallPathData(TTSQLite3& dataAccess, int processID, int profileNodeID, int parentNodeID, int *callPathID)
+				void writeCallPathData(TTSQLite3& dataAccess, int processID, int profileNodeID, int parentNodeID, int *callPathID, bool verifyUnique)
 				{
 					sqlite3_stmt *pStmt = nullptr;
 					int err;
 
-					// Check for existing entry
-					int tmpID;
-					findCallPathDataID(dataAccess, processID, profileNodeID, parentNodeID, &tmpID);
-
-					if(tmpID == -1)
-					{
-						err = sqlite3_prepare(dataAccess.db,"INSERT INTO CallPathData VALUES(NULL, ?, ?, ?)", -1, &pStmt, NULL);
-
-						sqlite3_bind_int(pStmt,1, processID);
-						sqlite3_bind_int(pStmt,2, profileNodeID);
-						sqlite3_bind_int(pStmt,3, parentNodeID);
-						err = sqlite3_step(pStmt);
-
-						if (err != SQLITE_OK && err != SQLITE_DONE) {
-							if (err == SQLITE_ERROR) {
-								std::cout << "SQL Error encountered in writeCallPathData\n";
-							} else if (err == SQLITE_MISUSE) {
-								std::cout << "SQL Error encountered in writeCallPathData - misuse\n";
-							} else {
-								std::cout << "SQL Error encountered in writeCallPathData - unknown error code " << err << std::endl;
-							}
-							char *expandedQuery = sqlite3_expanded_sql(pStmt);
-							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-							// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-							sqlite3_free(expandedQuery);
-							if(callPathID!=nullptr) *callPathID = -1;
+					if (verifyUnique) {
+						// Check for existing entry
+						int tmpID = -1;
+						findCallPathDataID(dataAccess, processID, profileNodeID, parentNodeID, &tmpID);
+						if (tmpID != -1) {
+							if(callPathID!=nullptr) *callPathID = tmpID;
+							return;
 						}
-						else {
-							if(callPathID!=nullptr) *callPathID = sqlite3_last_insert_rowid(dataAccess.db);
-						}
+					}
 
-						sqlite3_finalize(pStmt);
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO CallPathData VALUES(NULL, ?, ?, ?)", -1, &pStmt, NULL);
+
+					sqlite3_bind_int(pStmt,1, processID);
+					sqlite3_bind_int(pStmt,2, profileNodeID);
+					sqlite3_bind_int(pStmt,3, parentNodeID);
+					err = sqlite3_step(pStmt);
+
+					if (err != SQLITE_OK && err != SQLITE_DONE) {
+						if (err == SQLITE_ERROR) {
+							std::cout << "SQL Error encountered in writeCallPathData\n";
+						} else if (err == SQLITE_MISUSE) {
+							std::cout << "SQL Error encountered in writeCallPathData - misuse\n";
+						} else {
+							std::cout << "SQL Error encountered in writeCallPathData - unknown error code " << err << std::endl;
+						}
+						char *expandedQuery = sqlite3_expanded_sql(pStmt);
+						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+
+						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
+						sqlite3_free(expandedQuery);
+						if(callPathID!=nullptr) *callPathID = -1;
 					}
 					else {
-						if(callPathID!=nullptr) *callPathID = tmpID;
+						if(callPathID!=nullptr) *callPathID = sqlite3_last_insert_rowid(dataAccess.db);
 					}
+
+					sqlite3_finalize(pStmt);
 				}
 
 				MPI_Datatype createCallpathNodeMpiType()

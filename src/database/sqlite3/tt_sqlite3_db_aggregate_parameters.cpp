@@ -246,7 +246,7 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeAggregateParameterIntData(TTSQLite3& dataAccess, TT_AggParamInt p, int *aggParamIntID)
+				void writeAggregateParameterIntData(TTSQLite3& dataAccess, TT_AggParamInt p, int *aggParamIntID, bool verifyUnique)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
 						dataAccess.aggParamIntRecords.push_back(p);
@@ -257,53 +257,53 @@ namespace treetimer
 					sqlite3_stmt *pStmt = nullptr;
 					int err;
 
-					// Check for existing entry
-					int tmpID;
-					findAggregateParameterIntDataID(dataAccess, p, &tmpID);
-
-					if(tmpID == -1)
-					{
-						err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterInt VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
-
-						sqlite3_bind_int   (pStmt,1, dataAccess.runID);
-						sqlite3_bind_int   (pStmt,2, p.callPathID);
-						sqlite3_bind_int   (pStmt,3, p.processID);
-						sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
-						sqlite3_bind_int   (pStmt,5, p.minValue);
-						sqlite3_bind_double(pStmt,6, p.avgValue);
-						sqlite3_bind_int   (pStmt,7, p.maxValue);
-						sqlite3_bind_double(pStmt,8, p.stdev);
-						sqlite3_bind_int   (pStmt,9, p.count);
-						err = sqlite3_step(pStmt);
-
-						if (err != SQLITE_OK && err != SQLITE_DONE) {
-							if (err == SQLITE_ERROR) {
-								std::cout << "SQL Error encountered in writeAggregateParameterIntData\n";
-							} else if (err == SQLITE_MISUSE) {
-								std::cout << "SQL Error encountered in writeAggregateParameterIntData - misuse\n";
-							} else {
-								std::cout << "SQL Error encountered in writeAggregateParameterIntData - unknown error code " << err << std::endl;
-							}
-							char *expandedQuery = sqlite3_expanded_sql(pStmt);
-							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-							// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-							sqlite3_free(expandedQuery);
-							if(aggParamIntID!=nullptr) *aggParamIntID = -1;
+					if (verifyUnique) {
+						// Check for existing entry
+						int tmpID = -1;
+						findAggregateParameterIntDataID(dataAccess, p, &tmpID);
+						if (tmpID != -1) {
+							if(aggParamIntID!=nullptr) *aggParamIntID = tmpID;
+							return;
 						}
-						else {
-							if(aggParamIntID!=nullptr) *aggParamIntID = sqlite3_last_insert_rowid(dataAccess.db);
-						}
+					}
 
-						sqlite3_finalize(pStmt);
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterInt VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+
+					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
+					sqlite3_bind_int   (pStmt,2, p.callPathID);
+					sqlite3_bind_int   (pStmt,3, p.processID);
+					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
+					sqlite3_bind_int   (pStmt,5, p.minValue);
+					sqlite3_bind_double(pStmt,6, p.avgValue);
+					sqlite3_bind_int   (pStmt,7, p.maxValue);
+					sqlite3_bind_double(pStmt,8, p.stdev);
+					sqlite3_bind_int   (pStmt,9, p.count);
+					err = sqlite3_step(pStmt);
+
+					if (err != SQLITE_OK && err != SQLITE_DONE) {
+						if (err == SQLITE_ERROR) {
+							std::cout << "SQL Error encountered in writeAggregateParameterIntData\n";
+						} else if (err == SQLITE_MISUSE) {
+							std::cout << "SQL Error encountered in writeAggregateParameterIntData - misuse\n";
+						} else {
+							std::cout << "SQL Error encountered in writeAggregateParameterIntData - unknown error code " << err << std::endl;
+						}
+						char *expandedQuery = sqlite3_expanded_sql(pStmt);
+						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+
+						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
+						sqlite3_free(expandedQuery);
+						if(aggParamIntID!=nullptr) *aggParamIntID = -1;
 					}
 					else {
-						if(aggParamIntID!=nullptr) *aggParamIntID = tmpID;
+						if(aggParamIntID!=nullptr) *aggParamIntID = sqlite3_last_insert_rowid(dataAccess.db);
 					}
+
+					sqlite3_finalize(pStmt);
 				}
 
 
-				void writeAggregateParameterFloatData(TTSQLite3& dataAccess, TT_AggParamFloat p, int *aggParamFloatID)
+				void writeAggregateParameterFloatData(TTSQLite3& dataAccess, TT_AggParamFloat p, int *aggParamFloatID, bool verifyUnique)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
 						dataAccess.aggParamFloatRecords.push_back(p);
@@ -314,53 +314,53 @@ namespace treetimer
 					sqlite3_stmt *pStmt = nullptr;
 					int err;
 
-					// Check for existing entry
-					int tmpID;
-					findAggregateParameterFloatDataID(dataAccess, p, &tmpID);
-
-					if(tmpID == -1)
-					{
-						err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterFloat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
-
-						sqlite3_bind_int   (pStmt,1, dataAccess.runID);
-						sqlite3_bind_int   (pStmt,2, p.callPathID);
-						sqlite3_bind_int   (pStmt,3, p.processID);
-						sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
-						sqlite3_bind_double(pStmt,5, p.minValue);
-						sqlite3_bind_double(pStmt,6, p.avgValue);
-						sqlite3_bind_double(pStmt,7, p.maxValue);
-						sqlite3_bind_double(pStmt,8, p.stdev);
-						sqlite3_bind_int   (pStmt,9, p.count);
-						err = sqlite3_step(pStmt);
-
-						if (err != SQLITE_OK && err != SQLITE_DONE) {
-							if (err == SQLITE_ERROR) {
-								std::cout << "SQL Error encountered in writeAggregateParameterFloatData\n";
-							} else if (err == SQLITE_MISUSE) {
-								std::cout << "SQL Error encountered in writeAggregateParameterFloatData - misuse\n";
-							} else {
-								std::cout << "SQL Error encountered in writeAggregateParameterFloatData - unknown error code " << err << std::endl;
-							}
-							char *expandedQuery = sqlite3_expanded_sql(pStmt);
-							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-							// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-							sqlite3_free(expandedQuery);
-							if(aggParamFloatID!=nullptr) *aggParamFloatID = -1;
+					if (verifyUnique) {
+						// Check for existing entry
+						int tmpID = -1;
+						findAggregateParameterFloatDataID(dataAccess, p, &tmpID);
+						if (tmpID != -1) {
+							if(aggParamFloatID!=nullptr) *aggParamFloatID = tmpID;
+							return;
 						}
-						else {
-							if(aggParamFloatID!=nullptr) *aggParamFloatID = sqlite3_last_insert_rowid(dataAccess.db);
-						}
+					}
 
-						sqlite3_finalize(pStmt);
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterFloat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+
+					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
+					sqlite3_bind_int   (pStmt,2, p.callPathID);
+					sqlite3_bind_int   (pStmt,3, p.processID);
+					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
+					sqlite3_bind_double(pStmt,5, p.minValue);
+					sqlite3_bind_double(pStmt,6, p.avgValue);
+					sqlite3_bind_double(pStmt,7, p.maxValue);
+					sqlite3_bind_double(pStmt,8, p.stdev);
+					sqlite3_bind_int   (pStmt,9, p.count);
+					err = sqlite3_step(pStmt);
+
+					if (err != SQLITE_OK && err != SQLITE_DONE) {
+						if (err == SQLITE_ERROR) {
+							std::cout << "SQL Error encountered in writeAggregateParameterFloatData\n";
+						} else if (err == SQLITE_MISUSE) {
+							std::cout << "SQL Error encountered in writeAggregateParameterFloatData - misuse\n";
+						} else {
+							std::cout << "SQL Error encountered in writeAggregateParameterFloatData - unknown error code " << err << std::endl;
+						}
+						char *expandedQuery = sqlite3_expanded_sql(pStmt);
+						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+
+						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
+						sqlite3_free(expandedQuery);
+						if(aggParamFloatID!=nullptr) *aggParamFloatID = -1;
 					}
 					else {
-						if(aggParamFloatID!=nullptr) *aggParamFloatID = tmpID;
+						if(aggParamFloatID!=nullptr) *aggParamFloatID = sqlite3_last_insert_rowid(dataAccess.db);
 					}
+
+					sqlite3_finalize(pStmt);
 				}
 
 
-				void writeAggregateParameterBoolData(TTSQLite3& dataAccess, TT_AggParamBool p,  int *aggParamBoolID)
+				void writeAggregateParameterBoolData(TTSQLite3& dataAccess, TT_AggParamBool p,  int *aggParamBoolID, bool verifyUnique)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
 						dataAccess.aggParamBoolRecords.push_back(p);
@@ -371,49 +371,49 @@ namespace treetimer
 					sqlite3_stmt *pStmt = nullptr;
 					int err;
 
-					// Check for existing entry
-					int tmpID;
-					findAggregateParameterBoolDataID(dataAccess, p, &tmpID);
-
-					if(tmpID == -1)
-					{
-						err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterBool VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
-
-						sqlite3_bind_int   (pStmt,1, dataAccess.runID);
-						sqlite3_bind_int   (pStmt,2, p.callPathID);
-						sqlite3_bind_int   (pStmt,3, p.processID);
-						sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
-						sqlite3_bind_int   (pStmt,5, p.minValue);
-						sqlite3_bind_double(pStmt,6, p.avgValue);
-						sqlite3_bind_int   (pStmt,7, p.maxValue);
-						sqlite3_bind_double(pStmt,8, p.stdev);
-						sqlite3_bind_int   (pStmt,9, p.count);
-						err = sqlite3_step(pStmt);
-
-						if (err != SQLITE_OK && err != SQLITE_DONE) {
-							if (err == SQLITE_ERROR) {
-								std::cout << "SQL Error encountered in writeAggregateParameterBoolData\n";
-							} else if (err == SQLITE_MISUSE) {
-								std::cout << "SQL Error encountered in writeAggregateParameterBoolData - misuse\n";
-							} else {
-								std::cout << "SQL Error encountered in writeAggregateParameterBoolData - unknown error code " << err << std::endl;
-							}
-							char *expandedQuery = sqlite3_expanded_sql(pStmt);
-							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
-							// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
-							sqlite3_free(expandedQuery);
-							if(aggParamBoolID!=nullptr) *aggParamBoolID = -1;
+					if (verifyUnique) {
+						// Check for existing entry
+						int tmpID = -1;
+						findAggregateParameterBoolDataID(dataAccess, p, &tmpID);
+						if (tmpID != -1) {
+							if(aggParamBoolID!=nullptr) *aggParamBoolID = tmpID;
+							return;
 						}
-						else {
-							if(aggParamBoolID!=nullptr) *aggParamBoolID = sqlite3_last_insert_rowid(dataAccess.db);
-						}
+					}
 
-						sqlite3_finalize(pStmt);
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterBool VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+
+					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
+					sqlite3_bind_int   (pStmt,2, p.callPathID);
+					sqlite3_bind_int   (pStmt,3, p.processID);
+					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
+					sqlite3_bind_int   (pStmt,5, p.minValue);
+					sqlite3_bind_double(pStmt,6, p.avgValue);
+					sqlite3_bind_int   (pStmt,7, p.maxValue);
+					sqlite3_bind_double(pStmt,8, p.stdev);
+					sqlite3_bind_int   (pStmt,9, p.count);
+					err = sqlite3_step(pStmt);
+
+					if (err != SQLITE_OK && err != SQLITE_DONE) {
+						if (err == SQLITE_ERROR) {
+							std::cout << "SQL Error encountered in writeAggregateParameterBoolData\n";
+						} else if (err == SQLITE_MISUSE) {
+							std::cout << "SQL Error encountered in writeAggregateParameterBoolData - misuse\n";
+						} else {
+							std::cout << "SQL Error encountered in writeAggregateParameterBoolData - unknown error code " << err << std::endl;
+						}
+						char *expandedQuery = sqlite3_expanded_sql(pStmt);
+						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
+
+						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
+						sqlite3_free(expandedQuery);
+						if(aggParamBoolID!=nullptr) *aggParamBoolID = -1;
 					}
 					else {
-						if(aggParamBoolID!=nullptr) *aggParamBoolID = tmpID;
+						if(aggParamBoolID!=nullptr) *aggParamBoolID = sqlite3_last_insert_rowid(dataAccess.db);
 					}
+
+					sqlite3_finalize(pStmt);
 				}
 
 				MPI_Datatype createAggregateParamIntMpiType()

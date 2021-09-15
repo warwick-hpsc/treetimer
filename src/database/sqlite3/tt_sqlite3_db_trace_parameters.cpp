@@ -345,12 +345,22 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeTraceParameterIntData(TTSQLite3& dataAccess, TT_TraceParamInt p, int *traceParamIntID)
+				void writeTraceParameterIntData(TTSQLite3& dataAccess, TT_TraceParamInt p, int *traceParamIntID, bool verifyUnique)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
 						dataAccess.traceParamIntRecords.push_back(p);
 						if(traceParamIntID!=nullptr) *traceParamIntID = -1;
 						return;
+					}
+
+					if (verifyUnique) {
+						// Check for existing entry
+						int tmpID = -1;
+						findTraceParameterIntDataID(dataAccess, p, &tmpID);
+						if (tmpID != -1) {
+							if(traceParamIntID!=nullptr) *traceParamIntID = tmpID;
+							return;
+						}
 					}
 
 					sqlite3_stmt *pStmt = nullptr;
@@ -402,12 +412,22 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeTraceParameterFloatData(TTSQLite3& dataAccess, TT_TraceParamFloat p, int *traceParamFloatID)
+				void writeTraceParameterFloatData(TTSQLite3& dataAccess, TT_TraceParamFloat p, int *traceParamFloatID, bool verifyUnique)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
 						dataAccess.traceParamFloatRecords.push_back(p);
 						if(traceParamFloatID!=nullptr) *traceParamFloatID = -1;
 						return;
+					}
+
+					if (verifyUnique) {
+						// Check for existing entry
+						int tmpID = -1;
+						findTraceParameterFloatDataID(dataAccess, p, &tmpID);
+						if (tmpID != -1) {
+							if(traceParamFloatID!=nullptr) *traceParamFloatID = tmpID;
+							return;
+						}
 					}
 
 					sqlite3_stmt *pStmt = nullptr;
@@ -459,12 +479,22 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeTraceParameterBoolData(TTSQLite3& dataAccess, TT_TraceParamBool p, int *traceParamBoolID)
+				void writeTraceParameterBoolData(TTSQLite3& dataAccess, TT_TraceParamBool p, int *traceParamBoolID, bool verifyUnique)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
 						dataAccess.traceParamBoolRecords.push_back(p);
 						if(traceParamBoolID!=nullptr) *traceParamBoolID = -1;
 						return;
+					}
+
+					if (verifyUnique) {
+						// Check for existing entry
+						int tmpID = -1;
+						findTraceParameterBoolDataID(dataAccess, p, &tmpID);
+						if (tmpID != -1) {
+							if(traceParamBoolID!=nullptr) *traceParamBoolID = tmpID;
+							return;
+						}
 					}
 
 					sqlite3_stmt *pStmt = nullptr;
@@ -517,12 +547,22 @@ namespace treetimer
 				}
 
 
-				void writeTraceParameterStringData(TTSQLite3& dataAccess, TT_TraceParamString p, int *traceParamStringID)
+				void writeTraceParameterStringData(TTSQLite3& dataAccess, TT_TraceParamString p, int *traceParamStringID, bool verifyUnique)
 				{
 					if (dataAccess.gatherIntraNode && dataAccess.rankLocal != 0) {
 						dataAccess.traceParamStringRecords.push_back(p);
 						if(traceParamStringID!=nullptr) *traceParamStringID = -1;
 						return;
+					}
+
+					if (verifyUnique) {
+						// Check for existing entry
+						int tmpID = -1;
+						findTraceParameterStringDataID(dataAccess, p, &tmpID);
+						if (tmpID != -1) {
+							if(traceParamStringID!=nullptr) *traceParamStringID = tmpID;
+							return;
+						}
 					}
 
 					sqlite3_stmt *pStmt = nullptr;

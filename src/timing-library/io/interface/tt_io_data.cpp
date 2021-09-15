@@ -41,9 +41,11 @@ namespace treetimer
 				writeRunConfigData(*(state.config), dataAccess);
 
 				// Write Aggregate Data
+				if (dataAccess->rankGlobal == 0) printf("TreeTimer: Writing aggregated performance data to SQL DB ...\n");
 				writeAggData(*(state.config), *(state.callTree), dataAccess);
 
 				// Write Trace Data
+				if (dataAccess->rankGlobal == 0) printf("TreeTimer: Writing trace performance data to SQL DB. Could take a while ...\n");
 				writeTraceData(*(state.config), *(state.callTree), dataAccess);
 
 				tt_sql::drivers::closeConnection(*dataAccess);

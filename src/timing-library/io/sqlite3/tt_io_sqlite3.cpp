@@ -44,6 +44,9 @@
 #include <vector>
 #include <map>
 
+#include <chrono>
+#include <ctime>
+
 namespace tt_sql = treetimer::database::tt_sqlite3;
 
 // Note! When performing intra-node gather of database records,
@@ -59,6 +62,8 @@ namespace tt_sql = treetimer::database::tt_sqlite3;
 #define TAG_TRACE_PARAM_FLOAT 23
 #define TAG_TRACE_PARAM_BOOL 24
 #define TAG_TRACE_PARAM_STRING 25
+
+// #define DBG_GATHER_PERFORMANCE 1
 
 namespace treetimer
 {
@@ -76,6 +81,16 @@ namespace treetimer
 					// Ensure string is NUL-terminated:
 					size_t n = strlen(src);
 					if (n >= size) dst[n-1] = '\0';
+				}
+
+				std::string getTimestamp()
+				{
+					std::chrono::time_point<std::chrono::system_clock> clk = std::chrono::system_clock::now();
+					std::time_t clk_time_t = std::chrono::system_clock::to_time_t(clk);
+					std::string s = std::ctime(&clk_time_t);
+					// Remove newline:
+					s.resize(s.size()-1);
+					return s;
 				}
 
 				tt_sql::TTSQLite3* setupOutput(treetimer::config::Config& config)
@@ -408,6 +423,7 @@ namespace treetimer
 									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 								}
 								nReceives++;
+								double t1 = MPI_Wtime();
 								for (int i=0; i<nRecords; i++) {
 									tt_sql::TT_CallPathNode r = records[i];
 
@@ -429,7 +445,7 @@ namespace treetimer
 									int callPathID;
 									// Get processID, which only root will know from earlier:
 									int processID = dataAccess->rankLocalToProcessID[srcRank];
-									tt_sql::drivers::writeCallPathData(*dataAccess, processID, profileNodeID, r.parentID, &callPathID);
+									tt_sql::drivers::writeCallPathData(*dataAccess, processID, profileNodeID, r.parentID, &callPathID, false);
 									if (callPathID == 0) {
 										fprintf(stderr, "TreeTimer error: writeCallPathData() has returned callPathID=%d\n", callPathID);
 										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
@@ -438,6 +454,12 @@ namespace treetimer
 									// Store the remap:
 									dataAccess->callpathNodeIdRemap[srcRank][r.callPathID] = callPathID;
 								}
+								#ifdef DBG_GATHER_PERFORMANCE
+									double t2 = MPI_Wtime();
+									if (nRecords > 0) {
+										std::cout << getTimestamp() << " | " << "Root wrote " << "to CallPath DB at " << int(double(nRecords)/(t2-t1)/1e3) << "K records/sec" << std::endl;
+									}
+								#endif
 								free(records); records=nullptr; nRecords=0;
 							}
 							if (nReceives != (n-1)) {
@@ -498,13 +520,20 @@ namespace treetimer
 										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 									}
 									nReceives++;
+									double t1 = MPI_Wtime();
 									for (int i=0; i<nRecords; i++) {
 										// Add in processID, which only root will know from earlier:
 										records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 										// Remap callpath IDs:
 										records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-										tt_sql::drivers::writeAggregateTimeData(*dataAccess, records[i], nullptr);
+										tt_sql::drivers::writeAggregateTimeData(*dataAccess, records[i], nullptr, false);
 									}
+									#ifdef DBG_GATHER_PERFORMANCE
+										double t2 = MPI_Wtime();
+										if (nRecords > 0) {
+											std::cout << getTimestamp() << " | " << "Root wrote " << "to AggregateTime DB at " << int(double(nRecords)/(t2-t1)/1e3) << "K records/sec" << std::endl;
+										}
+									#endif
 									free(records); records=nullptr; nRecords=0;
 								}
 							}
@@ -543,7 +572,7 @@ namespace treetimer
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeAggregateParameterIntData(*dataAccess, records[i], nullptr);
+											tt_sql::drivers::writeAggregateParameterIntData(*dataAccess, records[i], nullptr, false);
 										}
 										free(records); records=nullptr; nRecords=0;
 									}
@@ -580,7 +609,7 @@ namespace treetimer
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeAggregateParameterFloatData(*dataAccess, records[i], nullptr);
+											tt_sql::drivers::writeAggregateParameterFloatData(*dataAccess, records[i], nullptr, false);
 										}
 										free(records); records=nullptr; nRecords=0;
 									}
@@ -617,7 +646,7 @@ namespace treetimer
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeAggregateParameterBoolData(*dataAccess, records[i], nullptr);
+											tt_sql::drivers::writeAggregateParameterBoolData(*dataAccess, records[i], nullptr, false);
 										}
 										free(records); records=nullptr; nRecords=0;
 									}
@@ -675,13 +704,20 @@ namespace treetimer
 										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 									}
 									nReceives++;
+									double t1 = MPI_Wtime();
 									for (int i=0; i<nRecords; i++) {
 										// Add in processID, which only root will know from earlier:
 										records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 										// Remap callpath IDs:
 										records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-										tt_sql::drivers::writeTraceTimeData(*dataAccess, records[i], nullptr);
+										tt_sql::drivers::writeTraceTimeData(*dataAccess, records[i], nullptr, false);
 									}
+									#ifdef DBG_GATHER_PERFORMANCE
+										double t2 = MPI_Wtime();
+										if (nRecords > 0) {
+											std::cout << getTimestamp() << " | " << "Root wrote " << "to TraceTime DB at " << int(double(nRecords)/(t2-t1)/1e3) << "K records/sec" << std::endl;
+										}
+									#endif
 									free(records); records=nullptr; nRecords=0;
 								}
 							}
@@ -715,13 +751,20 @@ namespace treetimer
 											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
 										nReceives++;
+										double t1 = MPI_Wtime();
 										for (int i=0; i<nRecords; i++) {
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeTraceParameterIntData(*dataAccess, records[i], nullptr);
+											tt_sql::drivers::writeTraceParameterIntData(*dataAccess, records[i], nullptr, false);
 										}
+										#ifdef DBG_GATHER_PERFORMANCE
+											double t2 = MPI_Wtime();
+											if (nRecords > 0) {
+												std::cout << getTimestamp() << " | " << "Root wrote " << "to TraceParamInt DB at " << int(double(nRecords)/(t2-t1)/1e3) << "K records/sec" << std::endl;
+											}
+										#endif
 										free(records); records=nullptr; nRecords=0;
 									}
 								}
@@ -752,13 +795,20 @@ namespace treetimer
 											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
 										nReceives++;
+										double t1 = MPI_Wtime();
 										for (int i=0; i<nRecords; i++) {
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeTraceParameterFloatData(*dataAccess, records[i], nullptr);
+											tt_sql::drivers::writeTraceParameterFloatData(*dataAccess, records[i], nullptr, false);
 										}
+										#ifdef DBG_GATHER_PERFORMANCE
+											double t2 = MPI_Wtime();
+											if (nRecords > 0) {
+												std::cout << getTimestamp() << " | " << "Root wrote " << "to TraceParamFlt DB at " << int(double(nRecords)/(t2-t1)/1e3) << "K records/sec" << std::endl;
+											}
+										#endif
 										free(records); records=nullptr; nRecords=0;
 									}
 								}
@@ -789,13 +839,20 @@ namespace treetimer
 											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
 										nReceives++;
+										double t1 = MPI_Wtime();
 										for (int i=0; i<nRecords; i++) {
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeTraceParameterBoolData(*dataAccess, records[i], nullptr);
+											tt_sql::drivers::writeTraceParameterBoolData(*dataAccess, records[i], nullptr, false);
 										}
+										#ifdef DBG_GATHER_PERFORMANCE
+											double t2 = MPI_Wtime();
+											if (nRecords > 0) {
+												std::cout << getTimestamp() << " | " << "Root wrote " << "to TraceParamBool DB at " << int(double(nRecords)/(t2-t1)/1e3) << "K records/sec" << std::endl;
+											}
+										#endif
 										free(records); records=nullptr; nRecords=0;
 									}
 								}
@@ -826,13 +883,20 @@ namespace treetimer
 											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
 										nReceives++;
+										double t1 = MPI_Wtime();
 										for (int i=0; i<nRecords; i++) {
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
 											// Remap callpath IDs:
 											records[i].callPathID = dataAccess->callpathNodeIdRemap[srcRank][records[i].callPathID];
-											tt_sql::drivers::writeTraceParameterStringData(*dataAccess, records[i], nullptr);
+											tt_sql::drivers::writeTraceParameterStringData(*dataAccess, records[i], nullptr, false);
 										}
+										#ifdef DBG_GATHER_PERFORMANCE
+											double t2 = MPI_Wtime();
+											if (nRecords > 0) {
+												std::cout << getTimestamp() << " | " << "Root wrote " << "to TraceParamStr DB at " << int(double(nRecords)/(t2-t1)/1e3) << "K records/sec" << std::endl;
+											}
+										#endif
 										free(records); records=nullptr; nRecords=0;
 									}
 								}
@@ -889,16 +953,27 @@ namespace treetimer
 											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
 
+										// printf("Rank %d received %d records from rank %d\n", dataAccess.rankGlobal, *nRecords, r); fflush(stdout);
+
 										if (*nRecords == 0) {
 											*records = malloc(1 * elemBytes);
 										} else {
 											*records = malloc(*nRecords * elemBytes);
 										}
+
+										double t1 = MPI_Wtime();
 										err = MPI_Recv(*records, *nRecords, elemType, r, mpiTag, dataAccess.nodeComm, &stat);
 										if (err != MPI_SUCCESS) {
 											fprintf(stderr, "Root failed on MPI_Recv(rank=%d)\n", r);
 											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
+										#ifdef DBG_GATHER_PERFORMANCE
+											double mb = (double(*nRecords)*elemBytes/1e6);
+											double t2 = MPI_Wtime();
+											if ((*nRecords) > 0) {
+												std::cout << getTimestamp() << " | " << "Root received at " << int(mb/(t2-t1)) << " MB/sec" << std::endl;
+											}
+										#endif
 
 										return 0;
 									}
@@ -928,15 +1003,27 @@ namespace treetimer
 					if (dataAccess.nRanksLocal > 1) {
 						if (dataAccess.rankLocal > 0) {
 							// Send to local root
-							MPI_Request req;
-							MPI_Status stat;
-							int err = MPI_Isend(data, nElems, elemType, 0, mpiTag, dataAccess.nodeComm, &req);
+
+							// printf("Rank %d sending %d records (tag=%d) to root (elemBytes = %d, total MB = %d)\n", 
+							// 		dataAccess.rankGlobal, nElems, mpiTag, elemBytes, (nElems*elemBytes)/1000000); fflush(stdout);
+
+							// Write speed to root is invariant to blocking vs nonblocking send.
+
+							// MPI_Request req;
+							// MPI_Status stat;
+							// int err = MPI_Isend(data, nElems, elemType, 0, mpiTag, dataAccess.nodeComm, &req);
+							// if (err != MPI_SUCCESS) {
+							// 	fprintf(stderr, "Rank %d failed Isend (nElems=%d, tag=%d)\n", dataAccess.rankGlobal, nElems, mpiTag);
+							// 	MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+							// }
+							// // printf("Rank %d sent %d records (tag=%d) to root (elemBytes = %d, total MB = %d)\n", dataAccess.rankGlobal, nElems, mpiTag, elemBytes, nElems*elemBytes/1e6); fflush(stdout);
+							// MPI_Wait(&req, &stat);
+
+							int err = MPI_Send(data, nElems, elemType, 0, mpiTag, dataAccess.nodeComm);
 							if (err != MPI_SUCCESS) {
-								fprintf(stderr, "Rank %d failed Isend (nElems=%d, tag=%d)\n", dataAccess.rankGlobal, nElems, mpiTag);
+								fprintf(stderr, "Rank %d failed Send (nElems=%d, tag=%d)\n", dataAccess.rankGlobal, nElems, mpiTag);
 								MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 							}
-							// printf("Rank %d sent %d records (tag=%d) to root (elemBytes = %d)\n", dataAccess.rankGlobal, nElems, mpiTag, elemBytes); fflush(stdout);
-							MPI_Wait(&req, &stat);
 						}
 					}
 
@@ -989,11 +1076,11 @@ namespace treetimer
 							//tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.parent->nodeData.blockType], &parentBlockType);
 							//tt_sql::drivers::findProfileNodeID(dataAccess, parentName, parentBlockType, &parentNodeID);
 
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID, false);
 						}
 						else
 						{
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID, false);
 						}
 					}
 					else {
@@ -1028,7 +1115,7 @@ namespace treetimer
 						d.maxWallTime = node.nodeData.blockTimer->aggTimings.maxWalltime;
 						d.stdev = sqrt(node.nodeData.blockTimer->aggTimings.varianceWalltime);
 						d.count = node.nodeData.blockTimer->aggTimings.count;
-						tt_sql::drivers::writeAggregateTimeData(dataAccess, d, &aggTimeID);
+						tt_sql::drivers::writeAggregateTimeData(dataAccess, d, &aggTimeID, false);
 					}
 
 					// (d) Aggregate Parameter Data
@@ -1053,7 +1140,7 @@ namespace treetimer
 							p.avgValue = it_int->second->aggParam.avgVal;
 							p.stdev    = sqrt(it_int->second->aggParam.variance);
 							p.count    = it_int->second->aggParam.count;
-							tt_sql::drivers::writeAggregateParameterIntData(dataAccess, p, &aggParamID);
+							tt_sql::drivers::writeAggregateParameterIntData(dataAccess, p, &aggParamID, false);
 						}
 
 						std::unordered_map<std::string, treetimer::parameters::Parameter<double> *>::iterator it_float;
@@ -1072,7 +1159,7 @@ namespace treetimer
 							p.avgValue = it_float->second->aggParam.avgVal;
 							p.stdev    = sqrt(it_float->second->aggParam.variance);
 							p.count    = it_float->second->aggParam.count;
-							tt_sql::drivers::writeAggregateParameterFloatData(dataAccess, p, &aggParamID);
+							tt_sql::drivers::writeAggregateParameterFloatData(dataAccess, p, &aggParamID, false);
 						}
 
 						std::unordered_map<std::string, treetimer::parameters::Parameter<bool> *>::iterator it_bool;
@@ -1091,7 +1178,7 @@ namespace treetimer
 							p.avgValue = it_bool->second->aggParam.avgVal;
 							p.stdev    = sqrt(it_bool->second->aggParam.variance);
 							p.count    = it_bool->second->aggParam.count;
-							tt_sql::drivers::writeAggregateParameterBoolData(dataAccess, p, &aggParamID);
+							tt_sql::drivers::writeAggregateParameterBoolData(dataAccess, p, &aggParamID, false);
 						}
 					}
 
@@ -1136,11 +1223,11 @@ namespace treetimer
 						// Could create an 'unknown' profile node to point to, that has a profile node entry but no callpath node entry
 						if(node.parent != nullptr)
 						{
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID, false);
 						}
 						else
 						{
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID, false);
 						}
 					}
 					else {
@@ -1177,7 +1264,7 @@ namespace treetimer
 							d.nodeEntryID = ptr->data.callEntryID;
 							d.nodeExitID  = ptr->data.callExitID;
 							d.walltime    = ptr->data.wallTime;
-							tt_sql::drivers::writeTraceTimeData(dataAccess, d, &traceTimeID);
+							tt_sql::drivers::writeTraceTimeData(dataAccess, d, &traceTimeID, false);
 
 							ptr = ptr->next;
 						}
@@ -1206,7 +1293,7 @@ namespace treetimer
 								p.paramValue = ptr->data.val;
 								p.nodeEntryID = ptr->data.nodeEntryID;
 								p.nodeExitID = ptr->data.nodeExitID;
-								tt_sql::drivers::writeTraceParameterIntData(dataAccess, p, &traceParamID);
+								tt_sql::drivers::writeTraceParameterIntData(dataAccess, p, &traceParamID, false);
 
 								ptr = ptr->next;
 							}
@@ -1232,7 +1319,7 @@ namespace treetimer
 								p.paramValue = ptr->data.val;
 								p.nodeEntryID = ptr->data.nodeEntryID;
 								p.nodeExitID = ptr->data.nodeExitID;
-								tt_sql::drivers::writeTraceParameterFloatData(dataAccess, p, &traceParamID);
+								tt_sql::drivers::writeTraceParameterFloatData(dataAccess, p, &traceParamID, false);
 
 								ptr = ptr->next;
 							}
@@ -1257,7 +1344,7 @@ namespace treetimer
 								p.paramValue = ptr->data.val;
 								p.nodeEntryID = ptr->data.nodeEntryID;
 								p.nodeExitID = ptr->data.nodeExitID;
-								tt_sql::drivers::writeTraceParameterBoolData(dataAccess, p, &traceParamID);
+								tt_sql::drivers::writeTraceParameterBoolData(dataAccess, p, &traceParamID, false);
 
 								ptr = ptr->next;
 							}
@@ -1282,7 +1369,7 @@ namespace treetimer
 								tt_strlcpy(p.paramValue, ptr->data.val.c_str(), MAX_STRING_LENGTH);
 								p.nodeEntryID = ptr->data.nodeEntryID;
 								p.nodeExitID = ptr->data.nodeExitID;
-								tt_sql::drivers::writeTraceParameterStringData(dataAccess, p, &traceParamID);
+								tt_sql::drivers::writeTraceParameterStringData(dataAccess, p, &traceParamID, false);
 
 								ptr = ptr->next;
 							}

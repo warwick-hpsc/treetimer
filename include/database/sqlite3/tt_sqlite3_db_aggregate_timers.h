@@ -27,9 +27,10 @@ namespace treetimer
 			{
 				void writeSchemaAggregateTimeData(TTSQLite3& dataAccess);
 
-				void findAggregateTimeDataID(TTSQLite3& dataAccess, TT_AggTiming d, int * aggTimeID);
+				void findAggregateTimeDataID(TTSQLite3& dataAccess, TT_AggTiming d, int *aggTimeID);
 
-				void writeAggregateTimeData(TTSQLite3& dataAccess, TT_AggTiming d, int * aggTimeID);
+				// Note: 'verifyUnique' prevents data duplication, but makes this O(1) insertion a O(N) operation.
+				void writeAggregateTimeData(TTSQLite3& dataAccess, TT_AggTiming d, int *aggTimeID, bool verifyUnique);
 
 				MPI_Datatype createAggregateTimeMpiType();
 
