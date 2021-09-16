@@ -116,8 +116,6 @@ namespace treetimer
 						d.stdev = 0.0;
 					}
 
-					bool insert = true;
-
 					if (verifyUnique) {
 						// Check for existing entry
 						int tmpID = -1;

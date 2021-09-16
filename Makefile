@@ -74,7 +74,7 @@ CFLAGS        = $(debug) -std=gnu99 $(c_warnings)
 CDEF          = -D
 
 # C++ flags:
-CXXFLAGS      = $(debug)
+CXXFLAGS      = $(debug) $(c_warnings)
 
 LD = $(MPIFC)
 

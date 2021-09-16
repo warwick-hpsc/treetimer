@@ -423,7 +423,9 @@ namespace treetimer
 									MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 								}
 								nReceives++;
-								double t1 = MPI_Wtime();
+								#ifdef DBG_GATHER_PERFORMANCE
+									double t1 = MPI_Wtime();
+								#endif
 								for (int i=0; i<nRecords; i++) {
 									tt_sql::TT_CallPathNode r = records[i];
 
@@ -520,7 +522,9 @@ namespace treetimer
 										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 									}
 									nReceives++;
-									double t1 = MPI_Wtime();
+									#ifdef DBG_GATHER_PERFORMANCE
+										double t1 = MPI_Wtime();
+									#endif
 									for (int i=0; i<nRecords; i++) {
 										// Add in processID, which only root will know from earlier:
 										records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
@@ -704,7 +708,9 @@ namespace treetimer
 										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 									}
 									nReceives++;
-									double t1 = MPI_Wtime();
+									#ifdef DBG_GATHER_PERFORMANCE
+										double t1 = MPI_Wtime();
+									#endif
 									for (int i=0; i<nRecords; i++) {
 										// Add in processID, which only root will know from earlier:
 										records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
@@ -751,7 +757,9 @@ namespace treetimer
 											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
 										nReceives++;
-										double t1 = MPI_Wtime();
+										#ifdef DBG_GATHER_PERFORMANCE
+											double t1 = MPI_Wtime();
+										#endif
 										for (int i=0; i<nRecords; i++) {
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
@@ -795,7 +803,9 @@ namespace treetimer
 											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
 										nReceives++;
-										double t1 = MPI_Wtime();
+										#ifdef DBG_GATHER_PERFORMANCE
+											double t1 = MPI_Wtime();
+										#endif
 										for (int i=0; i<nRecords; i++) {
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
@@ -839,7 +849,9 @@ namespace treetimer
 											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
 										nReceives++;
-										double t1 = MPI_Wtime();
+										#ifdef DBG_GATHER_PERFORMANCE
+											double t1 = MPI_Wtime();
+										#endif
 										for (int i=0; i<nRecords; i++) {
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
@@ -883,7 +895,9 @@ namespace treetimer
 											MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 										}
 										nReceives++;
-										double t1 = MPI_Wtime();
+										#ifdef DBG_GATHER_PERFORMANCE
+											double t1 = MPI_Wtime();
+										#endif
 										for (int i=0; i<nRecords; i++) {
 											// Add in processID, which only root will know from earlier:
 											records[i].processID = dataAccess->rankLocalToProcessID[srcRank];
@@ -961,7 +975,9 @@ namespace treetimer
 											*records = malloc(*nRecords * elemBytes);
 										}
 
-										double t1 = MPI_Wtime();
+										#ifdef DBG_GATHER_PERFORMANCE
+											double t1 = MPI_Wtime();
+										#endif
 										err = MPI_Recv(*records, *nRecords, elemType, r, mpiTag, dataAccess.nodeComm, &stat);
 										if (err != MPI_SUCCESS) {
 											fprintf(stderr, "Root failed on MPI_Recv(rank=%d)\n", r);
