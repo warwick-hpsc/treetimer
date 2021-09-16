@@ -26,7 +26,6 @@ namespace treetimer
 					char *zErrMsg = 0;
 					std::string stmt = "CREATE TABLE IF NOT EXISTS AggregateTime(AggTimeID INTEGER, "
 																				"RunID INTEGER, "
-																				"Rank INTEGER, "
 																				"CallPathID INTEGER, "
 																				"ProcessID INTEGER, "
 																				"MinWallTime REAL, "
@@ -53,7 +52,6 @@ namespace treetimer
 					int err = sqlite3_prepare(dataAccess.db,
 												"SELECT AggTimeID FROM AggregateTime WHERE "
 												"RunID = ? AND "
-												"Rank = ? AND "
 												"CallPathID = ? AND "
 												"ProcessID = ? AND "
 												"MinWallTime = ? AND "
@@ -64,14 +62,13 @@ namespace treetimer
 												-1, &pStmt, NULL);
 
 					sqlite3_bind_int(   pStmt,1, dataAccess.runID);
-					sqlite3_bind_int(   pStmt,2, d.rank);
-					sqlite3_bind_int(   pStmt,3, d.callPathID);
-					sqlite3_bind_int(   pStmt,4, d.processID);
-					sqlite3_bind_double(pStmt,5, d.minWallTime);
-					sqlite3_bind_double(pStmt,6, d.avgWallTime);
-					sqlite3_bind_double(pStmt,7, d.maxWallTime);
-					sqlite3_bind_double(pStmt,8, d.stdev);
-					sqlite3_bind_int(   pStmt,9, d.count);
+					sqlite3_bind_int(   pStmt,2, d.callPathID);
+					sqlite3_bind_int(   pStmt,3, d.processID);
+					sqlite3_bind_double(pStmt,4, d.minWallTime);
+					sqlite3_bind_double(pStmt,5, d.avgWallTime);
+					sqlite3_bind_double(pStmt,6, d.maxWallTime);
+					sqlite3_bind_double(pStmt,7, d.stdev);
+					sqlite3_bind_int(   pStmt,8, d.count);
 					err = sqlite3_step(pStmt);
 
 					if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
@@ -126,16 +123,15 @@ namespace treetimer
 						}
 					}
 
-					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateTime VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateTime VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 					sqlite3_bind_int(   pStmt,1, dataAccess.runID);
-					sqlite3_bind_int(   pStmt,2, d.rank);
-					sqlite3_bind_int(   pStmt,3, d.callPathID);
-					sqlite3_bind_int(   pStmt,4, d.processID);
-					sqlite3_bind_double(pStmt,5, d.minWallTime);
-					sqlite3_bind_double(pStmt,6, d.avgWallTime);
-					sqlite3_bind_double(pStmt,7, d.maxWallTime);
-					sqlite3_bind_double(pStmt,8, d.stdev);
-					sqlite3_bind_int(   pStmt,9, d.count);
+					sqlite3_bind_int(   pStmt,2, d.callPathID);
+					sqlite3_bind_int(   pStmt,3, d.processID);
+					sqlite3_bind_double(pStmt,4, d.minWallTime);
+					sqlite3_bind_double(pStmt,5, d.avgWallTime);
+					sqlite3_bind_double(pStmt,6, d.maxWallTime);
+					sqlite3_bind_double(pStmt,7, d.stdev);
+					sqlite3_bind_int(   pStmt,8, d.count);
 					err = sqlite3_step(pStmt);
 
 					if (err != SQLITE_OK && err != SQLITE_DONE) {
