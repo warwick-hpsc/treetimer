@@ -25,11 +25,12 @@ namespace treetimer
 		{
 			namespace drivers
 			{
+				// Need for table unclear, a script can collect this data.
+/*
 				void writeSchemaMachineData(TTSQLite3& dataAccess);
-
 				void findMachineDataID(TTSQLite3& dataAccess, std::string machineName, int *machineID);
-
 				void writeMachineData(TTSQLite3& dataAccess, std::string machineName, int *machineID);
+*/
 			}
 		}
 	}

@@ -65,12 +65,14 @@ namespace treetimer
 
 				// Update: what is the purpose of "global" parameters? Codebase only sets them, never uses them.
 				//         And if they're global, why does each rank need to write them to database?
-				// // ToDo - The name/key is used in the map already, and the only other item of interest is the value
-				// // We could probably eliminate the ParameterSingularObject entirely and just map directly to the value
-				// std::unordered_map<std::string, treetimer::parameters::ParameterSingular<int> *> intGlobalParams;
-				// std::unordered_map<std::string, treetimer::parameters::ParameterSingular<double> *> doubleGlobalParams;
-				// std::unordered_map<std::string, treetimer::parameters::ParameterSingular<bool> *> boolGlobalParams;
-				// std::unordered_map<std::string, treetimer::parameters::ParameterSingular<std::string> *> stringGlobalParams;
+				/*
+				// ToDo - The name/key is used in the map already, and the only other item of interest is the value
+				// We could probably eliminate the ParameterSingularObject entirely and just map directly to the value
+				std::unordered_map<std::string, treetimer::parameters::ParameterSingular<int> *> intGlobalParams;
+				std::unordered_map<std::string, treetimer::parameters::ParameterSingular<double> *> doubleGlobalParams;
+				std::unordered_map<std::string, treetimer::parameters::ParameterSingular<bool> *> boolGlobalParams;
+				std::unordered_map<std::string, treetimer::parameters::ParameterSingular<std::string> *> stringGlobalParams;
+				*/
 
 				// SQL I/O Config Parameters
 				std::string sqlIOFilename;
@@ -87,9 +89,13 @@ namespace treetimer
 		{
 			void setConfigFromEnv(Config& config);
 
+			// Update: TT: does not need to know these GLOBAL, STATIC values:
+			/*
 			void setAppNameFromEnv(Config& config);
 			void setAppVerFromEnv(Config& config);
 			void setMachineNameFromEnv(Config& config);
+			*/
+			
 			void setOutputFolderFromEnv(Config& config);
 			void setAggTimerFromEnv(Config& config);
 			void setTraceTimerFromEnv(Config& config);

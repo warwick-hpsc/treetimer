@@ -29,13 +29,13 @@ namespace treetimer
 
 				void findComputeNodeDataID(TTSQLite3& dataAccess,
 											// int machineID,
-											TT_ComputeNode d,
-											int *computeNodeID);
+											TT_ComputeNode d, int *computeNodeID);
 
 				void writeComputeNodeData(TTSQLite3& dataAccess,
 											// int machineID,
-											TT_ComputeNode d,
-											int *computeNodeID);
+											TT_ComputeNode d, int *computeNodeID);
+
+				MPI_Datatype createHwInfoMpiType();
 			}
 		}
 	}

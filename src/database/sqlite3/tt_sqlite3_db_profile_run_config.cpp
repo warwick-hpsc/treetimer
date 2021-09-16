@@ -21,7 +21,8 @@ namespace treetimer
 		{
 			namespace drivers
 			{
-				// Most of table is useless, trim it down!
+				// Most of table refers to other now-redundant tables, as a script can collect their data.
+
 				void writeSchemaProfileRunConfigData(TTSQLite3& dataAccess)
 				{
 					char * zErrMsg = 0;
@@ -46,8 +47,9 @@ namespace treetimer
 					}
 				}
 
-				// void writeProfileRunConfigData(TTSQLite3& dataAccess, int appConfigID, int libConfigID, int processCount, int *runID)
-				void writeProfileRunConfigData(TTSQLite3& dataAccess, int libConfigID, int processCount, int *runID)
+				void writeProfileRunConfigData(TTSQLite3& dataAccess, 
+												// int appConfigID, 
+												int libConfigID, int processCount, int *runID)
 				{
 					sqlite3_stmt *pStmt = nullptr;
 					int err;

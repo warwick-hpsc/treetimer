@@ -21,12 +21,14 @@ namespace treetimer
 		{
 			namespace drivers
 			{
+				// Need for table unclear, a script can collect this data.
+/*
 				void writeSchemaMachineData(TTSQLite3& dataAccess)
 				{
 					char *zErrMsg = 0;
 					std::string stmt = "CREATE TABLE IF NOT EXISTS MachineData(MachineID INTEGER, "
-																				  "MachineName TEXT, "
-																				  "PRIMARY KEY(MachineID));";
+																				"MachineName TEXT, "
+																				"PRIMARY KEY(MachineID));";
 					int err = sqlite3_exec(dataAccess.db, stmt.c_str(), NULL, 0, &zErrMsg);
 					if(err == SQLITE_ERROR) {
 						std::cout << "SQL Error encountered in writeSchemaCPUSocketData\n";
@@ -111,6 +113,7 @@ namespace treetimer
 						if(machineID!=nullptr) *machineID = tmpID;
 					}
 				}
+*/
 			}
 		}
 	}

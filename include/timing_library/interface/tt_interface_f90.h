@@ -43,10 +43,12 @@ int F2C(c_tree_timer_exit, C_TREE_TIMER_EXIT)(const char *name, int *text_len);
 
 // Update: what is the purpose of "global" parameters? Codebase only sets them, never uses them.
 //         And if they're global, why does each rank need to write them to database?
-// int F2C(c_tree_timer_log_global_parameter_int, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_INT)(const char *name, int *text_len, int *value);
-// int F2C(c_tree_timer_log_global_parameter_double, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_DOUBLE)(const char *name, int *text_len, double *value);
-// int F2C(c_tree_timer_log_global_parameter_bool, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_BOOL)(const char *name, int *text_len, int *value);
-// int F2C(c_tree_timer_log_global_parameter_string, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_BOOL)(const char *name, int *name_len, const char *value, int *value_len);
+/*
+int F2C(c_tree_timer_log_global_parameter_int, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_INT)(const char *name, int *text_len, int *value);
+int F2C(c_tree_timer_log_global_parameter_double, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_DOUBLE)(const char *name, int *text_len, double *value);
+int F2C(c_tree_timer_log_global_parameter_bool, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_BOOL)(const char *name, int *text_len, int *value);
+int F2C(c_tree_timer_log_global_parameter_string, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_BOOL)(const char *name, int *name_len, const char *value, int *value_len);
+*/
 
 int F2C(c_tree_timer_flush_trace_data, C_TREE_TIMER_FLUSH_TRACE_DATA)();
 

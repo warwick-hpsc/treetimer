@@ -35,8 +35,6 @@ namespace treetimer
 					}
 				}
 
-				// ========================================================================================================================
-
 				void findProfileNodeTypeID(TTSQLite3& dataAccess, std::string profileTypeName, int *profileNodeTypeID)
 				{
 					sqlite3_stmt *pStmt = nullptr;
@@ -69,8 +67,6 @@ namespace treetimer
 
 					sqlite3_finalize(pStmt);
 				}
-
-				// ========================================================================================================================
 
 				void writeProfileNodeTypeData(TTSQLite3& dataAccess, std::string profileTypeName, int *profileNodeTypeID)
 				{

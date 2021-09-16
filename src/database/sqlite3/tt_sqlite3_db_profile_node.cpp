@@ -22,8 +22,6 @@ namespace treetimer
 		{
 			namespace drivers
 			{
-				// ========================================================================================================================
-
 				void writeSchemaProfileNodeData(TTSQLite3& dataAccess)
 				{
 					char *zErrMsg = 0;
@@ -41,8 +39,6 @@ namespace treetimer
 						std::cout << "Failed query: " << std::string(stmt) << "\n";
 					}
 				}
-
-				// ========================================================================================================================
 
 				void findProfileNodeID(TTSQLite3& dataAccess, std::string profileNodeName, int profileNodeTypeID, int *profileNodeID)
 				{
@@ -79,8 +75,6 @@ namespace treetimer
 
 					sqlite3_finalize(pStmt);
 				}
-
-				// ========================================================================================================================
 
 				void writeTreeNodeProfileNodeData(TTSQLite3& dataAccess,
 												  std::string profileNodeName,
@@ -127,8 +121,6 @@ namespace treetimer
 						if(profileNodeID!=nullptr) *profileNodeID = tmpID;
 					}
 				}
-
-				// ========================================================================================================================
 			}
 		}
 	}

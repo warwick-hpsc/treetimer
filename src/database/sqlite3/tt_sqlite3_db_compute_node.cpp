@@ -135,6 +135,52 @@ namespace treetimer
 						if(computeNodeID!=nullptr) *computeNodeID = tmpID;
 					}
 				}
+
+				MPI_Datatype createHwInfoMpiType()
+				{
+					// Create MPI type for a AggregateTime record:
+					int err;
+					MPI_Datatype hwInfoRecord_MPI, tmpType;
+
+					int lengths[7] = {1, 1, MAX_STRING_LENGTH, MAX_STRING_LENGTH, 1, 1, 1};
+					MPI_Aint displacements[7];
+					displacements[0] = offsetof(TT_HwInfo, rankGlobal);
+					displacements[1] = offsetof(TT_HwInfo, thread);
+					displacements[2] = offsetof(TT_HwInfo, nodeName);
+					displacements[3] = offsetof(TT_HwInfo, cpuModel);
+					displacements[4] = offsetof(TT_HwInfo, socketCount);
+					displacements[5] = offsetof(TT_HwInfo, phySocketNum);
+					displacements[6] = offsetof(TT_HwInfo, physicalCoreNum);
+					MPI_Datatype types[7] = { MPI_INT, MPI_INT, MPI_CHAR, MPI_CHAR, MPI_INT, MPI_INT, MPI_INT };
+					err = MPI_Type_create_struct(7, lengths, displacements, types, &tmpType);
+
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to create custom type for hwInfoRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					MPI_Aint lb, extent;
+					err = MPI_Type_get_extent(tmpType, &lb, &extent);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to get extent of custom type for hwInfoRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					err = MPI_Type_create_resized(tmpType, lb, extent, &hwInfoRecord_MPI);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to resize custom type for hwInfoRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+					err = MPI_Type_commit(&hwInfoRecord_MPI);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Failed to commit custom type for hwInfoRecord\n");
+						MPI_Abort(MPI_COMM_WORLD, err);
+						exit(EXIT_FAILURE);
+					}
+
+					return hwInfoRecord_MPI;
+				}
 			}
 		}
 	}

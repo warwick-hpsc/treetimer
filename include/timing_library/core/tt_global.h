@@ -15,17 +15,6 @@
 
 #include "tt_state.h"
 
-#define STRINGIZE_DETAIL(x) #x
-#define STRINGIZE(x) STRINGIZE_DETAIL(x)
-#ifndef DEBUGGABLE_ERROR
-	#ifdef DEBUG
-		// #define DEBUGGABLE_ERROR fprintf(stderr, "%s:%d\n\n", __FILE__, __LINE__); fflush(stderr); fflush(stdout);
- 		#define DEBUGGABLE_ERROR {std::cerr << __FILE__ << ":" << STRINGIZE(__LINE__) << std::endl; }
-	#else
-		#define DEBUGGABLE_ERROR 
-	#endif
-#endif
-
 #define MAX_STRING_LENGTH 256
 
 namespace treetimer

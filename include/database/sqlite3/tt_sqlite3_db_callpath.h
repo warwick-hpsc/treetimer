@@ -26,9 +26,12 @@ namespace treetimer
 			namespace drivers
 			{
 				void writeSchemaCallPathData(TTSQLite3& dataAccess);
+
 				void findCallPathDataID(TTSQLite3& dataAccess, int rank, int profileNodeID, int parentNodeID, int *callPathID);
+
 				// Note: 'verifyUnique' prevents data duplication, but makes this O(1) insertion a O(N) operation.
 				void writeCallPathData(TTSQLite3& dataAccess, int rank, int profileNodeID, int parentNodeID, int *callPathID, bool verifyUnique);
+
 				MPI_Datatype createCallpathNodeMpiType();
 			}
 		}

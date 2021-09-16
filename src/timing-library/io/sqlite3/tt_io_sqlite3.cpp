@@ -11,7 +11,6 @@
  */
 
 #include "tt_io_sqlite3.h"
-
 #include "tt_code_block_type.h"
 #include "tt_global.h"
 
@@ -63,6 +62,9 @@ namespace tt_sql = treetimer::database::tt_sqlite3;
 #define TAG_TRACE_PARAM_BOOL 24
 #define TAG_TRACE_PARAM_STRING 25
 
+// Because TreeTimer intercepts MPI calls, then profiling TreeTimer with another profiler is tricky.
+// Enable 'DBG_GATHER_PERFORMANCE' to enable reporting of gather-at-root performance. Best done with
+// just one node.
 // #define DBG_GATHER_PERFORMANCE 1
 
 namespace treetimer
@@ -113,10 +115,11 @@ namespace treetimer
 							// (c) Singular Parameters (used for Global Parameter Storage)
 							tt_sql::drivers::writeSchemaParameterData(*dataAccess);
 
-							// Disabled tables:
+							// Disabled table: script can collect data.
 							// // (d) Application Data
 							// tt_sql::drivers::writeSchemaApplicationData(*dataAccess);
 
+							// Disabled table: script can collect data.
 							// // (e) Application Configuration Data (Links Combinations of Global Parameters)
 							// tt_sql::drivers::writeSchemaApplicationConfigData(*dataAccess);
 
@@ -126,8 +129,9 @@ namespace treetimer
 							// (f) Profile Nodes
 							tt_sql::drivers::writeSchemaProfileNodeData(*dataAccess);
 
-							// (h) Machine Data
-							tt_sql::drivers::writeSchemaMachineData(*dataAccess);
+							// Disabled table: script can collect data.
+							// // (h) Machine Data
+							// tt_sql::drivers::writeSchemaMachineData(*dataAccess);
 
 							// (g) CPU Data
 							tt_sql::drivers::writeSchemaCPUData(*dataAccess);
@@ -159,7 +163,6 @@ namespace treetimer
 							tt_sql::drivers::writeSchemaTraceTimeData(*dataAccess);
 
 							config.sqlIOSetup = true;
-							return dataAccess;
 						}
 					}
 					return dataAccess;
@@ -205,14 +208,14 @@ namespace treetimer
 																		&runID);
 							dataAccess->runID = runID;
 
-							// Useless table!
+							// Need for table unclear, a script can collect this data.
 							// // Application Data
 							// int appID;
 							// tt_sql::drivers::writeApplicationData(*dataAccess, config.appName, config.appVersion, &appID);
 
 							// Machine Data - machineName is global and constant.
-							int machineID;
-							tt_sql::drivers::writeMachineData(*dataAccess, config.machineName, &machineID);
+							// int machineID;
+							// tt_sql::drivers::writeMachineData(*dataAccess, config.machineName, &machineID);
 						}
 
 						// Now handle process execution data:
@@ -265,7 +268,7 @@ namespace treetimer
 						// 	stringParamValues.push_back(it4->second->value);
 						// }
 
-						// Useless table!
+						// Need for table unclear, a script can collect this data.
 						// // Application Config Data
 						// int appConfigID;
 						// tt_sql::drivers::writeApplicationConfigData(*dataAccess,

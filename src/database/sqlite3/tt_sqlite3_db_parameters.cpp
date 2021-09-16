@@ -78,8 +78,6 @@ namespace treetimer
 					}
 				}
 
-				// ============================================================================================================
-
 				// ToDo: Is there a nice way of templating these (that won't require use of typeid?)
 				// Lot of duplicated boilerplate code otherwise.
 
@@ -121,8 +119,6 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				// ============================================================================================================
-
 				void findParameterIntDataID(TTSQLite3& dataAccess, std::string paramName, int value, int *paramIntID)
 				{
 					sqlite3_stmt *pStmt = nullptr;
@@ -160,8 +156,6 @@ namespace treetimer
 
 					sqlite3_finalize(pStmt);
 				}
-
-				// ============================================================================================================
 
 				void findParameterBoolDataID(TTSQLite3& dataAccess, std::string paramName, bool value, int *paramBoolID)
 				{
@@ -201,8 +195,6 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				// ============================================================================================================
-
 				void findParameterStringDataID(TTSQLite3& dataAccess, std::string paramName, std::string value, int *paramStringID)
 				{
 					sqlite3_stmt *pStmt = nullptr;
@@ -240,8 +232,6 @@ namespace treetimer
 
 					sqlite3_finalize(pStmt);
 				}
-
-				// ============================================================================================================
 
 				void writeParameterFloatData(TTSQLite3& dataAccess, std::string paramName, double value, int *paramFloatID)
 				{
@@ -287,8 +277,6 @@ namespace treetimer
 					}
 				}
 
-				// ============================================================================================================
-
 				void writeParameterIntData(TTSQLite3& dataAccess, std::string paramName, int value, int *paramIntID)
 				{
 					sqlite3_stmt *pStmt = nullptr;
@@ -331,8 +319,6 @@ namespace treetimer
 						if(paramIntID!=nullptr) *paramIntID = tmpID;
 					}
 				}
-
-				// ============================================================================================================
 
 				void writeParameterBoolData(TTSQLite3& dataAccess, std::string paramName, bool value, int *paramBoolID)
 				{
@@ -377,8 +363,6 @@ namespace treetimer
 					}
 				}
 
-				// ============================================================================================================
-
 				void writeParameterStringData(TTSQLite3& dataAccess, std::string paramName, std::string value, int *paramStringID)
 				{
 					sqlite3_stmt *pStmt = nullptr;
@@ -421,8 +405,6 @@ namespace treetimer
 						if(paramStringID!=nullptr) *paramStringID = tmpID;
 					}
 				}
-
-				// ============================================================================================================
 			}
 		}
 	}

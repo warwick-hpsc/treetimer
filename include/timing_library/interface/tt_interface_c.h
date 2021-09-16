@@ -46,10 +46,12 @@ void TreeTimerExit(const char *blockName);
 
 // Update: what is the purpose of "global" parameters? Codebase only sets them, never uses them.
 //         And if they're global, why does each rank need to write them to database?
-// void TreeTimerLogGlobalParameterInt(const char *paramName, int value);
-// void TreeTimerLogGlobalParameterDouble(const char *paramName, double value);
-// void TreeTimerLogGlobalParameterBool(const char *paramName, int value);
-// void TreeTimerLogGlobalParameterString(const char *paramName, const char *value);
+/*
+void TreeTimerLogGlobalParameterInt(const char *paramName, int value);
+void TreeTimerLogGlobalParameterDouble(const char *paramName, double value);
+void TreeTimerLogGlobalParameterBool(const char *paramName, int value);
+void TreeTimerLogGlobalParameterString(const char *paramName, const char *value);
+*/
 
 void TreeTimerFlushTraceData();
 

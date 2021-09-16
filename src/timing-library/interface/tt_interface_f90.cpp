@@ -176,48 +176,50 @@ int F2C(c_tree_timer_exit, C_TREE_TIMER_EXIT)(const char *name, int *text_len)
 }
 
 // Update: What is the purpose of "global" parameters? Codebase only sets them, never uses them
-// int F2C(c_tree_timer_log_global_parameter_int, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_INT)(const char *name, int *text_len, int *value)
-// {
-// 	char c_name[*text_len + 1];
-// 	F2C_strcpy(c_name, name, *text_len);
+/*
+int F2C(c_tree_timer_log_global_parameter_int, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_INT)(const char *name, int *text_len, int *value)
+{
+	char c_name[*text_len + 1];
+	F2C_strcpy(c_name, name, *text_len);
 
-// 	TreeTimerLogGlobalParameterInt(c_name, *value);
+	TreeTimerLogGlobalParameterInt(c_name, *value);
 
-// 	return 0;
-// }
+	return 0;
+}
 
-// int F2C(c_tree_timer_log_global_parameter_double, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_DOUBLE)(const char *name, int *text_len, double *value)
-// {
-// 	char c_name[*text_len + 1];
-// 	F2C_strcpy(c_name, name, *text_len);
+int F2C(c_tree_timer_log_global_parameter_double, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_DOUBLE)(const char *name, int *text_len, double *value)
+{
+	char c_name[*text_len + 1];
+	F2C_strcpy(c_name, name, *text_len);
 
-// 	TreeTimerLogGlobalParameterDouble(c_name, *value);
+	TreeTimerLogGlobalParameterDouble(c_name, *value);
 
-// 	return 0;
-// }
+	return 0;
+}
 
-// int F2C(c_tree_timer_log_global_parameter_bool, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_BOOL)(const char *name, int *text_len, int *value)
-// {
-// 	char c_name[*text_len + 1];
-// 	F2C_strcpy(c_name, name, *text_len);
+int F2C(c_tree_timer_log_global_parameter_bool, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_BOOL)(const char *name, int *text_len, int *value)
+{
+	char c_name[*text_len + 1];
+	F2C_strcpy(c_name, name, *text_len);
 
-// 	TreeTimerLogGlobalParameterBool(c_name, *value);
+	TreeTimerLogGlobalParameterBool(c_name, *value);
 
-// 	return 0;
-// }
+	return 0;
+}
 
-// int F2C(c_tree_timer_log_global_parameter_string, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_BOOL)(const char *name, int *name_len, const char *value, int *value_len)
-// {
-// 	char c_name[*name_len + 1];
-// 	F2C_strcpy(c_name, name, *name_len);
+int F2C(c_tree_timer_log_global_parameter_string, C_TREE_TIMER_LOG_GLOBAL_PARAMETER_BOOL)(const char *name, int *name_len, const char *value, int *value_len)
+{
+	char c_name[*name_len + 1];
+	F2C_strcpy(c_name, name, *name_len);
 
-// 	char c_value[*value_len + 1];
-// 	F2C_strcpy(c_value, value, *value_len);
+	char c_value[*value_len + 1];
+	F2C_strcpy(c_value, value, *value_len);
 
-// 	TreeTimerLogGlobalParameterString(c_name, c_value);
+	TreeTimerLogGlobalParameterString(c_name, c_value);
 
-// 	return 0;
-// }
+	return 0;
+}
+*/
 
 int F2C(c_tree_timer_flush_trace_data, C_TREE_TIMER_FLUSH_TRACE_DATA)()
 {

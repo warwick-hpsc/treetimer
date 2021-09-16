@@ -125,29 +125,31 @@ void TreeTimerLogParameterBool(const char *paramName, int value)
 }
 
 // Update: What is the purpose of "global" parameters? Codebase only sets them, never uses them.
-// void TreeTimerLogGlobalParameterInt(const char *paramName, int value)
-// {
-// 	std::string strName(paramName);
-// 	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, value);
-// }
+/*
+void TreeTimerLogGlobalParameterInt(const char *paramName, int value)
+{
+	std::string strName(paramName);
+	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, value);
+}
 
-// void TreeTimerLogGlobalParameterDouble(const char *paramName, double value)
-// {
-// 	std::string strName(paramName);
-// 	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, value);
-// }
+void TreeTimerLogGlobalParameterDouble(const char *paramName, double value)
+{
+	std::string strName(paramName);
+	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, value);
+}
 
-// void TreeTimerLogGlobalParameterBool(const char *paramName, int value)
-// {
-// 	std::string strName(paramName);
-// 	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, (bool) value);
-// }
+void TreeTimerLogGlobalParameterBool(const char *paramName, int value)
+{
+	std::string strName(paramName);
+	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, (bool) value);
+}
 
-// void TreeTimerLogGlobalParameterString(const char *paramName, const char *value)
-// {
-// 	std::string strName(paramName);
-// 	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, std::string(value));
-// }
+void TreeTimerLogGlobalParameterString(const char *paramName, const char *value)
+{
+	std::string strName(paramName);
+	treetimer::config::drivers::setGlobalParam(*(treetimer::core::instrumState->config), strName, std::string(value));
+}
+*/
 
 void TreeTimerFlushTraceData()
 {

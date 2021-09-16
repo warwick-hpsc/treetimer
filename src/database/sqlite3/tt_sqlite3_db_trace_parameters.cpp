@@ -142,9 +142,9 @@ namespace treetimer
 						} else {
 							std::cout << "SQL Error encountered in findTraceParameterIntDataID - unknown error code " << err << std::endl;
 						}
+
 						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
 						sqlite3_free(expandedQuery);
 
 						if(traceParamIntID!=nullptr) *traceParamIntID = -1;
@@ -204,9 +204,9 @@ namespace treetimer
 						} else {
 							std::cout << "SQL Error encountered in findTraceParameterFloatDataID - unknown error code " << err << std::endl;
 						}
+
 						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
 						sqlite3_free(expandedQuery);
 
 						if(traceParamFloatID!=nullptr) *traceParamFloatID = -1;
@@ -266,9 +266,9 @@ namespace treetimer
 						} else {
 							std::cout << "SQL Error encountered in findTraceParameterBoolDataID - unknown error code " << err << std::endl;
 						}
+
 						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
 						sqlite3_free(expandedQuery);
 
 						if(traceParamBoolID!=nullptr) *traceParamBoolID = -1;
@@ -328,9 +328,9 @@ namespace treetimer
 						} else {
 							std::cout << "SQL Error encountered in findTraceParameterStringDataID - unknown error code " << err << std::endl;
 						}
+
 						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
 						sqlite3_free(expandedQuery);
 
 						if(traceParamStringID!=nullptr) *traceParamStringID = -1;
@@ -398,9 +398,9 @@ namespace treetimer
 						} else {
 							std::cout << "SQL Error encountered in writeTraceParameterIntData - unknown error code " << err << std::endl;
 						}
+
 						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
 						sqlite3_free(expandedQuery);
 
 						if(traceParamIntID!=nullptr) *traceParamIntID = -1;
@@ -465,9 +465,9 @@ namespace treetimer
 						} else {
 							std::cout << "SQL Error encountered in writeTraceParameterFloatData - unknown error code " << err << std::endl;
 						}
+
 						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
 						sqlite3_free(expandedQuery);
 
 						if(traceParamFloatID!=nullptr) *traceParamFloatID = -1;
@@ -532,9 +532,9 @@ namespace treetimer
 						} else {
 							std::cout << "SQL Error encountered in writeTraceParameterBoolData - unknown error code " << err << std::endl;
 						}
+
 						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
 						sqlite3_free(expandedQuery);
 
 						if(traceParamBoolID!=nullptr) *traceParamBoolID = -1;
@@ -600,9 +600,9 @@ namespace treetimer
 						} else {
 							std::cout << "SQL Error encountered in writeTraceParameterStringData - unknown error code " << err << std::endl;
 						}
+
 						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
 						sqlite3_free(expandedQuery);
 
 						if(traceParamStringID!=nullptr) *traceParamStringID = -1;

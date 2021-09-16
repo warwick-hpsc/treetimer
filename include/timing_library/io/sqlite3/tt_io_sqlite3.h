@@ -39,7 +39,9 @@ namespace treetimer
 				void writeRunConfigData(tt_cfg::Config& config, tt_sql::TTSQLite3 *access);
 
 				tt_sql::TT_HwInfo getProcessData(tt_sql::TTSQLite3 *dataAccess);
+
 				void writeProcessHwData(treetimer::config::Config& config, tt_sql::TTSQLite3 *dataAccess, tt_sql::TT_HwInfo hw, int *processID);
+
 				void gatherWriteProcessData(treetimer::config::Config& config, tt_sql::TTSQLite3 *dataAccess);
 
 				void gatherAndWriteCallPathData(treetimer::config::Config& config, 
@@ -63,6 +65,7 @@ namespace treetimer
 
 				int fetchNextGatheredRecord(tt_sql::TTSQLite3& dataAccess, void* *records, int *nRecords, int *srcRank,
 											int elemBytes, MPI_Datatype elemType, int mpiTag);
+
 				int sendRecordsToRoot(tt_sql::TTSQLite3& dataAccess, const void *data, int nElems, 
 									MPI_Datatype elemType, int elemBytes, int mpiTag);
 

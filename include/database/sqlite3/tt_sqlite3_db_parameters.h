@@ -27,39 +27,15 @@ namespace treetimer
 			{
 				void writeSchemaParameterData(TTSQLite3& dataAccess);
 
-				// ============================================================================================================
-
 				void findParameterFloatDataID(TTSQLite3& dataAccess, std::string paramName, double value, int *paramFloatID);
-
-				// ============================================================================================================
-
 				void findParameterIntDataID(TTSQLite3& dataAccess, std::string paramName, int value, int *paramIntID);
-
-				// ============================================================================================================
-
 				void findParameterBoolDataID(TTSQLite3& dataAccess, std::string paramName, bool value, int *paramBoolID);
-
-				// ============================================================================================================
-
 				void findParameterStringDataID(TTSQLite3& dataAccess, std::string paramName, std::string value, int *paramStringID);
 
-				// ============================================================================================================
-
 				void writeParameterFloatData(TTSQLite3& dataAccess, std::string paramName, double value, int *paramFloatID);
-
-				// ============================================================================================================
-
 				void writeParameterIntData(TTSQLite3& dataAccess, std::string paramName, int value, int *paramIntID);
-
-				// ============================================================================================================
-
 				void writeParameterBoolData(TTSQLite3& dataAccess, std::string paramName, bool value, int *paramBoolID);
-
-				// ============================================================================================================
-
 				void writeParameterStringData(TTSQLite3& dataAccess, std::string paramName, std::string value, int *paramStringID);
-
-				// ============================================================================================================
 			}
 		}
 	}

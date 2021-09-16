@@ -78,7 +78,6 @@ namespace treetimer
 						}
 						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
-
 						sqlite3_free(expandedQuery);
 
 						if(traceTimeID!=nullptr) *traceTimeID = -1;

@@ -33,8 +33,6 @@ namespace treetimer
 				void writeAggregateTimeData(TTSQLite3& dataAccess, TT_AggTiming d, int *aggTimeID, bool verifyUnique);
 
 				MPI_Datatype createAggregateTimeMpiType();
-
-				MPI_Datatype createHwInfoMpiType();
 			}
 		}
 	}

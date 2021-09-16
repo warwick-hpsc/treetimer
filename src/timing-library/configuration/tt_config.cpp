@@ -48,9 +48,12 @@ namespace treetimer
 		{
 			void setConfigFromEnv(Config& config)
 			{
+				/*
 				setAppNameFromEnv(config);
 				setAppVerFromEnv(config);
 				setMachineNameFromEnv(config);
+				*/
+				
 				setOutputFolderFromEnv(config);
 				setAggTimerFromEnv(config);
 				setTraceTimerFromEnv(config);
@@ -64,6 +67,8 @@ namespace treetimer
 				// setGlobalParamFromEnv(config);
 			}
 
+			// Update: TT: does not need to know these GLOBAL, STATIC values:
+/*
 			void setAppNameFromEnv(Config& config)
 			{
 				// ====== Application Name ========
@@ -90,6 +95,7 @@ namespace treetimer
 					config.machineName = std::string(envVar);
 				}
 			}
+*/
 
 			void setOutputFolderFromEnv(Config& config)
 			{
@@ -100,7 +106,7 @@ namespace treetimer
 				}
 			}
 
-			/*
+/*
 			void setFormatFromEnv(Config& config)
 			{
 				// ====== Output Format ========
@@ -118,7 +124,7 @@ namespace treetimer
 					}
 				}
 			}
-			*/
+*/
 
 			void setAggTimerFromEnv(Config& config)
 			{
@@ -179,6 +185,7 @@ namespace treetimer
 					}
 				}
 
+
 				int ptr = 0;
 
 				// Push one past the end of the string onto the end
@@ -215,174 +222,176 @@ namespace treetimer
 			}
 
 			// Update: What is the purpose of "global" parameters? Codebase only sets them, never uses them.
-			// //ToDo: Do we want to store the variables as separate types?
-			// // We have to convert from a string anyway, so we could just store all of them as strings
-			// void setGlobalParamFromEnv(Config& config)
-			// {
-			// 	// Read in global parameters from environment variables.
-			// 	// This is handled via 4 separate environment variables, with each containing a comma separated list
-			// 	// of name=value pairs.
+/*
+			//ToDo: Do we want to store the variables as separate types?
+			// We have to convert from a string anyway, so we could just store all of them as strings
+			void setGlobalParamFromEnv(Config& config)
+			{
+				// Read in global parameters from environment variables.
+				// This is handled via 4 separate environment variables, with each containing a comma separated list
+				// of name=value pairs.
 
-			// 	//ToDo: Error checking that the strings are valid - we assume they are for now...
+				//ToDo: Error checking that the strings are valid - we assume they are for now...
 
-			// 	char *envVar;
+				char *envVar;
 
-			// 	// === Integers ===
-			// 	envVar = getenv("TT_CONFIG_GLOBAL_PARAM_INT");
+				// === Integers ===
+				envVar = getenv("TT_CONFIG_GLOBAL_PARAM_INT");
 
-			// 	if(envVar != NULL)
-			// 	{
-			// 		std::vector<std::string> commaSplit;
-			// 		strSplit(envVar, commaSplit, ',');
+				if(envVar != NULL)
+				{
+					std::vector<std::string> commaSplit;
+					strSplit(envVar, commaSplit, ',');
 
-			// 		for(size_t i = 0; i < commaSplit.size(); i++)
-			// 		{
-			// 			// Now split each substring by = to get name, value pair separately
-			// 			std::vector<std::string> substrSplit;
-			// 			strSplit(commaSplit[i], substrSplit, '=');
+					for(size_t i = 0; i < commaSplit.size(); i++)
+					{
+						// Now split each substring by = to get name, value pair separately
+						std::vector<std::string> substrSplit;
+						strSplit(commaSplit[i], substrSplit, '=');
 
-			// 			for(size_t j = 0; j < substrSplit.size(); j+=2)
-			// 			{
-			// 				setGlobalParam(config, substrSplit[j], stoi(substrSplit[j+1]));
-			// 			}
-			// 		}
-			// 	}
+						for(size_t j = 0; j < substrSplit.size(); j+=2)
+						{
+							setGlobalParam(config, substrSplit[j], stoi(substrSplit[j+1]));
+						}
+					}
+				}
 
-			// 	// === Doubles ===
-			// 	envVar = getenv("TT_CONFIG_GLOBAL_PARAM_FLOAT");
+				// === Doubles ===
+				envVar = getenv("TT_CONFIG_GLOBAL_PARAM_FLOAT");
 
-			// 	if(envVar != NULL)
-			// 	{
-			// 		std::vector<std::string> commaSplit;
-			// 		strSplit(envVar, commaSplit, ',');
+				if(envVar != NULL)
+				{
+					std::vector<std::string> commaSplit;
+					strSplit(envVar, commaSplit, ',');
 
-			// 		for(size_t i = 0; i < commaSplit.size(); i++)
-			// 		{
-			// 			// Now split each substring by = to get name, value pair separately
-			// 			std::vector<std::string> substrSplit;
-			// 			strSplit(commaSplit[i], substrSplit, '=');
+					for(size_t i = 0; i < commaSplit.size(); i++)
+					{
+						// Now split each substring by = to get name, value pair separately
+						std::vector<std::string> substrSplit;
+						strSplit(commaSplit[i], substrSplit, '=');
 
-			// 			for(size_t j = 0; j < substrSplit.size(); j+=2)
-			// 			{
-			// 				setGlobalParam(config, substrSplit[j], stod(substrSplit[j+1]));
-			// 			}
-			// 		}
-			// 	}
+						for(size_t j = 0; j < substrSplit.size(); j+=2)
+						{
+							setGlobalParam(config, substrSplit[j], stod(substrSplit[j+1]));
+						}
+					}
+				}
 
-			// 	// === Bool ===
-			// 	envVar = getenv("TT_CONFIG_GLOBAL_PARAM_BOOL");
+				// === Bool ===
+				envVar = getenv("TT_CONFIG_GLOBAL_PARAM_BOOL");
 
-			// 	if(envVar != NULL)
-			// 	{
-			// 		std::vector<std::string> commaSplit;
-			// 		strSplit(envVar, commaSplit, ',');
+				if(envVar != NULL)
+				{
+					std::vector<std::string> commaSplit;
+					strSplit(envVar, commaSplit, ',');
 
-			// 		for(size_t i = 0; i < commaSplit.size(); i++)
-			// 		{
-			// 			// Now split each substring by = to get name, value pair separately
-			// 			std::vector<std::string> substrSplit;
-			// 			strSplit(commaSplit[i], substrSplit, '=');
+					for(size_t i = 0; i < commaSplit.size(); i++)
+					{
+						// Now split each substring by = to get name, value pair separately
+						std::vector<std::string> substrSplit;
+						strSplit(commaSplit[i], substrSplit, '=');
 
-			// 			for(size_t j = 0; j < substrSplit.size(); j+=2)
-			// 			{
-			// 				setGlobalParam(config, substrSplit[j], (bool) (stoi(substrSplit[j+1])));
-			// 			}
-			// 		}
-			// 	}
+						for(size_t j = 0; j < substrSplit.size(); j+=2)
+						{
+							setGlobalParam(config, substrSplit[j], (bool) (stoi(substrSplit[j+1])));
+						}
+					}
+				}
 
-			// 	// === String ===
-			// 	envVar = getenv("TT_CONFIG_GLOBAL_PARAM_STRING");
+				// === String ===
+				envVar = getenv("TT_CONFIG_GLOBAL_PARAM_STRING");
 
-			// 	if(envVar != NULL)
-			// 	{
-			// 		std::vector<std::string> commaSplit;
-			// 		strSplit(envVar, commaSplit, ',');
+				if(envVar != NULL)
+				{
+					std::vector<std::string> commaSplit;
+					strSplit(envVar, commaSplit, ',');
 
-			// 		for(size_t i = 0; i < commaSplit.size(); i++)
-			// 		{
-			// 			// Now split each substring by = to get name, value pair separately
-			// 			std::vector<std::string> substrSplit;
-			// 			strSplit(commaSplit[i], substrSplit, '=');
+					for(size_t i = 0; i < commaSplit.size(); i++)
+					{
+						// Now split each substring by = to get name, value pair separately
+						std::vector<std::string> substrSplit;
+						strSplit(commaSplit[i], substrSplit, '=');
 
-			// 			for(size_t j = 0; j < substrSplit.size(); j+=2)
-			// 			{
-			// 				setGlobalParam(config, substrSplit[j], substrSplit[j+1]);
-			// 			}
-			// 		}
-			// 	}
-			// }
+						for(size_t j = 0; j < substrSplit.size(); j+=2)
+						{
+							setGlobalParam(config, substrSplit[j], substrSplit[j+1]);
+						}
+					}
+				}
+			}
 
-			// void setGlobalParam(Config& config, std::string name, int val)
-			// {
-			// 	// Search for existing parameter of type int with the same name
-			// 	// If found, overwrite, else create a new parameter
-			// 	typename std::unordered_map<std::string, treetimer::parameters::ParameterSingular<int> *>::const_iterator search = config.intGlobalParams.find(name);
+			void setGlobalParam(Config& config, std::string name, int val)
+			{
+				// Search for existing parameter of type int with the same name
+				// If found, overwrite, else create a new parameter
+				typename std::unordered_map<std::string, treetimer::parameters::ParameterSingular<int> *>::const_iterator search = config.intGlobalParams.find(name);
 
-			// 	if(search == config.intGlobalParams.end())
-			// 	{
-			// 		treetimer::parameters::ParameterSingular<int> *store = new treetimer::parameters::ParameterSingular<int>(name, val);
-			// 		std::pair<std::string, treetimer::parameters::ParameterSingular<int> *> insertPair(name, store);
-			// 		config.intGlobalParams.insert(insertPair);
-			// 	}
-			// 	else
-			// 	{
-			// 		search->second->value = val;
-			// 	}
-			// }
+				if(search == config.intGlobalParams.end())
+				{
+					treetimer::parameters::ParameterSingular<int> *store = new treetimer::parameters::ParameterSingular<int>(name, val);
+					std::pair<std::string, treetimer::parameters::ParameterSingular<int> *> insertPair(name, store);
+					config.intGlobalParams.insert(insertPair);
+				}
+				else
+				{
+					search->second->value = val;
+				}
+			}
 
-			// void setGlobalParam(Config& config, std::string name, double val)
-			// {
-			// 	// Search for existing parameter of type int with the same name
-			// 	// If found, overwrite, else create a new parameter
-			// 	typename std::unordered_map<std::string, treetimer::parameters::ParameterSingular<double> *>::const_iterator search = config.doubleGlobalParams.find(name);
+			void setGlobalParam(Config& config, std::string name, double val)
+			{
+				// Search for existing parameter of type int with the same name
+				// If found, overwrite, else create a new parameter
+				typename std::unordered_map<std::string, treetimer::parameters::ParameterSingular<double> *>::const_iterator search = config.doubleGlobalParams.find(name);
 
-			// 	if(search == config.doubleGlobalParams.end())
-			// 	{
-			// 		treetimer::parameters::ParameterSingular<double> *store = new treetimer::parameters::ParameterSingular<double>(name, val);
-			// 		std::pair<std::string, treetimer::parameters::ParameterSingular<double> *> insertPair(name, store);
-			// 		config.doubleGlobalParams.insert(insertPair);
-			// 	}
-			// 	else
-			// 	{
-			// 		search->second->value = val;
-			// 	}
-			// }
+				if(search == config.doubleGlobalParams.end())
+				{
+					treetimer::parameters::ParameterSingular<double> *store = new treetimer::parameters::ParameterSingular<double>(name, val);
+					std::pair<std::string, treetimer::parameters::ParameterSingular<double> *> insertPair(name, store);
+					config.doubleGlobalParams.insert(insertPair);
+				}
+				else
+				{
+					search->second->value = val;
+				}
+			}
 
-			// void setGlobalParam(Config& config, std::string name, bool val)
-			// {
-			// 	// Search for existing parameter of type int with the same name
-			// 	// If found, overwrite, else create a new parameter
-			// 	typename std::unordered_map<std::string, treetimer::parameters::ParameterSingular<bool> *>::const_iterator search = config.boolGlobalParams.find(name);
+			void setGlobalParam(Config& config, std::string name, bool val)
+			{
+				// Search for existing parameter of type int with the same name
+				// If found, overwrite, else create a new parameter
+				typename std::unordered_map<std::string, treetimer::parameters::ParameterSingular<bool> *>::const_iterator search = config.boolGlobalParams.find(name);
 
-			// 	if(search == config.boolGlobalParams.end())
-			// 	{
-			// 		treetimer::parameters::ParameterSingular<bool> *store = new treetimer::parameters::ParameterSingular<bool>(name, val);
-			// 		std::pair<std::string, treetimer::parameters::ParameterSingular<bool> *> insertPair(name, store);
-			// 		config.boolGlobalParams.insert(insertPair);
-			// 	}
-			// 	else
-			// 	{
-			// 		search->second->value = val;
-			// 	}
-			// }
+				if(search == config.boolGlobalParams.end())
+				{
+					treetimer::parameters::ParameterSingular<bool> *store = new treetimer::parameters::ParameterSingular<bool>(name, val);
+					std::pair<std::string, treetimer::parameters::ParameterSingular<bool> *> insertPair(name, store);
+					config.boolGlobalParams.insert(insertPair);
+				}
+				else
+				{
+					search->second->value = val;
+				}
+			}
 
-			// void setGlobalParam(Config& config, std::string name, std::string val)
-			// {
-			// 	// Search for existing parameter of type int with the same name
-			// 	// If found, overwrite, else create a new parameter
-			// 	typename std::unordered_map<std::string, treetimer::parameters::ParameterSingular<std::string> *>::const_iterator search = config.stringGlobalParams.find(name);
+			void setGlobalParam(Config& config, std::string name, std::string val)
+			{
+				// Search for existing parameter of type int with the same name
+				// If found, overwrite, else create a new parameter
+				typename std::unordered_map<std::string, treetimer::parameters::ParameterSingular<std::string> *>::const_iterator search = config.stringGlobalParams.find(name);
 
-			// 	if(search == config.stringGlobalParams.end())
-			// 	{
-			// 		treetimer::parameters::ParameterSingular<std::string> *store = new treetimer::parameters::ParameterSingular<std::string>(name, val);
-			// 		std::pair<std::string, treetimer::parameters::ParameterSingular<std::string> *> insertPair(name, store);
-			// 		config.stringGlobalParams.insert(insertPair);
-			// 	}
-			// 	else
-			// 	{
-			// 		search->second->value = val;
-			// 	}
-			// }
+				if(search == config.stringGlobalParams.end())
+				{
+					treetimer::parameters::ParameterSingular<std::string> *store = new treetimer::parameters::ParameterSingular<std::string>(name, val);
+					std::pair<std::string, treetimer::parameters::ParameterSingular<std::string> *> insertPair(name, store);
+					config.stringGlobalParams.insert(insertPair);
+				}
+				else
+				{
+					search->second->value = val;
+				}
+			}
+*/
 
 			void setConfig(Config& config, std::string appName, std::string appVersion, std::string machineName, std::string outputFolder,
 						   int processCount,

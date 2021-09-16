@@ -121,52 +121,6 @@ namespace treetimer
 						if(cpuID!=nullptr) *cpuID = tmpID;
 					}
 				}
-
-				MPI_Datatype createCpuMpiType()
-				{
-					// Create MPI type for a AggregateTime record:
-					int err;
-					MPI_Datatype cpuRecord_MPI, tmpType;
-
-					// int lengths[2] = {1, MAX_STRING_LENGTH};
-					// MPI_Aint displacements[2];
-					// displacements[0] = offsetof(TT_Cpu, rank);
-					// displacements[1] = offsetof(TT_Cpu, cpuModel);
-					// MPI_Datatype types[2] = { MPI_INT, MPI_CHAR };
-					// err = MPI_Type_create_struct(2, lengths, displacements, types, &tmpType);
-					int lengths[1] = {MAX_STRING_LENGTH};
-					MPI_Aint displacements[1];
-					displacements[0] = offsetof(TT_Cpu, cpuModel);
-					MPI_Datatype types[1] = { MPI_CHAR };
-					err = MPI_Type_create_struct(1, lengths, displacements, types, &tmpType);
-
-					if (err != MPI_SUCCESS) {
-						fprintf(stderr, "Failed to create custom type for cpuRecord\n");
-						MPI_Abort(MPI_COMM_WORLD, err);
-						exit(EXIT_FAILURE);
-					}
-					MPI_Aint lb, extent;
-					err = MPI_Type_get_extent(tmpType, &lb, &extent);
-					if (err != MPI_SUCCESS) {
-						fprintf(stderr, "Failed to get extent of custom type for cpuRecord\n");
-						MPI_Abort(MPI_COMM_WORLD, err);
-						exit(EXIT_FAILURE);
-					}
-					err = MPI_Type_create_resized(tmpType, lb, extent, &cpuRecord_MPI);
-					if (err != MPI_SUCCESS) {
-						fprintf(stderr, "Failed to resize custom type for cpuRecord\n");
-						MPI_Abort(MPI_COMM_WORLD, err);
-						exit(EXIT_FAILURE);
-					}
-					err = MPI_Type_commit(&cpuRecord_MPI);
-					if (err != MPI_SUCCESS) {
-						fprintf(stderr, "Failed to commit custom type for cpuRecord\n");
-						MPI_Abort(MPI_COMM_WORLD, err);
-						exit(EXIT_FAILURE);
-					}
-
-					return cpuRecord_MPI;
-				}
 			}
 		}
 	}

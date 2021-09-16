@@ -10,8 +10,6 @@
  *
  */
 
-// TODO: Rename table and files from "process" to "thread"
-
 #include "tt_sqlite3_db_process.h"
 #include <iostream>
 
