@@ -104,82 +104,111 @@ methodTypeToColour["MPICollectiveCall"] = "red"
 methodTypeToColour["LibraryCall"] = "yellowgreen"
 
 def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
-	if verbose:
-		print("Processing: {0} ({1}/{2})".format(db_fp, ctr, num_dbs))
+	if verbose: print("Processing: {0} ({1}/{2})".format(db_fp, ctr, num_dbs))
+
+	## For now just support single-run databases:
+	runID = 1
+
 	db = sqlite3.connect(db_fp)
-	## Loading DB into memory roughly halves query times. 
-	## But only load if access required.
+	## Loading DB into memory roughly halves query times. But only lazy-load.
 	dbm = None
 
 	f = os.path.basename(db_fp)
-	m = re.match("^results\.([0-9]+)\.db$", f)
-	rank = int(m.groups()[0])
 
 	df_csv = os.path.join(cache_dp, f+".csv")
 	if not os.path.isfile(df_csv):
-		if verbose:
-			print("- generating: " + df_csv)
-		if dbm is None:
-			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
-		df = aggregatedTimes_calculateHotspots(1, 1, dbm)
+		if verbose: print("- generating: " + df_csv)
+		if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+		df = aggregatedTimes_calculateHotspots(runID, dbm)
 		if not df is None:
-			df["rank"] = rank
 			df.to_csv(df_csv, index=False)
 
 	df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
 	if not os.path.isfile(df_agg_fp):
-		if verbose:
-			print("- generating: " + df_agg_fp)
-		if dbm is None:
-			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
-		df_agg = aggregateTimesByType(1, 1, dbm)
+		if verbose: print("- generating: " + df_agg_fp)
+		if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+		df_agg = aggregateTimesByType(runID, dbm)
 		if not df_agg is None:
-			df_agg["rank"] = rank
 			df_agg.to_csv(df_agg_fp, index=False)
 
-	tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
-	t = None
-	if not os.path.isfile(tree_fp):
-		if verbose:
-			print("- generating: " + tree_fp)
-		if dbm is None:
-			dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
-		t = buildCallPathTree(1, 1, dbm)
-		with open(tree_fp, 'wb') as output:
+	trees_fp = os.path.join(cache_dp, f+".call-trees.pkl")
+	trees = None
+	if not os.path.isfile(trees_fp):
+		if verbose: print("- generating: " + trees_fp)
+		if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+		trees = {}
+		for processID in getProcessIds(dbm):
+			rank = getMpiRank(dbm, processID)
+			trees[rank] = buildCallPathTree(dbm, runID, processID)
+		with open(trees_fp, 'wb') as output:
 			#pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
-			pickle.dump(t, output, 4)
+			pickle.dump(trees, output, 4)
 
 	if not table_empty(db, "TraceTimeData"):
 		traceTimes_fp = os.path.join(cache_dp, f+".traceTimes.csv")
 		if not os.path.isfile(traceTimes_fp):
-			if verbose:
-				print("- generating: " + traceTimes_fp)
-			if t is None:
-				with open(tree_fp, 'rb') as input:
-					t = pickle.load(input)
+			if verbose: print("- generating: " + traceTimes_fp)
+			if trees is None:
+				with open(trees_fp, 'rb') as input:
+					trees = pickle.load(input)
 
-			n = findTreeNodeByType(t, "TraceConductor")
-			if n is None:
-				n = findSolverNode(t, 1, t.time)
-			#if n is None:
-			#	raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
-			#else:
-			if not n is None:
-				traceGroupNode = n.name
-				if dbm is None:
-					dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
-				traces_df = traceTimes_aggregateByNode(dbm, 1, 1, t, traceGroupNode)
-				traces_df["Rank"] = rank
-				traces_df.to_csv(traceTimes_fp, index=False)
+			traces_df_all = None
+			for rank, t in trees.items():
+				n = findTreeNodeByType(t, "TraceConductor")
+				if n is None:
+					n = findSolverNode(t, 1, t.time)
+				#if n is None:
+				#	raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+				if not n is None:
+					traceGroupNode = n.name
+					if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+					processID = getProcessID(dbm, rank)
+					traces_df = traceTimes_aggregateByNode(dbm, runID, processID, t, traceGroupNode)
+					traces_df["Rank"] = rank
+					if traces_df_all is None:
+						traces_df_all = traces_df
+					else:
+						traces_df_all = traces_df_all.append(traces_df)
+			traces_df_all.to_csv(traceTimes_fp, index=False)
+
 
 		if args.trace_group_focus:
 			traceTimes_focused_fp = os.path.join(cache_dp, f+".time-traces.focused-on-{0}.csv".format(args.trace_group_focus))
 			if not os.path.isfile(traceTimes_focused_fp):
-				if verbose:
-					print("- generating: " + traceTimes_focused_fp)
-				if t is None:
-					with open(tree_fp, 'rb') as input:
-						t = pickle.load(input)
+				if verbose: print("- generating: " + traceTimes_focused_fp)
+				if trees is None:
+					with open(trees_fp, 'rb') as input:
+						trees = pickle.load(input)
+
+				traces_df_all = None
+				for rank, t in trees.items():
+					n = findTreeNodeByType(t, "TraceConductor")
+					if n is None:
+						n = findSolverNode(t, 1, t.time)
+					if n is None:
+						raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+					else:
+						traceGroupNode = n.name
+						if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+						processID = getProcessID(dbm, rank)
+						traces_df = traceTimes_aggregateByNode(dbm, runID, processID, t, traceGroupNode, args.trace_group_focus)
+						traces_df["Rank"] = rank
+						if traces_df_all is None:
+							traces_df_all = traces_df
+						else:
+							traces_df_all = traces_df_all.append(traces_df)
+				traces_df_all.to_csv(traceTimes_focused_fp, index=False)
+
+	if not args.parameter is None:
+		traceParameter_fp = os.path.join(cache_dp, f+".traceParameter-{0}.csv".format(args.parameter))
+		if not os.path.isfile(traceParameter_fp):
+			if verbose: print("- generating: " + traceParameter_fp)
+			if trees is None:
+				with open(trees_fp, 'rb') as input:
+					trees = pickle.load(input)
+
+			traces_df_all = None
+			for rank, t in trees.items():
 				n = findTreeNodeByType(t, "TraceConductor")
 				if n is None:
 					n = findSolverNode(t, 1, t.time)
@@ -187,32 +216,15 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 					raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
 				else:
 					traceGroupNode = n.name
-					if dbm is None:
-						dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
-					traces_df = traceTimes_aggregateByNode(dbm, 1, 1, t, traceGroupNode, args.trace_group_focus)
+					if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+					processID = getProcessID(dbm, rank)
+					traces_df = traceParameter_aggregateByNode(dbm, runID, processID, t, traceGroupNode, args.parameter)
 					traces_df["Rank"] = rank
-					traces_df.to_csv(traceTimes_focused_fp, index=False)
-
-	if (not args.parameter is None):
-		traceParameter_fp = os.path.join(cache_dp, f+".traceParameter-{0}.csv".format(args.parameter))
-		if not os.path.isfile(traceParameter_fp):
-			if verbose:
-				print("- generating: " + traceParameter_fp)
-			if t is None:
-				with open(tree_fp, 'rb') as input:
-					t = pickle.load(input)
-			n = findTreeNodeByType(t, "TraceConductor")
-			if n is None:
-				n = findSolverNode(t, 1, t.time)
-			if n is None:
-				raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
-			else:
-				traceGroupNode = n.name
-				if dbm is None:
-					dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
-				traces_df = traceParameter_aggregateByNode(dbm, 1, 1, t, traceGroupNode, args.parameter)
-				traces_df["Rank"] = rank
-				traces_df.to_csv(traceParameter_fp, index=False)
+					if traces_df_all is None:
+						traces_df_all = traces_df
+					else:
+						traces_df_all = traces_df_all.append(traces_df)
+			traces_df_all.to_csv(traceParameter_fp, index=False)
 
 	return True
 
@@ -234,7 +246,7 @@ def main():
 	traceTimes_focused_all_df = None
 	traceParameter_all_df = None
 
-	rank_ids = set()
+	ranks = set()
 
 	## Group together rank call traces that have identical topology:
 	groupedCallTrees = None
@@ -263,8 +275,7 @@ def main():
 			params = (db_fp, i+1, len(db_fps), cache_dp)
 			dbs_pending.append(params)
 		p = Pool(nprocs)
-		if verbose:
-			p.imap_unordered(preprocess_db_job, dbs_pending)
+		if verbose: p.imap_unordered(preprocess_db_job, dbs_pending)
 		else:
 			for _ in tqdm.tqdm(p.imap_unordered(preprocess_db_job, dbs_pending), total=len(dbs_pending)):
 				pass
@@ -283,11 +294,9 @@ def main():
 		m = re.match("^results\.([0-9]+)\.db$", f)
 		if m:
 			ctr += 1
-			rank = int(m.groups()[0])
-			rank_ids.add(rank)
-
-			if verbose:
-				print("Collating rank {0} data".format(rank))
+			db_ranks = getMpiRanks(db_fp)
+			for rank in db_ranks: ranks.add(rank)
+			if verbose: print("Collating data from rank {0}".format(db_ranks))
 
 			df_csv = os.path.join(cache_dp, f+".csv")
 			if not os.path.isfile(df_csv):
@@ -322,8 +331,6 @@ def main():
 						traceTimes_focused_all_df = df
 					else:
 						traceTimes_focused_all_df = traceTimes_focused_all_df.append(df)
-			#else:
-			#	print("Cannot find: " + traceTimes_fp)
 
 			if not args.parameter is None:
 				traceParameter_fp = os.path.join(cache_dp, f+".traceParameter-{0}.csv".format(args.parameter))
@@ -334,34 +341,35 @@ def main():
 					else:
 						traceParameter_all_df = traceParameter_all_df.append(df)
 
-			tree_fp = os.path.join(cache_dp, f+".call-tree.pkl")
-			with open(tree_fp, 'rb') as input:
-				t = pickle.load(input)
+			trees_fp = os.path.join(cache_dp, f+".call-trees.pkl")
+			with open(trees_fp, 'rb') as input:
+				trees = pickle.load(input)
 
-			if not tt_db_filepath is None:
-				# Just one DB being analysed, so print out call tree:
-				print(t)
+			for rank, t in trees.items():
+				if not tt_db_filepath is None:
+					# Just one DB being analysed, so print out call tree:
+					print(t)
 
-			if not args.charts is None:
-				## Add tree to a group
-				if groupedCallTrees is None:
-					groupedCallTrees = [ {rank:t} ]
-				else:
-					found_group = False
-					for treeGroup in groupedCallTrees:
-						tOther = next(iter(treeGroup.values()))
-						if t == tOther:
-							treeGroup[rank] = t
-							found_group = True
-					if not found_group:
-						groupedCallTrees.append({rank:t})
+				if not args.charts is None:
+					## Add tree to a group
+					if groupedCallTrees is None:
+						groupedCallTrees = [ {rank:t} ]
+					else:
+						found_group = False
+						for treeGroup in groupedCallTrees:
+							tOther = next(iter(treeGroup.values()))
+							if t == tOther:
+								treeGroup[rank] = t
+								found_group = True
+						if not found_group:
+							groupedCallTrees.append({rank:t})
 
-				# Plot this call tree
-				if args.charts and (args.chart_ranks or rank==1):
-					print(" - drawing call-tree chart ...")
-					chartCallPath(t, "Call stack times of rank {0}".format(rank), "rank-{0}.png".format(rank))
+					# Plot this call tree
+					if args.charts and (args.chart_ranks or rank==1):
+						print(" - drawing call-tree chart ...")
+						chartCallPath(t, "Call stack times of rank {0}".format(rank), "rank-{0}.png".format(rank))
 
-	if not args.charts is None:
+	if (not args.charts is None) and (not groupedCallTrees is None):
 		## Aggregate together call trees within each group, and create plots:
 		print("Drawing grouped call-tree charts")
 		aggregatedCallTrees = []
@@ -377,7 +385,7 @@ def main():
 			aggSum = agg.sumElementwise()
 			chartCallPath(aggSum, "Call stack times summed across ranks "+sorted(agg.ranks).__str__(), "rankGroup{0}.png".format(gn))
 
-	if len(rank_ids) > 1:
+	if len(ranks) > 1:
 		print("Drawing trace charts")
 		if not traceTimes_all_df is None:
 			traceTimes_chartDynamicLoadBalance(traceTimes_all_df)
@@ -387,37 +395,44 @@ def main():
 			traceParameter_chart(traceParameter_all_df, args.parameter)
 
 	print("Writing out collated CSVs")
-	df_all_raw["num_ranks"] = len(rank_ids)
-	df_all_raw.sort_values(["Name", "rank"], inplace=True)
+	df_all_raw["num_ranks"] = len(ranks)
+	df_all_raw.sort_values(["Name", "Rank"], inplace=True)
 	df_filename = os.path.join(output_dirpath, "timings_raw.csv")
 	df_all_raw.to_csv(df_filename, index=False)
 	print("Collated raw data written to '{0}'".format(df_filename))
 
 	if not df_all_aggregated is None:
-		df_all_aggregated.sort_values(["Method type", "rank"], inplace=True)
+		df_all_aggregated.sort_values(["Method type", "Rank"], inplace=True)
 		df_filename = os.path.join(output_dirpath, "timings_aggregated.csv")
 		df_all_aggregated.to_csv(df_filename, index=False)
 		print("Collated aggregated data written to '{0}'".format(df_filename))
 
 
-# Note - ProcessID is just a DB key, NOT the MPI rank.
-def aggregatedTimes_calculateHotspots(runID, processID, db):
+def aggregatedTimes_calculateHotspots(runID, db):
 	if table_empty(db, "AggregateTime"):
 		return None
 
-	rootID = getNodeCallpathId(db, 'ProgramRoot')
-	rootRecord = getNodeAggregatedStats(rootID, runID, processID, db)
+	processIDs = getProcessIds(db)
+	df_all = None
+	for processID in processIDs:
+		rootID = getNodeCallpathId(db, processID, 'ProgramRoot')
+		rootRecord = getNodeAggregatedStats(rootID, runID, processID, db)
 
-	df = getAllProfileNodesAggregateTimeExclusive(runID, processID, db)
+		df = getAllProfileNodesAggregateTimeExclusive(runID, processID, db)
 
-	df['ExclusiveAggregateTime(% of Run)'] = df['AggTotalTimeE']/rootRecord['AggTotalTimeI']
-	df = df.rename(columns={'AggTotalTimeI':'InclusiveAggregateTime(s)', 'AggTotalTimeE':'ExclusiveAggregateTime(s)'})
-	df = df.drop(['AggAvgTime', 'AggMaxTime', 'AggMinTime', 'CallPathID'], axis=1)
-	df = df.sort_values('ExclusiveAggregateTime(% of Run)', ascending=False)
+		df['ExclusiveAggregateTime(% of Run)'] = df['AggTotalTimeE']/rootRecord['AggTotalTimeI']
+		df = df.rename(columns={'AggTotalTimeI':'InclusiveAggregateTime(s)', 'AggTotalTimeE':'ExclusiveAggregateTime(s)'})
+		df = df.drop(['AggAvgTime', 'AggMaxTime', 'AggMinTime', 'CallPathID'], axis=1)
+		df = df.sort_values('ExclusiveAggregateTime(% of Run)', ascending=False)
 
-	return df
+		df["Rank"] = getMpiRank(db, processID)
+		if df_all is None:
+			df_all = df
+		else:
+			df_all = df_all.append(df)
 
-# Note - ProcessID is just a DB key, NOT the MPI rank.
+	return df_all
+
 def getAllProfileNodesAggregateTimeExclusive(runID, processID, db):
 	# Since aggregate properties operate on call path nodes (since
 	# times for different paths to the same profile node are stored
@@ -445,13 +460,16 @@ def getAllProfileNodesAggregateTimeExclusive(runID, processID, db):
 
 	return df_grp
 
-def getNodeCallpathId(db, nodeName):
+def getNodeCallpathId(db, processID, nodeName):
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
-	cmd = "SELECT CallPathID FROM CallPathData NATURAL JOIN ProfileNodeData WHERE NodeName = '{0}'".format(nodeName)
+	cmd = "SELECT CallPathID FROM CallPathData NATURAL JOIN ProfileNodeData WHERE ProcessID = {0} AND NodeName = '{1}'".format(processID, nodeName)
 	cur.execute(cmd)
-	result = cur.fetchone()
-	return result['CallPathID']
+	results = cur.fetchall()
+	ids = [r["CallPathID"] for r in results]
+	if len(ids) > 1:
+		raise Exception("getNodeCallpathId(processID={0}, nodeName={1}) has returned {2} IDs".format(processID, nodeName, len(ids)))
+	return ids[0]
 
 def getNodeChildrenIDs(db, callPathID):
 	db.row_factory = sqlite3.Row
@@ -605,13 +623,13 @@ class CallTreeNodeAggregated:
 			nodeStr += cStr
 		return nodeStr
 
-def buildCallPathTree(runID, processID, db):
-	rootID = getNodeCallpathId(db, 'ProgramRoot')
+def buildCallPathTree(db, runID, processID):
+	rootID = getNodeCallpathId(db, processID, 'ProgramRoot')
 	tree = None
-	x = buildCallPathNodeTraversal(runID, processID, db, tree, rootID, 0)
+	x = buildCallPathNodeTraversal(db, runID, processID,tree, rootID, 0)
 	return x
 
-def buildCallPathNodeTraversal(runID, processID, db, treeNode, nodeID, indentLevel):
+def buildCallPathNodeTraversal(db, runID, processID, treeNode, nodeID, indentLevel):
 	# Recursive depth-first traversal through call stack
 	if table_empty(db, "AggregateTime"):
 		record = getNodeCallStats(nodeID, db)
@@ -629,7 +647,7 @@ def buildCallPathNodeTraversal(runID, processID, db, treeNode, nodeID, indentLev
 
 	childNodes = getNodeChildrenIDs(db, nodeID)
 	for childID in childNodes:
-		buildCallPathNodeTraversal(runID, processID, db, leaf, childID, indentLevel + 1)
+		buildCallPathNodeTraversal(db, runID, processID, leaf, childID, indentLevel + 1)
 
 	if am_root:
 		return treeNode
@@ -843,10 +861,13 @@ def getNodeAggregatedStats(callPathID, runID, processID, db):
 			"WHERE A.CallPathID = {0} AND A.RunID = {1} AND A.ProcessID = {2} ;".format(callPathID, runID, processID)
 
 	cur.execute(query)
-	result = cur.fetchone()
+	result = cur.fetchall()
 	if result is None:
 		print(query)
-		raise Exception("No node with CallPathID {0}".format(callPathID))
+		raise Exception("No CallPath node meeting criteria: processID={0}, callPathID={1}".format(processID, callPathID))
+	if len(result) > 1:
+		raise Exception("Multiple CallPath nodes ({2}) meeting criteria: processID={0}, callPathID={1}".format(processID, callPathID, len(result)))
+	result = result[0]
 	nodeStats = {k:result[k] for k in result.keys()}
 	nodeStats['AggTotalTimeI'] = nodeStats['AggAvgTime'] * nodeStats['CallCount']
 
@@ -859,9 +880,9 @@ def getNodeAggregatedStats(callPathID, runID, processID, db):
 	else:
 		# Get sum of inclusive times taken by child nodes
 		childIDStr = ','.join([str(x) for x in childIDs])
-		query = "SELECT SUM(AvgWallTime * Count) AS ChildrenWalltime FROM AggregateTime " + \
-			  "WHERE RunID = {0} ".format(processID) + \
-			  "AND CallPathID IN ({0}) ;".format(childIDStr)
+		query = "SELECT SUM(AvgWallTime * Count) AS ChildrenWalltime FROM AggregateTime" + \
+			  " WHERE RunID = {0} AND ProcessID = {1} ".format(runID, processID) + \
+			  " AND CallPathID IN ({0}) ;".format(childIDStr)
 		cur.execute(query);
 		childrenWalltime = cur.fetchone()['ChildrenWalltime']
 
@@ -902,37 +923,46 @@ def getNodeCallStats(callPathID, db):
 
 	return nodeStats
 
-def aggregateTimesByType(runID, processID, db):
+def aggregateTimesByType(runID, db):
 	if table_empty(db, "AggregateTime"):
 		return None
-	
-	# # Get all callpath node IDs
-	db.row_factory = sqlite3.Row
-	cur = db.cursor()
-	query = "SELECT DISTINCT CallPathID FROM AggregateTime NATURAL JOIN CallPathData WHERE RunID = {0};".format(runID)
-	cur.execute(query)
-	result = cur.fetchall()
-	callpathIDs = [row['CallPathID'] for row in result]
 
-	# For each callpath node, get the aggregate details
-	col_names = ["Name", "TypeName", "CallCount", "AggTotalTimeI", "AggTotalTimeE", "AggAvgTime", "AggMaxTime", "AggMinTime"]
-	df = None
-	df_cols = {c:[] for c in col_names}
-	for callpathID in callpathIDs:
-		r = getNodeAggregatedStats(callpathID, runID, processID, db)
-		for k in col_names:
-			df_cols[k].append(r[k])
-	df = pd.DataFrame(data=df_cols, columns=col_names)
+	processIDs = getProcessIds(db)
+	df_sum_all = None
+	for processID in processIDs:
+		# # Get all callpath node IDs
+		db.row_factory = sqlite3.Row
+		cur = db.cursor()
+		query = "SELECT DISTINCT CallPathID FROM AggregateTime NATURAL JOIN CallPathData WHERE RunID = {0} AND ProcessID = {1};".format(runID, processID)
+		cur.execute(query)
+		result = cur.fetchall()
+		callpathIDs = [row['CallPathID'] for row in result]
 
-	walltime = df[df['Name']=='ProgramRoot'].loc[0,'AggTotalTimeI']
+		# For each callpath node, get the aggregate details
+		col_names = ["Name", "TypeName", "CallCount", "AggTotalTimeI", "AggTotalTimeE", "AggAvgTime", "AggMaxTime", "AggMinTime"]
+		df = None
+		df_cols = {c:[] for c in col_names}
+		for callpathID in callpathIDs:
+			r = getNodeAggregatedStats(callpathID, runID, processID, db)
+			for k in col_names:
+				df_cols[k].append(r[k])
+		df = pd.DataFrame(data=df_cols, columns=col_names)
 
-	# Sum times across method types
-	df_sum = df[['TypeName', 'AggTotalTimeE']].groupby('TypeName').sum().reset_index()
-	df_sum = df_sum.rename(columns={'TypeName':'Method type', 'AggTotalTimeE':'Exclusive time'})
-	df_sum['Exclusive time %'] = df_sum['Exclusive time'] / walltime
-	df_sum = df_sum.sort_values("Exclusive time", ascending=False)
+		walltime = df[df['Name']=='ProgramRoot'].loc[0,'AggTotalTimeI']
 
-	return(df_sum)
+		# Sum times across method types
+		df_sum = df[['TypeName', 'AggTotalTimeE']].groupby('TypeName').sum().reset_index()
+		df_sum = df_sum.rename(columns={'TypeName':'Method type', 'AggTotalTimeE':'Exclusive time'})
+		df_sum['Exclusive time %'] = df_sum['Exclusive time'] / walltime
+		df_sum = df_sum.sort_values("Exclusive time", ascending=False)
+
+		df_sum["Rank"] = getMpiRank(db, processID)
+		if df_sum_all is None:
+			df_sum_all = df_sum
+		else:
+			df_sum_all = df_sum_all.append(df_sum)
+
+	return(df_sum_all)
 
 def traceTimes_aggregateTraceRange(db, runID, processID, nodeEntryId, nodeExitId):
 	cur = db.cursor()
@@ -962,7 +992,7 @@ def traceTimes_aggregateTraceSubRanges(db, runID, processID, nodeEntryId, nodeEx
 	## Query to, for each trace entry in range, sum walltimes of its immediate children
 	qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, nodeEntryId, nodeExitId)
 
-	## Query to join the above two queries into one, bringing together inclusive waltims of each node and its children. Seems to work.
+	## Query to join the above two queries into one, bringing together inclusive waltimes of each node and its children. Seems to work.
 	query12 = "SELECT NodeEntryID, TraceTimeID, WallTime, ChildrenWalltime, TypeName FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraceWalltime, qGetChildrenWalltime)
 	cur.execute(query12)
 	rows = np.array(cur.fetchall())
@@ -990,7 +1020,7 @@ def traceTimes_aggregateTraceSubRanges(db, runID, processID, nodeEntryId, nodeEx
 def traceTimes_aggregateByNode(db, runID, processID, tree, nodeName, nodeOfInterestName=None):
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
-	cid = getNodeCallpathId(db, nodeName)
+	cid = getNodeCallpathId(db, processID, nodeName)
 	query = "SELECT NodeEntryID, NodeExitID FROM TraceTimeData WHERE RunID = {0} AND ProcessID = {1} AND CallPathID = {2};".format(runID, processID, cid)
 	cur.execute(query)
 	result = cur.fetchall()
@@ -1015,7 +1045,7 @@ def traceTimes_aggregateByNode(db, runID, processID, tree, nodeName, nodeOfInter
 		if t is None:
 			raise Exception("'{0}' not child of '{1}'".format(nodeOfInterestName, nodeName))
 
-		cid = getNodeCallpathId(db, nodeOfInterestName)
+		cid = getNodeCallpathId(db, processID, nodeOfInterestName)
 		query = "SELECT NodeEntryID, NodeExitID FROM TraceTimeData WHERE RunID = {0} AND ProcessID = {1} AND CallPathID = {2};".format(runID, processID, cid)
 		cur.execute(query)
 		result = cur.fetchall()
@@ -1085,7 +1115,7 @@ def traceParameter_aggregateTraceRange(db, runID, processID, paramTable, paramNa
 	## To reduce code development time, check that parameter only has one value in specified nodeID range.
 	## If this is not the case, then need to think about what statistics to report (average? max and min? variance?). 
 	## Multiple parameter values cannot be handled like runtimes (which can be summed).
-	qCountQuery = "SELECT COUNT(*) FROM {0} NATURAL JOIN CallPathData WHERE ParamName = \"{1}\" AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(paramTable, paramName, nodeEntryId, nodeExitId)
+	qCountQuery = "SELECT COUNT(*) FROM {0} NATURAL JOIN CallPathData WHERE ProcessID = {1} AND ParamName = \"{2}\" AND NodeEntryID >= {3} AND NodeExitID <= {4} GROUP BY ParentNodeID".format(paramTable, processID, paramName, nodeEntryId, nodeExitId)
 	cur.execute(qCountQuery)
 	res = cur.fetchone()
 	if res is None:
@@ -1094,7 +1124,7 @@ def traceParameter_aggregateTraceRange(db, runID, processID, paramTable, paramNa
 	if count > 1:
 		raise Exception("Parameter '{0}' recorded multiple values between a specific nodeID range. This situation has not been coded in TreeTimer, contact developers to request average, variance, or some other aggregating function.")
 
-	query = "SELECT {0} AS TraceParamId, ParamValue FROM {1} NATURAL JOIN CallPathData WHERE ParamName = \"{2}\" AND NodeEntryID >= {3} AND NodeExitID <= {4} GROUP BY ParentNodeID".format(traceParamIdColMap[paramTable], paramTable, paramName, nodeEntryId, nodeExitId)
+	query = "SELECT {0} AS TraceParamId, ParamValue FROM {1} NATURAL JOIN CallPathData WHERE ProcessID = {2} AND ParamName = \"{3}\" AND NodeEntryID >= {4} AND NodeExitID <= {5} GROUP BY ParentNodeID".format(traceParamIdColMap[paramTable], paramTable, processID, paramName, nodeEntryId, nodeExitId)
 	cur.execute(query)
 	res = cur.fetchone()
 	row = [res["TraceParamId"], res["ParamValue"]]
@@ -1117,13 +1147,13 @@ def traceParameter_aggregateByNode(db, runID, processID, tree, nodeName, paramNa
 	if paramTable is None:
 		raise Exception("ParamName {0} not found in any TraceParameter* table".format(paramName))
 
-	query = "SELECT COUNT(*) FROM TraceParameterBoolData WHERE ParamName = \"TraceConductorEnabled?\";"
+	query = "SELECT COUNT(*) FROM TraceParameterBoolData WHERE ProcessID = {0} AND ParamName = \"TraceConductorEnabled?\";".format(processID)
 	cur.execute(query)
 	count = cur.fetchone()[0]
 	if count == 0:
-		raise Exception("TreeTimer has not written parameter 'TraceConductorEnabled?' to table TraceParameterBoolData, which is necessary for grouping trace parameter by ")
+		raise Exception("TreeTimer processID {0} has not written parameter 'TraceConductorEnabled?' to table TraceParameterBoolData, which is necessary for grouping trace parameter by ".format(processID))
 
-	cid = getNodeCallpathId(db, nodeName)
+	cid = getNodeCallpathId(db, processID, nodeName)
 	query = "SELECT NodeEntryID, NodeExitID FROM TraceParameterBoolData WHERE RunID = {0} AND ProcessID = {1} AND CallPathID = {2} AND ParamName = \"TraceConductorEnabled?\";".format(runID, processID, cid)
 	cur.execute(query)
 	result = cur.fetchall()

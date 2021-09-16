@@ -29,15 +29,15 @@
 extern "C" {
 #endif
 
-int  MPI_Comm_size(MPI_Comm comm, int * size);
-int PMPI_Comm_size(MPI_Comm comm, int * size);
-int  MPI_Comm_rank(MPI_Comm comm, int * rank);
-int PMPI_Comm_rank(MPI_Comm comm, int * rank);
+int  MPI_Comm_size(MPI_Comm comm, int *size);
+int PMPI_Comm_size(MPI_Comm comm, int *size);
+int  MPI_Comm_rank(MPI_Comm comm, int *rank);
+int PMPI_Comm_rank(MPI_Comm comm, int *rank);
 
 int  MPI_Send(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 int PMPI_Send(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
-int  MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request * request);
-int PMPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request * request);
+int  MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
+int PMPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
 int  MPI_Ssend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 int PMPI_Ssend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 int  MPI_Issend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
@@ -45,8 +45,8 @@ int PMPI_Issend(const void *buf, int count, MPI_Datatype datatype, int dest, int
 
 int  MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status);
 int PMPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status);
-int  MPI_Irecv(void * buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request * request);
-int PMPI_Irecv(void * buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request * request);
+int  MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request);
+int PMPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request);
 
 int  MPI_Barrier(MPI_Comm comm);
 int PMPI_Barrier(MPI_Comm comm);
@@ -56,10 +56,10 @@ int  MPI_Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of
 int PMPI_Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
 int  MPI_Waitany(int count, MPI_Request array_of_requests[], int *indx, MPI_Status *status);
 int PMPI_Waitany(int count, MPI_Request array_of_requests[], int *indx, MPI_Status *status);
-int  MPI_Test(MPI_Request *request, int * flag, MPI_Status *status);
-int PMPI_Test(MPI_Request *request, int * flag, MPI_Status *status);
-int  MPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status * status);
-int PMPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status * status);
+int  MPI_Test(MPI_Request *request, int *flag, MPI_Status *status);
+int PMPI_Test(MPI_Request *request, int *flag, MPI_Status *status);
+int  MPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status *status);
+int PMPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status *status);
 
 int  MPI_Gather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount,                MPI_Datatype recvtype, int root, MPI_Comm comm);
 int PMPI_Gather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount,                MPI_Datatype recvtype, int root, MPI_Comm comm);
@@ -69,8 +69,8 @@ int  MPI_Allgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, vo
 int PMPI_Allgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm);
 int  MPI_Allgatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, const int *recvcounts, const int *displs, MPI_Datatype recvtype, MPI_Comm comm);
 int PMPI_Allgatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, const int *recvcounts, const int *displs, MPI_Datatype recvtype, MPI_Comm comm);
-int  MPI_Iallgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request * request);
-int PMPI_Iallgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request * request);
+int  MPI_Iallgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request);
+int PMPI_Iallgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request);
 
 int  MPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm);
 int PMPI_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm);
@@ -84,8 +84,8 @@ int PMPI_Allreduce(const void *sendbuf, void *recvbuf, int count, MPI_Datatype d
 
 int  MPI_Unpack(const void *inbuf, int insize, int *position, void *outbuf, int outcount, MPI_Datatype datatype, MPI_Comm comm);
 int PMPI_Unpack(const void *inbuf, int insize, int *position, void *outbuf, int outcount, MPI_Datatype datatype, MPI_Comm comm);
-int  MPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype, void* outbuf, int outsize, int * position, MPI_Comm comm);
-int PMPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype, void* outbuf, int outsize, int * position, MPI_Comm comm);
+int  MPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype, void *outbuf, int outsize, int *position, MPI_Comm comm);
+int PMPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype, void *outbuf, int outsize, int *position, MPI_Comm comm);
 int  MPI_Bsend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 int PMPI_Bsend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 int  MPI_Buffer_attach(void *buffer, int size);
@@ -101,10 +101,10 @@ int  MPI_Rsend_init(const void *buf, int count, MPI_Datatype datatype, int dest,
 int PMPI_Rsend_init(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request);
 int  MPI_Recv_init(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request);
 int PMPI_Recv_init(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request);
-int  MPI_Start(MPI_Request * request);
-int PMPI_Start(MPI_Request * request);
-int  MPI_Startall(int count, MPI_Request * array_of_requests);
-int PMPI_Startall(int count, MPI_Request * array_of_requests);
+int  MPI_Start(MPI_Request *request);
+int PMPI_Start(MPI_Request *request);
+int  MPI_Startall(int count, MPI_Request *array_of_requests);
+int PMPI_Startall(int count, MPI_Request *array_of_requests);
 
 int  MPI_Put(const void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win);
 int PMPI_Put(const void *origin_addr, int origin_count, MPI_Datatype origin_datatype, int target_rank, MPI_Aint target_disp, int target_count, MPI_Datatype target_datatype, MPI_Win win);

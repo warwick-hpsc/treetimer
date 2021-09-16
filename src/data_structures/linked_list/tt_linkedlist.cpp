@@ -38,11 +38,11 @@ namespace treetimer
 		{
 			if(this->head != nullptr)
 			{
-				LinkedListNode<T> * ptr = this->head;
+				LinkedListNode<T> *ptr = this->head;
 
 				while(ptr != nullptr)
 				{
-					LinkedListNode<T> * current = ptr;
+					LinkedListNode<T> *current = ptr;
 					ptr = ptr->next;
 					delete(current);
 				}

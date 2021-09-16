@@ -26,6 +26,9 @@ namespace treetimer
 		{
 			namespace drivers
 			{
+				// Need for table unclear, a script can collect this data.
+/*
+
 				void writeSchemaApplicationConfigData(TTSQLite3& dataAccess);
 
 
@@ -45,6 +48,7 @@ namespace treetimer
 						 std::vector<std::string> boolParamNames,  std::vector<bool> boolParamValues,
 						 std::vector<std::string> stringParamNames,  std::vector<std::string> stringParamValues,
 						 int * applicationConfigID);
+*/
 			}
 		}
 	}

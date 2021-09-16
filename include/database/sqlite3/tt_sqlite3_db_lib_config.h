@@ -33,7 +33,7 @@ namespace treetimer
 										 bool aggParam, bool traceParam,
 										 bool aggPAPI, bool tracePAPI,
 										 bool mpiHooks,
-										 int * libConfigID);
+										 int *libConfigID);
 
 				void writeLibraryConfigID(TTSQLite3& dataAccess,
 										 int verMajor, int verMinor,
@@ -41,7 +41,7 @@ namespace treetimer
 										 bool aggParam, bool traceParam,
 										 bool aggPAPI, bool tracePAPI,
 										 bool mpiHooks,
-										 int * libConfigID);
+										 int *libConfigID);
 			}
 		}
 	}

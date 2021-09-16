@@ -25,22 +25,12 @@ namespace treetimer
 		{
 			namespace drivers
 			{
-				// ========================================================================================================================
-
 				void writeSchemaProfileNodeData(TTSQLite3& dataAccess);
 
-				// ========================================================================================================================
+				void findProfileNodeID(TTSQLite3& dataAccess, std::string profileNodeName, int profileNodeTypeID, int *profileNodeID);
 
-				void findProfileNodeID(TTSQLite3& dataAccess, std::string profileNodeName, int profileNodeTypeID, int * profileNodeID);
-
-				// ========================================================================================================================
-
-				void writeTreeNodeProfileNodeData(TTSQLite3& dataAccess,
-												  std::string profileNodeName,
-												  int profileNodeTypeID,
-												  int * profileNodeID);
-
-				// ========================================================================================================================
+				void writeTreeNodeProfileNodeData(TTSQLite3& dataAccess, std::string profileNodeName,
+												  int profileNodeTypeID, int *profileNodeID);
 			}
 		}
 	}

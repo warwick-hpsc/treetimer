@@ -40,11 +40,11 @@ namespace tt_m = treetimer::core::mpi;
 
 #define INSTR_MPI_CONDITION (tt_c::libInit && tt_c::instrumState->config->eMPIHooks && (! tt_c::instrumState->config->inLibrary) && (!tt_c::instrumState->sleeping))
 
-int MPI_Comm_size(MPI_Comm comm, int * size)
+int MPI_Comm_size(MPI_Comm comm, int *size)
 {
 	return PMPI_Comm_size(comm, size);
 }
-int PMPI_Comm_size(MPI_Comm comm, int * size)
+int PMPI_Comm_size(MPI_Comm comm, int *size)
 {
 	if (tt_m::lPMPI_Comm_size == nullptr) {
 		tt_m::lPMPI_Comm_size = (int(*)(MPI_Comm, int*))dlsym(RTLD_NEXT, "PMPI_Comm_size");
@@ -72,11 +72,11 @@ int PMPI_Comm_size(MPI_Comm comm, int * size)
 	return r;
 }
 
-int MPI_Comm_rank(MPI_Comm comm, int * rank)
+int MPI_Comm_rank(MPI_Comm comm, int *rank)
 {
 	return PMPI_Comm_rank(comm, rank);
 }
-int PMPI_Comm_rank(MPI_Comm comm, int * rank)
+int PMPI_Comm_rank(MPI_Comm comm, int *rank)
 {
 	if (tt_m::lPMPI_Comm_rank == nullptr) {
 		tt_m::lPMPI_Comm_rank = (int(*)(MPI_Comm, int*))dlsym(RTLD_NEXT, "PMPI_Comm_rank");
@@ -142,11 +142,11 @@ int PMPI_Send(const void *buf, int count, MPI_Datatype datatype, int dest, int t
 	return r;
 }
 
-int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request * request)
+int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request)
 {
 	return PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
 }
-int PMPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request * request)
+int PMPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request)
 {
 	if (tt_m::lPMPI_Isend == nullptr) {
 		tt_m::lPMPI_Isend = (int(*)(const void*, int, MPI_Datatype, int, int, MPI_Comm, MPI_Request*))dlsym(RTLD_NEXT, "PMPI_Isend");
@@ -297,11 +297,11 @@ int PMPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, 
 	return r;
 }
 
-int MPI_Irecv(void * buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request * request)
+int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request)
 {
 	return PMPI_Irecv(buf, count, datatype, source, tag, comm, request);
 }
-int PMPI_Irecv(void * buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request * request)
+int PMPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request)
 {
 	if (tt_m::lPMPI_Irecv == nullptr) {
 		tt_m::lPMPI_Irecv = (int(*)(void*, int, MPI_Datatype, int, int, MPI_Comm, MPI_Request*))dlsym(RTLD_NEXT, "PMPI_Irecv");
@@ -443,11 +443,11 @@ int PMPI_Waitany(int count, MPI_Request array_of_requests[], int *indx, MPI_Stat
 	return r;
 }
 
-int MPI_Test(MPI_Request *request, int * flag, MPI_Status *status)
+int MPI_Test(MPI_Request *request, int *flag, MPI_Status *status)
 {
 	return PMPI_Test(request, flag, status);
 }
-int PMPI_Test(MPI_Request *request, int * flag, MPI_Status *status)
+int PMPI_Test(MPI_Request *request, int *flag, MPI_Status *status)
 {
 	if (tt_m::lPMPI_Test == nullptr) {
 		tt_m::lPMPI_Test = (int(*)(MPI_Request*, int*, MPI_Status*))dlsym(RTLD_NEXT, "MPI_Test");
@@ -469,11 +469,11 @@ int PMPI_Test(MPI_Request *request, int * flag, MPI_Status *status)
 	return r;
 }
 
-int MPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status * status)
+int MPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status *status)
 {
 	return PMPI_Probe(source, tag, comm, status);
 }
-int PMPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status * status)
+int PMPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status *status)
 {
 	if (tt_m::lPMPI_Probe == nullptr) {
 		tt_m::lPMPI_Probe = (int(*)(int, int, MPI_Comm, MPI_Status*))dlsym(RTLD_NEXT, "MPI_Probe");
@@ -667,11 +667,11 @@ int PMPI_Allgatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, v
 	return r;
 }
 
-int MPI_Iallgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request * request)
+int MPI_Iallgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request)
 {
 	return PMPI_Iallgather(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm, request);
 }
-int PMPI_Iallgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request * request)
+int PMPI_Iallgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request)
 {
 	if (tt_m::lPMPI_Iallgather == nullptr) {
 		tt_m::lPMPI_Iallgather = (int(*)(const void*, int, MPI_Datatype, void*, int, MPI_Datatype, MPI_Comm, MPI_Request*))dlsym(RTLD_NEXT, "MPI_Iallgather");
@@ -910,11 +910,11 @@ int PMPI_Unpack(const void *inbuf, int insize, int *position, void *outbuf, int 
 	return r;
 }
 
-int MPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype, void* outbuf, int outsize, int * position, MPI_Comm comm)
+int MPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype, void *outbuf, int outsize, int *position, MPI_Comm comm)
 {
 	return PMPI_Pack(inbuf, incount, datatype, outbuf, outsize, position, comm);
 }
-int PMPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype, void* outbuf, int outsize, int * position, MPI_Comm comm)
+int PMPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype, void *outbuf, int outsize, int *position, MPI_Comm comm)
 {
 	if (tt_m::lPMPI_Pack == nullptr) {
 		tt_m::lPMPI_Pack = (int(*)(const void*, int, MPI_Datatype, void*, int, int*, MPI_Comm))dlsym(RTLD_NEXT, "PMPI_Pack");
@@ -1211,11 +1211,11 @@ int PMPI_Recv_init(void *buf, int count, MPI_Datatype datatype, int source, int 
 	return r;
 }
 
-int MPI_Start(MPI_Request * request)
+int MPI_Start(MPI_Request *request)
 {
 	return PMPI_Start(request);
 }
-int PMPI_Start(MPI_Request * request)
+int PMPI_Start(MPI_Request *request)
 {
 	if (tt_m::lPMPI_Start == nullptr) {
 		tt_m::lPMPI_Start = (int(*)(MPI_Request*))dlsym(RTLD_NEXT, "PMPI_Start");
@@ -1236,11 +1236,11 @@ int PMPI_Start(MPI_Request * request)
 	return r;
 }
 
-int MPI_Startall(int count, MPI_Request * array_of_requests)
+int MPI_Startall(int count, MPI_Request *array_of_requests)
 {
 	return PMPI_Startall(count, array_of_requests);
 }
-int PMPI_Startall(int count, MPI_Request * array_of_requests)
+int PMPI_Startall(int count, MPI_Request *array_of_requests)
 {
 	if (tt_m::lPMPI_Startall == nullptr) {
 		tt_m::lPMPI_Startall = (int(*)(int, MPI_Request*))dlsym(RTLD_NEXT, "PMPI_Startall");

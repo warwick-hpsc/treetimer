@@ -41,17 +41,14 @@ namespace treetimer
 				// Store Application Name, Version - Global
 				void storeApplicationData(TTJson& data, treetimer::config::Config& config);
 
-				// Store Integer Global Parameters
+				// Update: what is the purpose of "global" parameters? Codebase only sets them, never uses them.
+				//         And if they're global, why does each rank need to write them to database?
+				/*
 				void storeGlobalIntParameters(TTJson& data, treetimer::config::Config& config);
-
-				// Store Double Global Parameters
 				void storeGlobalDoubleParameters(TTJson& data, treetimer::config::Config& config);
-
-				// Store Boolean Global Parameters
 				void storeGlobalBoolParameters(TTJson& data, treetimer::config::Config& config);
-
-				// Store String Global Parameters
 				void storeGlobalStringParameters(TTJson& data, treetimer::config::Config& config);
+				*/
 
 				// Store Global Process Count
 				void storeProcessCount(TTJson& data, treetimer::config::Config& config);

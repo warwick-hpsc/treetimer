@@ -43,7 +43,6 @@ namespace treetimer
 		{
 			void setMPIRank(TTProcessConfig& processConfig)
 			{
-				int rank;
 				MPI_Comm_rank(MPI_COMM_WORLD, &processConfig.mpiRank);
 			}
 

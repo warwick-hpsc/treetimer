@@ -2,58 +2,66 @@
 # ===== Third party =====
 
 # Directories
-SQLITE_INC=${SQLITE_DIR}/include
+ifdef SQLITE_DIR
+	SQLITE_INC=-I${SQLITE_DIR}/include
+	SQLITE_LIB=-L${SQLITE_DIR}/lib
+endif
 
 # Library Name
 LIB_NAME = tt
 
 # ===== Do not edit below this line =====
 
-LIBDIR = -L
-LIB = -l
-INC = -I
-
 # Compilers:
 ifeq ($(COMPILER),gnu)
-	CC  = gcc
-	FC  = gfortran
-	AR  = ar
-	MPIFC  = mpif90
-	MPICC  = mpicc
-	MPICXX = mpic++
+	CC  ?= gcc
+	FC  ?= gfortran
+	AR  ?= ar
+	MPIFC  ?= mpif90
+	MPICC  ?= mpicc
+	MPICXX ?= mpic++
+	c_warnings = -fmax-errors=1 -Wall -Werror -Wno-deprecated-declarations
+	f_warnings = -fmax-errors=1 -Wall -Werror -Wno-deprecated-declarations -Wno-tabs
 else ifeq ($(COMPILER),intel)
-	CC  = icc
-	FC  = ifort
-	AR  = xiar
-	MPIFC = mpiifort
-	MPICC = mpiicc
-	MPICXX = mpiicpc
+	CC  ?= icc
+	FC  ?= ifort
+	AR  ?= xiar
+	MPIFC ?= mpiifort
+	MPICC ?= mpiicc
+	MPICXX ?= mpiicpc
 else ifeq ($(COMPILER),clang)
-    CC = clang
-    FC = gfortran ## LLVM-Fortran far from ready (pre-Alpha)
-    AR = ar
-    MPIFC = mpif90 ## LLVM-Fortran far from ready (pre-Alpha)
-    MPICC = mpicc -cc=clang
-    MPICXX = mpicxx -cxx=clang++
+	CC ?= clang
+	FC ?= gfortran ## LLVM-Fortran far from ready (pre-Alpha)
+	AR ?= ar
+	MPIFC ?= mpif90 ## LLVM-Fortran far from ready (pre-Alpha)
+	MPICC ?= mpicc -cc=clang
+	MPICXX ?= mpicxx -cxx=clang++
+else ifeq ($(COMPILER),cray)
+	CC ?= cc
+	FC ?= ftn
+	AR ?= ar
+	MPIFC ?= ftn
+	MPICC ?= cc
+	MPICXX ?= CC
 endif
 
 # Build options:
-opt           = -O2
-debug         = -g -O2
+opt   = -O2
+debug = -O2 -g -DDEBUG
 
 # Include Paths
-TREETIMER_INC=./include
+TREETIMER_INC=-I./include
 
-INCLUDE=${INC}${TREETIMER_INC} ${INC}${SQLITE_INC}
+INCLUDE=${TREETIMER_INC} ${SQLITE_INC}
 
 # Library Paths
-SQLITE_LIB=${LIBDIR}${SQLITE_DIR}/lib -lsqlite3
+SQLITE_LIB += -lsqlite3
 
 # Library Links
 LINK = ${SQLITE_LIB} -lm -lc
 
 # Fortran flags:
-FFLAGS        := $(debug)
+FFLAGS        := $(debug) $(f_warnings)
 FSTDLIBS      :=
 F2C_NAMING    = F2C_UNDERSCORE
 ifeq ($(COMPILER),intel)
@@ -62,11 +70,11 @@ ifeq ($(COMPILER),intel)
 endif
 
 # C flags:
-CFLAGS        = $(debug) -std=gnu99
+CFLAGS        = $(debug) -std=gnu99 $(c_warnings)
 CDEF          = -D
 
 # C++ flags:
-CXXFLAGS      = $(debug)
+CXXFLAGS      = $(debug) $(c_warnings)
 
 LD = $(MPIFC)
 
@@ -126,21 +134,21 @@ OBJECTS = \
 		  src/timing-library/interface/tt_wrapper_f90.o
 
 INCLUDE+= \
-        ${INC} include/third-party/jsoncpp \
-		${INC} include/data_structures/tree \
-		${INC} include/data_structures/linked_list \
-		${INC} include/database/sqlite3 \
-		${INC} include/timing_library/measurement \
-        ${INC} include/timing_library/measurement/parameters \
-        ${INC} include/timing_library/measurement/timers \
-        ${INC} include/timing_library/measurement/mpi \
-        ${INC} include/timing_library/io/json \
-        ${INC} include/timing_library/io/sqlite3 \
-        ${INC} include/timing_library/io/interface \
-        ${INC} include/timing_library/configuration \
-        ${INC} include/timing_library/environment \
-        ${INC} include/timing_library/core \
-        ${INC} include/timing_library/interface
+        -Iinclude/third-party/jsoncpp \
+		-Iinclude/data_structures/tree \
+		-Iinclude/data_structures/linked_list \
+		-Iinclude/database/sqlite3 \
+		-Iinclude/timing_library/measurement \
+        -Iinclude/timing_library/measurement/parameters \
+        -Iinclude/timing_library/measurement/timers \
+        -Iinclude/timing_library/measurement/mpi \
+        -Iinclude/timing_library/io/json \
+        -Iinclude/timing_library/io/sqlite3 \
+        -Iinclude/timing_library/io/interface \
+        -Iinclude/timing_library/configuration \
+        -Iinclude/timing_library/environment \
+        -Iinclude/timing_library/core \
+        -Iinclude/timing_library/interface
 
 -include F2C_conf
 

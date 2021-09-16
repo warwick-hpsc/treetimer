@@ -14,7 +14,6 @@
 
 #include "tt_systimers_linux.h"
 #include "tt_agg_timings.h"
-#include "tt_trace_timings.h"
 
 namespace treetimer
 {

@@ -27,50 +27,21 @@ namespace treetimer
 			{
 				void writeSchemaTraceParameterData(TTSQLite3& dataAccess);
 
-				void findTraceParameterIntDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, 
-												 std::string paramName, int paramValue,
-												 int * traceParamIntID);
+				void findTraceParameterIntDataID   (TTSQLite3& dataAccess, TT_TraceParamInt    p, int *traceParamIntID);
+				void findTraceParameterFloatDataID (TTSQLite3& dataAccess, TT_TraceParamFloat  p, int *traceParamDoubleID);
+				void findTraceParameterBoolDataID  (TTSQLite3& dataAccess, TT_TraceParamBool   p, int *traceParamBoolID);
+				void findTraceParameterStringDataID(TTSQLite3& dataAccess, TT_TraceParamString p, int *traceParamStringID);
 
+				// Note: 'verifyUnique' prevents data duplication, but makes this O(1) insertion a O(N) operation.
+				void writeTraceParameterIntData   (TTSQLite3& dataAccess, TT_TraceParamInt    p, int *traceParamIntID,    bool verifyUnique);
+				void writeTraceParameterFloatData (TTSQLite3& dataAccess, TT_TraceParamFloat  p, int *traceParamFloatID,  bool verifyUnique);
+				void writeTraceParameterBoolData  (TTSQLite3& dataAccess, TT_TraceParamBool   p, int *traceParamBoolID,   bool verifyUnique);
+				void writeTraceParameterStringData(TTSQLite3& dataAccess, TT_TraceParamString p, int *traceParamStringID, bool verifyUnique);
 
-				void findTraceParameterFloatDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, 
-												 std::string paramName, double paramValue,
-												 int * traceParamDoubleID);
-
-				void findTraceParameterBoolDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, 
-												 std::string paramName, int paramValue,
-												 int * traceParamBoolID);
-
-				void findTraceParameterStringDataID(TTSQLite3& dataAccess,
-												 int runID, int processID, int callPathID, int nodeEntryID, 
-												 std::string paramName, std::string paramValue,
-												 int * traceParamStringID);
-
-				void writeTraceParameterIntData(TTSQLite3& dataAccess,
-												int runID, int processID, int callPathID, 
-												int nodeEntryID, int nodeExitID, 
-												std::string paramName, int paramValue,
-												int * traceParamIntID);
-
-				void writeTraceParameterFloatData(TTSQLite3& dataAccess,
-												int runID, int processID, int callPathID, 
-												int nodeEntryID, int nodeExitID, 
-												std::string paramName, double paramValue,
-												int * traceParamFloatID);
-
-				void writeTraceParameterBoolData(TTSQLite3& dataAccess,
-												int runID, int processID, int callPathID, 
-												int nodeEntryID, int nodeExitID, 
-												std::string paramName, int paramValue,
-												int * traceParamBoolID);
-
-				void writeTraceParameterStringData(TTSQLite3& dataAccess,
-												int runID, int processID, int callPathID, 
-												int nodeEntryID, int nodeExitID, 
-												std::string paramName, std::string paramValue,
-												int * traceParamStringID);
+				MPI_Datatype createTraceParamIntMpiType();
+				MPI_Datatype createTraceParamFloatMpiType();
+				MPI_Datatype createTraceParamBoolMpiType();
+				MPI_Datatype createTraceParamStringMpiType();
 			}
 		}
 	}

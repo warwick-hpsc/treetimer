@@ -21,9 +21,11 @@ namespace treetimer
 		{
 			namespace drivers
 			{
+				// Need for table unclear, a script can collect this data.
+/*
 				void writeSchemaApplicationData(TTSQLite3& dataAccess)
 				{
-					char * zErrMsg = 0;
+					char *zErrMsg = 0;
 					std::string stmt = "CREATE TABLE IF NOT EXISTS ApplicationData(ApplicationID INTEGER, "
 																				  "ApplicationName TEXT, "
 																				  "ApplicationVersion TEXT, "
@@ -32,10 +34,10 @@ namespace treetimer
 					int err = sqlite3_exec(dataAccess.db, stmt.c_str(), NULL, 0, &zErrMsg);
 				}
 
-				void findApplicationDataID(TTSQLite3& dataAccess, std::string appName, std::string appVer, int * applicationID)
+				void findApplicationDataID(TTSQLite3& dataAccess, std::string appName, std::string appVer, int *applicationID)
 				{
-					sqlite3_stmt * pStmt;
-					char * zErrMsg = 0;
+					sqlite3_stmt *pStmt = nullptr;
+					char *zErrMsg = 0;
 
 					int err = sqlite3_prepare(dataAccess.db,
 											  "SELECT ApplicationID FROM ApplicationData WHERE "
@@ -50,7 +52,7 @@ namespace treetimer
 					if(err == SQLITE_ERROR)
 					{
 						std::cout << "SQL Error encountered in findApplicationDataID\n";
-						char * expandedQuery = sqlite3_expanded_sql(pStmt);
+						char *expandedQuery = sqlite3_expanded_sql(pStmt);
 						std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 						// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
@@ -68,9 +70,9 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeApplicationData(TTSQLite3& dataAccess, std::string appName, std::string appVer, int * applicationID)
+				void writeApplicationData(TTSQLite3& dataAccess, std::string appName, std::string appVer, int *applicationID)
 				{
-					sqlite3_stmt * pStmt;
+					sqlite3_stmt *pStmt = nullptr;
 					int err;
 
 					// Check for existing entry
@@ -88,7 +90,7 @@ namespace treetimer
 						if(err == SQLITE_ERROR)
 						{
 							std::cout << "SQL Error encountered in writeApplicationData\n";
-							char * expandedQuery = sqlite3_expanded_sql(pStmt);
+							char *expandedQuery = sqlite3_expanded_sql(pStmt);
 							std::cout << "Failed query: " << std::string(expandedQuery) << "\n";
 
 							// sqlite3_expanded_sql is not automatically freed by the sqlite3 library on finalize (unlike sqlite3_sql)
@@ -107,6 +109,7 @@ namespace treetimer
 						*applicationID = tmpID;
 					}
 				}
+*/
 			}
 		}
 	}

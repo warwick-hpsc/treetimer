@@ -27,9 +27,9 @@ namespace treetimer
 			{
 				void writeSchemaCPUSocketData(TTSQLite3& dataAccess);
 
-				void findCPUSocketDataID(TTSQLite3& dataAccess, int computeNodeID, int cpuID, int phySocketNum, int * cpuSocketID);
+				void findCPUSocketDataID(TTSQLite3& dataAccess, int computeNodeID, int cpuID, TT_Socket d_skt, int *cpuSocketID);
 
-				void writeCPUSocketData(TTSQLite3& dataAccess, int computeNodeID, int cpuID, int phySocketNum, int * cpuSocketID);
+				void writeCPUSocketData(TTSQLite3& dataAccess, int computeNodeID, int cpuID, TT_Socket d_skt, int *cpuSocketID);
 			}
 		}
 	}

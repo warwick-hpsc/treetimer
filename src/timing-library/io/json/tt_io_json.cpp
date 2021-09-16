@@ -36,6 +36,8 @@ namespace treetimer
 					data.root["ApplicationData"]["ApplicationVersion"] = config.appVersion;
 				}
 
+				// Update: What is the purpose of "global" parameters? Codebase only sets them, never uses them.
+/*
 				void storeGlobalIntParameters(TTJson& data, treetimer::config::Config& config)
 				{
 					std::unordered_map<std::string, treetimer::parameters::ParameterSingular<int> *>::iterator it;
@@ -75,6 +77,7 @@ namespace treetimer
 						data.root["GlobalParameters"]["Strings"][it->first] = it->second->value;
 					}
 				}
+*/
 
 				void storeProcessCount(TTJson& data, treetimer::config::Config& config)
 				{

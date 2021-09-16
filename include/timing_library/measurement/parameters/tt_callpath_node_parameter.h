@@ -30,16 +30,11 @@ namespace treetimer
 				std::string name;
 				T val;
 
-				char * name;
 				double minVal;
 				double avgVal;
 				double maxVal;
 				double totalVal;
 				int count;
-
-				// Linked List for Traces
-				struct it_trace_param_d_t * traceHead;
-				struct it_trace_param_d_t * traceTail;
 		};
 
 		namespace drivers

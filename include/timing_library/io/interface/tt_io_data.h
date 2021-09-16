@@ -40,15 +40,15 @@ namespace treetimer
 
 			tt_sql::TTSQLite3* setupOutput(treetimer::config::Config& config);
 
-			void writeRunConfigData(treetimer::config::Config& config, tt_sql::TTSQLite3* access);
+			void writeRunConfigData(treetimer::config::Config& config, tt_sql::TTSQLite3 *access);
 
 			void writeAggData(treetimer::config::Config& config,
 							  treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
-							  tt_sql::TTSQLite3* access);
+							  tt_sql::TTSQLite3 *access);
 
 			void writeTraceData(treetimer::config::Config& config,
 								treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>& callTree,
-								tt_sql::TTSQLite3* access);
+								tt_sql::TTSQLite3 *access);
 		}
 	}
 }

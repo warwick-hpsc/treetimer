@@ -14,7 +14,6 @@
 #define TT_TIMER_INCLUDE
 
 #include "tt_agg_timings.h"
-#include "tt_trace_timings.h"
 #include "tt_linkedlist.h"
 #include "tt_trace_timer.h"
 

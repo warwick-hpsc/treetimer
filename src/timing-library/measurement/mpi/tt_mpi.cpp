@@ -33,7 +33,7 @@ namespace tt_d = treetimer::core::drivers;
 
 #define INSTR_MPI_CONDITION (tt_c::libInit && tt_c::instrumState->config->eMPIHooks && (! tt_c::instrumState->config->inLibrary) && (!tt_c::instrumState->sleeping))
 
-int MPI_Comm_size(MPI_Comm comm, int * size)
+int MPI_Comm_size(MPI_Comm comm, int *size)
 {
 	if(INSTR_MPI_CONDITION)
 	{
@@ -57,7 +57,7 @@ int MPI_Comm_size(MPI_Comm comm, int * size)
 	return r;
 }
 
-int MPI_Comm_rank(MPI_Comm comm, int * rank)
+int MPI_Comm_rank(MPI_Comm comm, int *rank)
 {
 	if(INSTR_MPI_CONDITION)
 	{
@@ -111,7 +111,7 @@ int MPI_Send(const void *buf, int count, MPI_Datatype datatype, int dest, int ta
 	return r;
 }
 
-int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request * request)
+int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request)
 {
 	if(INSTR_MPI_CONDITION)
 	{
@@ -234,7 +234,7 @@ int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, M
 	return r;
 }
 
-int MPI_Irecv(void * buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request * request)
+int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request)
 {
 	if(INSTR_MPI_CONDITION)
 	{
@@ -341,7 +341,7 @@ int MPI_Waitany(int count, MPI_Request array_of_requests[], int *indx,
 	return r;
 }
 
-int MPI_Test(MPI_Request *request, int * flag, MPI_Status *status)
+int MPI_Test(MPI_Request *request, int *flag, MPI_Status *status)
 {
 	if(INSTR_MPI_CONDITION)
 	{
@@ -359,7 +359,7 @@ int MPI_Test(MPI_Request *request, int * flag, MPI_Status *status)
 	return r;
 }
 
-int MPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status * status)
+int MPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status *status)
 {
 	if(INSTR_MPI_CONDITION)
 	{
@@ -525,7 +525,7 @@ int MPI_Allgatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 }
 int MPI_Iallgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 				  void *recvbuf, int recvcount, MPI_Datatype recvtype,
-				  MPI_Comm comm, MPI_Request * request)
+				  MPI_Comm comm, MPI_Request *request)
 {
 	if(INSTR_MPI_CONDITION)
 	{
@@ -721,7 +721,7 @@ int MPI_Unpack(const void *inbuf, int insize, int *position, void *outbuf, int o
 	return r;
 }
 
-int MPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype, void* outbuf, int outsize, int * position, MPI_Comm comm)
+int MPI_Pack(const void *inbuf, int incount, MPI_Datatype datatype, void *outbuf, int outsize, int *position, MPI_Comm comm)
 {
 	if(INSTR_MPI_CONDITION)
 	{
@@ -958,7 +958,7 @@ int MPI_Recv_init(void *buf, int count, MPI_Datatype datatype, int source, int t
 	return r;
 }
 
-int MPI_Start(MPI_Request * request)
+int MPI_Start(MPI_Request *request)
 {
 	if(INSTR_MPI_CONDITION)
 	{
@@ -975,7 +975,7 @@ int MPI_Start(MPI_Request * request)
 	return r;
 }
 
-int MPI_Startall(int count, MPI_Request * array_of_requests)
+int MPI_Startall(int count, MPI_Request *array_of_requests)
 {
 	if(INSTR_MPI_CONDITION)
 	{

@@ -42,7 +42,7 @@ namespace treetimer
 {
 	namespace core
 	{
-		treetimer::config::State * instrumState;
+		treetimer::config::State *instrumState = nullptr;
 		bool libInit = false;
 
 		namespace drivers
@@ -166,7 +166,7 @@ namespace treetimer
 				instrumState->callTree->pos->nodeData.currentNodeEntryID = instrumState->callTree->nodeEntryCounter;
 
 				instrumState->callTree->pos->nodeData.instrumentThisVisit = ! treetimer::core::instrumState->sleeping;
-				if (instrumState->callTree->pos->parent == NULL) {
+				if (instrumState->callTree->pos->parent == nullptr) {
 					// Always instrument root node, need to know walltime
 					instrumState->callTree->pos->nodeData.instrumentThisVisit = true;
 				}

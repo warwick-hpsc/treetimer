@@ -30,7 +30,6 @@ namespace treetimer
 				T maxVal;
 
 				double avgVal;
-				//double stdDev;
 				double variance;
 				int count;
 		};
