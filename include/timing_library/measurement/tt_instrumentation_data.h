@@ -52,9 +52,9 @@ namespace treetimer
 				std::vector<std::pair<std::string, bool>>         boolParametersCached;
 				std::vector<std::pair<std::string, std::string>>  stringParametersCached;
 
+				int targetNumAggWindows = 1;
+
 				// Trace collection management
-				bool isConductor = false;
-				int traceCallInterval = 0;
 				bool instrumentThisVisit = true;
 
 				int currentNodeEntryID = 0;

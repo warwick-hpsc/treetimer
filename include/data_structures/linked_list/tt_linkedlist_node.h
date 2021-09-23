@@ -21,6 +21,7 @@ namespace treetimer
 		class LinkedListNode
 		{
 			public:
+				LinkedListNode();
 				LinkedListNode(T data);
 				~LinkedListNode();
 

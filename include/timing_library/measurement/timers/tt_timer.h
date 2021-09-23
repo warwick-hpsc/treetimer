@@ -28,6 +28,12 @@ namespace treetimer
 				Timer();
 				~Timer();
 
+				void resetTimer();
+				void startTimer(bool eATimers, bool eTTimers, long callEntryID);
+				void stopTimer(bool eATimers,  bool eTTimers, long callExitID);
+
+				void setNumAggWindows(int n);
+
 			   	// 'Hot' variables - used for in-progress timings
 				// Walltime
 			   	double startWallTime;
@@ -42,19 +48,12 @@ namespace treetimer
 			   	long callExitID;
 
 				// Aggregate Timer Statistics
-				AggTimings aggTimings;
+				treetimer::data_structures::LinkedList<AggTimings> aggTimings;
 
 				// Trace Timer Linked List
 				treetimer::data_structures::LinkedList<TraceTimer> traceTimers;
 
 		};
-
-		namespace drivers
-		{
-			void resetTimer(Timer& timer);
-			void startTimer(Timer& timer, bool eATimers, bool eTTimers, long callEntryID);
-			void stopTimer(Timer& timer, bool eATimers,  bool eTTimers, long callExitID);
-		}
 	}
 }
 

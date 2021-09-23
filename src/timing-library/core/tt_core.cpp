@@ -33,7 +33,8 @@ extern const std::string codeBlockNames[TT_CODE_BLOCK_COUNT] = {std::string("Pro
 																std::string("MPICollectiveCall"),
 																std::string("MPIIOCall"),
 																std::string("LibraryCall"),
-																std::string("TraceConductor")};
+																std::string("TraceConductor"),
+																std::string("AggregationStepper")};
 																// std::string("MPINonCommMethodCall"),
 																// std::string("NonMPIMethodCall"),
 																// std::string("Unspecified"),
@@ -155,6 +156,36 @@ namespace treetimer
 				}
 			}
 
+			void TreeTimerEnterAggregationStepper(std::string blockName, int stepInterval)
+			{
+				// Move to the next aggregation window. A little tricky, as each CallPath 
+				// node performs its own aggregation. So each node will have to advance its 
+				// own aggregation window according to 'targetNumAggWindows'.
+
+				if (!treetimer::core::instrumState->sleeping) {
+					if (instrumState->config->eATimers || instrumState->config->eAParam) {
+						if (instrumState->aggStepInterval <= 0) {
+							// Initialise
+							instrumState->aggStepInterval = stepInterval;
+							instrumState->aggStepIntervalCounter = stepInterval;
+							instrumState->targetNumAggWindows = 1;
+							// Negate the subsequent decrement:
+							instrumState->aggStepIntervalCounter++;
+						}
+
+						// Decide whether to step to next aggregation window:
+						instrumState->aggStepIntervalCounter--;
+						if (instrumState->aggStepIntervalCounter <= 0) {
+							// Trigger a step to a next window
+							instrumState->targetNumAggWindows++;
+							instrumState->aggStepIntervalCounter = instrumState->aggStepInterval;
+						}
+					}
+				}
+
+				TreeTimerEnterBlock(blockName, TT_NODE_TYPE_AGGREGATION_STEPPER);
+			}
+
 			void TreeTimerEnterBlock(std::string blockName, CodeBlockType blockType)
 			{
 				// Move position in callpath tree
@@ -170,6 +201,9 @@ namespace treetimer
 					// Always instrument root node, need to know walltime
 					instrumState->callTree->pos->nodeData.instrumentThisVisit = true;
 				}
+
+				// Ensure each node is on same aggregation window
+				instrumState->callTree->pos->nodeData.targetNumAggWindows = instrumState->targetNumAggWindows;
 
 				if (instrumState->callTree->pos->nodeData.instrumentThisVisit) {
 					// Start instrumentation on data node

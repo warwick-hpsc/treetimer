@@ -1129,12 +1129,20 @@ namespace treetimer
 						d.rank = dataAccess.rankGlobal;
 						d.callPathID = *callPathID;
 						d.processID = processID;
-						d.minWallTime = node.nodeData.blockTimer->aggTimings.minWalltime;
-						d.avgWallTime = node.nodeData.blockTimer->aggTimings.avgWalltime;
-						d.maxWallTime = node.nodeData.blockTimer->aggTimings.maxWalltime;
-						d.stdev = sqrt(node.nodeData.blockTimer->aggTimings.varianceWalltime);
-						d.count = node.nodeData.blockTimer->aggTimings.count;
-						tt_sql::drivers::writeAggregateTimeData(dataAccess, d, &aggTimeID, false);
+						int w=1;
+						treetimer::data_structures::LinkedListNode<treetimer::timers::AggTimings> *ptr = node.nodeData.blockTimer->aggTimings.head;
+						while(ptr != nullptr) {
+							d.window = w;
+							d.minWallTime = ptr->data.minWalltime;
+							d.avgWallTime = ptr->data.avgWalltime;
+							d.maxWallTime = ptr->data.maxWalltime;
+							d.stdev = sqrt(ptr->data.varianceWalltime);
+							d.count = ptr->data.count;
+							tt_sql::drivers::writeAggregateTimeData(dataAccess, d, &aggTimeID, false);
+
+							w++;
+							ptr = ptr->next;
+						}
 					}
 
 					// (d) Aggregate Parameter Data
@@ -1148,18 +1156,25 @@ namespace treetimer
 						// Int Parameters;
 						for(it_int = node.nodeData.intParameters.begin(); it_int != node.nodeData.intParameters.end(); it_int++)
 						{
-							int aggParamID;
 							tt_sql::TT_AggParamInt p;
 							p.rank = dataAccess.rankGlobal;
 							p.callPathID = *callPathID;
 							p.processID = processID;
 							tt_strlcpy(p.paramName, it_int->first.c_str(), MAX_STRING_LENGTH);
-							p.minValue = it_int->second->aggParam.minVal;
-							p.maxValue = it_int->second->aggParam.maxVal;
-							p.avgValue = it_int->second->aggParam.avgVal;
-							p.stdev    = sqrt(it_int->second->aggParam.variance);
-							p.count    = it_int->second->aggParam.count;
-							tt_sql::drivers::writeAggregateParameterIntData(dataAccess, p, &aggParamID, false);
+							int w=1;
+							treetimer::data_structures::LinkedListNode<treetimer::parameters::AggParameter<int>> *ptr = it_int->second->aggValues.head;
+							while (ptr != nullptr) {
+								p.window = w;
+								p.minValue = ptr->data.minVal;
+								p.maxValue = ptr->data.maxVal;
+								p.avgValue = ptr->data.avgVal;
+								p.stdev = sqrt(ptr->data.variance);
+								p.count = ptr->data.count;
+								tt_sql::drivers::writeAggregateParameterIntData(dataAccess, p, nullptr, false);
+
+								w++;
+								ptr = ptr->next;
+							}
 						}
 
 						std::unordered_map<std::string, treetimer::parameters::Parameter<double> *>::iterator it_float;
@@ -1167,18 +1182,25 @@ namespace treetimer
 						// Float Parameters;
 						for(it_float = node.nodeData.doubleParameters.begin(); it_float != node.nodeData.doubleParameters.end(); it_float++)
 						{
-							int aggParamID;
 							tt_sql::TT_AggParamFloat p;
 							p.rank = dataAccess.rankGlobal;
 							p.callPathID = *callPathID;
 							p.processID = processID;
 							tt_strlcpy(p.paramName, it_float->first.c_str(), MAX_STRING_LENGTH);
-							p.minValue = it_float->second->aggParam.minVal;
-							p.maxValue = it_float->second->aggParam.maxVal;
-							p.avgValue = it_float->second->aggParam.avgVal;
-							p.stdev    = sqrt(it_float->second->aggParam.variance);
-							p.count    = it_float->second->aggParam.count;
-							tt_sql::drivers::writeAggregateParameterFloatData(dataAccess, p, &aggParamID, false);
+							int w=1;
+							treetimer::data_structures::LinkedListNode<treetimer::parameters::AggParameter<double>> *ptr = it_float->second->aggValues.head;
+							while (ptr != nullptr) {
+								p.window = w;
+								p.minValue = ptr->data.minVal;
+								p.maxValue = ptr->data.maxVal;
+								p.avgValue = ptr->data.avgVal;
+								p.stdev = sqrt(ptr->data.variance);
+								p.count = ptr->data.count;
+								tt_sql::drivers::writeAggregateParameterFloatData(dataAccess, p, nullptr, false);
+
+								w++;
+								ptr = ptr->next;
+							}
 						}
 
 						std::unordered_map<std::string, treetimer::parameters::Parameter<bool> *>::iterator it_bool;
@@ -1186,18 +1208,25 @@ namespace treetimer
 						// Bool Parameters;
 						for(it_bool = node.nodeData.boolParameters.begin(); it_bool != node.nodeData.boolParameters.end(); it_bool++)
 						{
-							int aggParamID;
 							tt_sql::TT_AggParamBool p;
 							p.rank = dataAccess.rankGlobal;
 							p.callPathID = *callPathID;
 							p.processID = processID;
 							tt_strlcpy(p.paramName, it_bool->first.c_str(), MAX_STRING_LENGTH);
-							p.minValue = it_bool->second->aggParam.minVal;
-							p.maxValue = it_bool->second->aggParam.maxVal;
-							p.avgValue = it_bool->second->aggParam.avgVal;
-							p.stdev    = sqrt(it_bool->second->aggParam.variance);
-							p.count    = it_bool->second->aggParam.count;
-							tt_sql::drivers::writeAggregateParameterBoolData(dataAccess, p, &aggParamID, false);
+							int w=1;
+							treetimer::data_structures::LinkedListNode<treetimer::parameters::AggParameter<bool>> *ptr = it_bool->second->aggValues.head;
+							while (ptr != nullptr) {
+								p.window = w;
+								p.minValue = ptr->data.minVal;
+								p.maxValue = ptr->data.maxVal;
+								p.avgValue = ptr->data.avgVal;
+								p.stdev = sqrt(ptr->data.variance);
+								p.count = ptr->data.count;
+								tt_sql::drivers::writeAggregateParameterBoolData(dataAccess, p, nullptr, false);
+
+								w++;
+								ptr = ptr->next;
+							}
 						}
 					}
 

@@ -36,37 +36,47 @@ namespace treetimer
 			// Nothing to do currently
 		}
 
-		namespace drivers
+		template <class T>
+		void Parameter<T>::addValue(T value, bool eAparam, bool eTParam, long nodeEntryID, long nodeExitID)
 		{
-			template <class T>
-			void addValue(Parameter<T>& param, T value, bool eAparam, bool eTParam, long nodeEntryID, long nodeExitID)
+			// Update the aggregate parameter statistics
+			if(eAparam)
 			{
-				// Update the aggregate parameter statistics
-				if(eAparam)
-				{
-					updateValue(param.aggParam, value);
+				if (this->aggValues.size == 0) {
+					this->aggValues.add(AggParameter<T>());
 				}
-
-				// Add a trace
-				if(eTParam)
-				{
-					// We're going to make a copy of this object, so create it on the stack
-					TraceParameter<T> tmp(value, nodeEntryID, nodeExitID);
-					param.traceParams.add(tmp);
-				}
+				this->aggValues.tail->data.updateValue(value);
 			}
 
-			template <>
-			void addValue(Parameter<std::string>& param, std::string value, bool eAparam, bool eTParam, long nodeEntryID, long nodeExitID)
+			// Add a trace
+			if(eTParam)
 			{
-				// String Parameters do not have aggregate values, only traces
+				// We're going to make a copy of this object, so create it on the stack
+				TraceParameter<T> tmp(value, nodeEntryID, nodeExitID);
+				this->traceParams.add(tmp);
+			}
+		}
 
-				// Add a trace
-				if(eTParam)
-				{
-					// We're going to make a copy of this object, so create it on the stack
-					TraceParameter<std::string> tmp(value, nodeEntryID, nodeExitID);
-					param.traceParams.add(tmp);
+		template <>
+		void Parameter<std::string>::addValue(std::string value, bool eAparam, bool eTParam, long nodeEntryID, long nodeExitID)
+		{
+			// String Parameters do not have aggregate values, only traces
+
+			// Add a trace
+			if(eTParam)
+			{
+				// We're going to make a copy of this object, so create it on the stack
+				TraceParameter<std::string> tmp(value, nodeEntryID, nodeExitID);
+				this->traceParams.add(tmp);
+			}
+		}
+
+		template<class T>
+		void Parameter<T>::setNumAggWindows(int n)
+		{
+			if (n > this->aggValues.size) {
+				while (n != this->aggValues.size) {
+					this->aggValues.add(AggParameter<T>());
 				}
 			}
 		}
@@ -80,10 +90,4 @@ template class treetimer::parameters::Parameter<long>;
 template class treetimer::parameters::Parameter<double>;
 template class treetimer::parameters::Parameter<bool>;
 template class treetimer::parameters::Parameter<std::string>;
-// Drivers
-template void treetimer::parameters::drivers::addValue<int>(Parameter<int>& param, int value, bool eAparam, bool eTParam, long nodeEntryID, long nodeExitID);
-template void treetimer::parameters::drivers::addValue<long>(Parameter<long>& param, long value, bool eAparam, bool eTParam, long nodeEntryID, long nodeExitID);
-template void treetimer::parameters::drivers::addValue<double>(Parameter<double>& param, double value, bool eAparam, bool eTParam, long nodeEntryID, long nodeExitID);
-template void treetimer::parameters::drivers::addValue<bool>(Parameter<bool>& param, bool value, bool eAparam, bool eTParam, long nodeEntryID, long nodeExitID);
-template void treetimer::parameters::drivers::addValue<>(Parameter<std::string>& param, std::string value, bool eAparam, bool eTParam, long nodeEntryID, long nodeExitID);
 

@@ -76,59 +76,55 @@ namespace treetimer
 
 		}
 
-		namespace drivers
+		template <class T>
+		void AggParameter<T>::updateValue(T value)
 		{
-			template <class T>
-			void updateValue(AggParameter<T>& param, T value)
-			{
-				if(value < param.minVal) param.minVal = value;
-				if(value > param.maxVal) param.maxVal = value;
+			if(value < this->minVal) this->minVal = value;
+			if(value > this->maxVal) this->maxVal = value;
 
-				// Welford's Online Algorithm
+			// Welford's Online Algorithm
 
-				// Avg(Mean) Val
-				// Need old mean for variance calculation
-				double oldMean = param.avgVal;
-				param.avgVal = ((param.avgVal * param.count) + value) / (param.count + 1);
+			// Avg(Mean) Val
+			// Need old mean for variance calculation
+			double oldMean = this->avgVal;
+			this->avgVal = ((this->avgVal * this->count) + value) / (this->count + 1);
 
-				// Variance
-				param.variance = ((param.variance * param.count) + ((value - oldMean) * (value - param.avgVal))) / (param.count + 1);
+			// Variance
+			this->variance = ((this->variance * this->count) + ((value - oldMean) * (value - this->avgVal))) / (this->count + 1);
 
-				// Count
-				param.count++;
+			// Count
+			this->count++;
+		}
 
-			}
+		template <>
+		void AggParameter<bool>::updateValue(bool value)
+		{
+			int tmp = value ? 1 : 0;
 
-			template <>
-			void updateValue(AggParameter<bool>& param, bool value)
-			{
-				int tmp = value ? 1 : 0;
+			if(tmp < this->minVal) this->minVal = tmp;
+			if(tmp > this->maxVal) this->maxVal = tmp;
 
-				if(tmp < param.minVal) param.minVal = tmp;
-				if(tmp > param.maxVal) param.maxVal = tmp;
+			// Avg(Mean) Val
+			// Welford's Online Algorithm
+			double oldMean = this->avgVal;
+			this->avgVal = ((this->avgVal * this->count) + tmp) / (this->count + 1);
 
-				// Avg(Mean) Val
-				// Welford's Online Algorithm
-				double oldMean = param.avgVal;
-				param.avgVal = ((param.avgVal * param.count) + tmp) / (param.count + 1);
+			// Variance
+			this->variance = ((this->variance * this->count) + ((tmp - oldMean) * (tmp - this->avgVal))) / (this->count + 1);
 
-				// Variance
-				param.variance = ((param.variance * param.count) + ((tmp - oldMean) * (tmp - param.avgVal))) / (param.count + 1);
+			// Count
+			this->count++;
+		}
 
-				// Count
-				param.count++;
-			}
+		template <>
+		void AggParameter<std::string>::updateValue(std::string value)
+		{
+			// Most of this is blank for now - we can't really have aggregate
+			// trackers for a string parameter. This exists mostly to override
+			// the template, since the log function should not call this function.
 
-			template <>
-			void updateValue(AggParameter<std::string>& param, std::string value)
-			{
-				// Most of this is blank for now - we can't really have aggregate
-				// trackers for a string parameter. This exists mostly to override
-				// the template, since the log function should not call this function.
-
-				// Count
-				param.count++;
-			}
+			// Count
+			this->count++;
 		}
 	}
 }
@@ -141,8 +137,3 @@ template class treetimer::parameters::AggParameter<double>;
 template class treetimer::parameters::AggParameter<bool>;
 template class treetimer::parameters::AggParameter<std::string>;
 
-template void treetimer::parameters::drivers::updateValue<int>(AggParameter<int>& param, int value);
-template void treetimer::parameters::drivers::updateValue<long>(AggParameter<long>& param, long value);
-template void treetimer::parameters::drivers::updateValue<double>(AggParameter<double>& param, double value);
-template void treetimer::parameters::drivers::updateValue<>(AggParameter<bool>& param, bool value);
-template void treetimer::parameters::drivers::updateValue<>(AggParameter<std::string>& param, std::string value);

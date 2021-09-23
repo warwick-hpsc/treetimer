@@ -21,7 +21,7 @@ namespace treetimer
 	{
 		Timer::Timer()
 		{
-			drivers::resetTimer(*this);
+			this->resetTimer();
 		}
 
 		Timer::~Timer()
@@ -29,57 +29,66 @@ namespace treetimer
 
 		}
 
-		namespace drivers
+		void Timer::resetTimer()
 		{
-			void resetTimer(Timer& timer)
+			// Clear Temporary Variables
+		   	this->startWallTime = 0.0;
+		   	this->stopWallTime = 0.0;
+
+		   	this->startCPUTime = 0.0;
+		   	this->stopCPUTime = 0.0;
+
+		   	// Reset Aggregate Data
+		    this->aggTimings.reset();
+
+		   	// Reset Trace Data
+		}
+
+		void Timer::startTimer(bool eATimers, bool eTTimers, long callEntryID)
+		{
+			if(eATimers || eTTimers)
 			{
-				// Clear Temporary Variables
-			   	timer.startWallTime = 0.0;
-			   	timer.stopWallTime = 0.0;
+				// Store when timer was started
+				treetimer::timers::drivers::set_timers(&(this->startCPUTime), &(this->startWallTime));
 
-			   	timer.startCPUTime = 0.0;
-			   	timer.stopCPUTime = 0.0;
-
-			   	// Reset Aggregate Data
-			    resetTimings(timer.aggTimings);
-
-			   	// Reset Trace Data
+				// Store the callpath node entry count at timer start
+				this->callEntryID = callEntryID;
 			}
+		}
 
-			void startTimer(Timer& timer, bool eATimers, bool eTTimers, long callEntryID)
+		void Timer::stopTimer(bool eATimers,  bool eTTimers, long callExitID)
+		{
+			if(eATimers || eTTimers)
 			{
-				if(eATimers || eTTimers)
-				{
-					// Store when timer was started
-					set_timers(&(timer.startCPUTime), &(timer.startWallTime));
+				// Store when timer was stopped
+				treetimer::timers::drivers::set_timers(&(this->stopCPUTime), &(this->stopWallTime));
 
-					// Store the callpath node entry count at timer start
-					timer.callEntryID = callEntryID;
+				// Store the callpath node entry count at timer stop
+				this->callExitID = callExitID;
+
+				if(eATimers)
+				{
+					// Update Aggregate Times
+					if (this->aggTimings.size == 0) {
+						this->aggTimings.add(AggTimings());
+					}
+					this->aggTimings.tail->data.addTimes(this->stopWallTime - this->startWallTime, this->stopCPUTime - this->startCPUTime);
+				}
+
+				if(eTTimers)
+				{
+					// Update Trace Times (only tracks walltime for now)
+					TraceTimer tmp(this->stopWallTime - this->startWallTime, this->callEntryID, this->callExitID);
+					this->traceTimers.add(tmp);
 				}
 			}
+		}
 
-			void stopTimer(Timer& timer, bool eATimers,  bool eTTimers, long callExitID)
-			{
-				if(eATimers || eTTimers)
-				{
-					// Store when timer was stopped
-					set_timers(&(timer.stopCPUTime), &(timer.stopWallTime));
-
-					// Store the callpath node entry count at timer stop
-					timer.callExitID = callExitID;
-
-					if(eATimers)
-					{
-						// Update Aggregate Times
-						addTimes(timer.aggTimings, timer.stopWallTime - timer.startWallTime, timer.stopCPUTime - timer.startCPUTime);
-					}
-
-					if(eTTimers)
-					{
-						// Update Trace Times (only tracks walltime for now)
-						TraceTimer tmp(timer.stopWallTime - timer.startWallTime, timer.callEntryID, timer.callExitID);
-						timer.traceTimers.add(tmp);
-					}
+		void Timer::setNumAggWindows(int n)
+		{
+			if (n > this->aggTimings.size) {
+				while (n != this->aggTimings.size) {
+					this->aggTimings.add(AggTimings());
 				}
 			}
 		}

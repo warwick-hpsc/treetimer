@@ -75,6 +75,14 @@ int F2C(c_tree_timer_enter_trace_conductor, C_TREE_TIMER_ENTER_TRACE_CONDUCTOR)(
 	return 0;
 }
 
+int F2C(c_tree_timer_enter_aggregation_stepper, C_TREE_TIMER_ENTER_AGGREGATION_STEPPER)(const char *name, int *text_len,  int *stepInterval)
+{
+	char c_name[*text_len + 1];
+	F2C_strcpy(c_name, name, *text_len);
+	TreeTimerEnterAggregationStepper(c_name, *stepInterval);
+	return 0;
+}
+
 int F2C(c_tree_timer_enter_method, C_TREE_TIMER_ENTER_METHOD)(const char *name, int *text_len)
 {
 	char c_name[*text_len + 1];

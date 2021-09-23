@@ -36,7 +36,9 @@ namespace treetimer
 		{
 			void startInstrumentation(InstrumentationData& node, bool eATimer, bool eTTimer, long callEntryID)
 			{
-				treetimer::timers::drivers::startTimer(*(node.blockTimer), eATimer, eTTimer, callEntryID);
+				node.blockTimer->setNumAggWindows(node.targetNumAggWindows);
+
+				node.blockTimer->startTimer(eATimer, eTTimer, callEntryID);
 
 				node.intParametersCached.clear();
 				node.longParametersCached.clear();
@@ -47,7 +49,7 @@ namespace treetimer
 
 			void stopInstrumentation(InstrumentationData& node, bool eATimer, bool eTTimer, long callExitID)
 			{
-				treetimer::timers::drivers::stopTimer(*(node.blockTimer), eATimer, eTTimer, callExitID);
+				node.blockTimer->stopTimer(eATimer, eTTimer, callExitID);
 			}
 
 			void logParameterValue(InstrumentationData& node, std::string name, int val)
@@ -96,10 +98,11 @@ namespace treetimer
 						std::pair<std::string, treetimer::parameters::Parameter<int> *> insertPair(name, store);
 
 						node.intParameters.insert(insertPair);
-						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
+						store->addValue(val, eAParam, eTParam, nodeEntryID, nodeExitID);
 					} else {
 						// Found, update existing
-						treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeEntryID, nodeExitID);
+						search->second->setNumAggWindows(node.targetNumAggWindows);
+						search->second->addValue(val, eAParam, eTParam, nodeEntryID, nodeExitID);
 					}
 				}
 				node.intParametersCached.clear();
@@ -114,9 +117,10 @@ namespace treetimer
 						treetimer::parameters::Parameter<long> *store = new treetimer::parameters::Parameter<long>(name);
 						std::pair<std::string, treetimer::parameters::Parameter<long> *> insertPair(name, store);
 						node.longParameters.insert(insertPair);
-						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
+						store->addValue(val, eAParam, eTParam, nodeEntryID, nodeExitID);
 					} else {
-						treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeEntryID, nodeExitID);
+						search->second->setNumAggWindows(node.targetNumAggWindows);
+						search->second->addValue(val, eAParam, eTParam, nodeEntryID, nodeExitID);
 					}
 				}
 				node.longParametersCached.clear();
@@ -131,9 +135,10 @@ namespace treetimer
 						treetimer::parameters::Parameter<double> *store = new treetimer::parameters::Parameter<double>(name);
 						std::pair<std::string, treetimer::parameters::Parameter<double> *> insertPair(name, store);
 						node.doubleParameters.insert(insertPair);
-						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
+						store->addValue(val, eAParam, eTParam, nodeEntryID, nodeExitID);
 					} else {
-						treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeEntryID, nodeExitID);
+						search->second->setNumAggWindows(node.targetNumAggWindows);
+						search->second->addValue(val, eAParam, eTParam, nodeEntryID, nodeExitID);
 					}
 				}
 				node.doubleParametersCached.clear();
@@ -148,9 +153,10 @@ namespace treetimer
 						treetimer::parameters::Parameter<bool> *store = new treetimer::parameters::Parameter<bool>(name);
 						std::pair<std::string, treetimer::parameters::Parameter<bool> *> insertPair(name, store);
 						node.boolParameters.insert(insertPair);
-						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
+						store->addValue(val, eAParam, eTParam, nodeEntryID, nodeExitID);
 					} else {
-						treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeEntryID, nodeExitID);
+						search->second->setNumAggWindows(node.targetNumAggWindows);
+						search->second->addValue(val, eAParam, eTParam, nodeEntryID, nodeExitID);
 					}
 				}
 				node.boolParametersCached.clear();
@@ -165,9 +171,10 @@ namespace treetimer
 						treetimer::parameters::Parameter<std::string> *store = new treetimer::parameters::Parameter<std::string>(name);
 						std::pair<std::string, treetimer::parameters::Parameter<std::string> *> insertPair(name, store);
 						node.stringParameters.insert(insertPair);
-						treetimer::parameters::drivers::addValue(*store, val, eAParam, eTParam, nodeEntryID, nodeExitID);
+						store->addValue(val, eAParam, eTParam, nodeEntryID, nodeExitID);
 					} else {
-						treetimer::parameters::drivers::addValue(*(search->second), val, eAParam, eTParam, nodeEntryID, nodeExitID);
+						search->second->setNumAggWindows(node.targetNumAggWindows);
+						search->second->addValue(val, eAParam, eTParam, nodeEntryID, nodeExitID);
 					}
 				}
 				node.stringParametersCached.clear();

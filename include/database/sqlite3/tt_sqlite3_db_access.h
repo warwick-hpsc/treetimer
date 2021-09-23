@@ -32,28 +32,27 @@ namespace treetimer
 			// That place needs to be a class object passed around. Ideally would be a new class, 
 			// but will put it into TTSQLite3 to get something working asap.
 
-			// 'rank' can be inferred, but included so that struct matches SQL exactly:
 			typedef struct {
-				int rank, callPathID, processID;
+				int rank, processID, window, callPathID;
 				double minWallTime, avgWallTime, maxWallTime, stdev;
 				int count;
 			} TT_AggTiming;
 
 			typedef struct {
-				int rank, callPathID, processID;
+				int rank, processID, callPathID;
 				int nodeEntryID, nodeExitID;
 				double walltime;
 			} TT_TraceTiming;
 
 			typedef struct {
-				int rank, callPathID, processID;
+				int rank, processID, window, callPathID;
 				char paramName[MAX_STRING_LENGTH];
 				int minValue, maxValue, count;
 				double avgValue, stdev;
 			} TT_AggParamInt;
 
 			typedef struct {
-				int rank, callPathID, processID;
+				int rank, processID, window, callPathID;
 				char paramName[MAX_STRING_LENGTH];
 				double minValue, maxValue;
 				int count;
@@ -61,35 +60,35 @@ namespace treetimer
 			} TT_AggParamFloat;
 
 			typedef struct {
-				int rank, callPathID, processID;
+				int rank, processID, window, callPathID;
 				char paramName[MAX_STRING_LENGTH];
 				int minValue, maxValue, count;
 				double avgValue, stdev;
 			} TT_AggParamBool;
 
 			typedef struct {
-				int rank, callPathID, processID;
+				int rank, processID, callPathID;
 				char paramName[MAX_STRING_LENGTH];
 				int paramValue;
 				int nodeEntryID, nodeExitID;
 			} TT_TraceParamInt;
 
 			typedef struct {
-				int rank, callPathID, processID;
+				int rank, processID, callPathID;
 				char paramName[MAX_STRING_LENGTH];
 				double paramValue;
 				int nodeEntryID, nodeExitID;
 			} TT_TraceParamFloat;
 
 			typedef struct {
-				int rank, callPathID, processID;
+				int rank, processID, callPathID;
 				char paramName[MAX_STRING_LENGTH];
 				bool paramValue;
 				int nodeEntryID, nodeExitID;
 			} TT_TraceParamBool;
 
 			typedef struct {
-				int rank, callPathID, processID;
+				int rank, processID, callPathID;
 				char paramName[MAX_STRING_LENGTH];
 				char paramValue[MAX_STRING_LENGTH];
 				int nodeEntryID, nodeExitID;
