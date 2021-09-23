@@ -45,8 +45,8 @@ from PostProcessPlotUtils import *
 
 parallel_process = True
 verbose = False
-#parallel_process = False
-#verbose = True
+parallel_process = False
+verbose = True
 max_nprocs = 16
 
 import pandas as pd
@@ -416,7 +416,7 @@ def aggregatedTimes_calculateHotspots(runID, db):
 	df_all = None
 	for processID in processIDs:
 		rootID = getNodeCallpathId(db, processID, 'ProgramRoot')
-		rootRecord = getNodeAggregatedStats(rootID, runID, processID, db)
+		rootRecord = getNodeAggregatedStats(db, runID, processID, rootID)
 
 		df = getAllProfileNodesAggregateTimeExclusive(runID, processID, db)
 
@@ -451,7 +451,7 @@ def getAllProfileNodesAggregateTimeExclusive(runID, processID, db):
 	df = None
 	df_cols = {c:[] for c in col_names}
 	for callpathID in callpathIDs:
-		data = getNodeAggregatedStats(callpathID, runID, processID, db)
+		data = getNodeAggregatedStats(db, runID, processID, callpathID)
 		for k in data.keys():
 			df_cols[k].append(data[k])
 		df_cols['CallPathID'].append(callpathID)
@@ -468,7 +468,7 @@ def getNodeCallpathId(db, processID, nodeName):
 	results = cur.fetchall()
 	ids = [r["CallPathID"] for r in results]
 	if len(ids) > 1:
-		raise Exception("getNodeCallpathId(processID={0}, nodeName={1}) has returned {2} IDs".format(processID, nodeName, len(ids)))
+		raise Exception("getNodeCallpathId(processID={0}, nodeName={1}) has returned {2} IDs: {3}".format(processID, nodeName, len(ids), ids))
 	return ids[0]
 
 def getNodeChildrenIDs(db, callPathID):
@@ -635,7 +635,7 @@ def buildCallPathNodeTraversal(db, runID, processID, treeNode, nodeID, indentLev
 		record = getNodeCallStats(nodeID, db)
 		leaf = CallTreeNode(record["Name"], record["TypeName"], 0.0, -1)
 	else:
-		record = getNodeAggregatedStats(nodeID, runID, processID, db)
+		record = getNodeAggregatedStats(db, runID, processID, nodeID)
 		leaf = CallTreeNode(record["Name"], record["TypeName"], record["AggTotalTimeI"], record["CallCount"])
 
 	am_root = False
@@ -843,7 +843,7 @@ def plotCallPath(tree, root_total, node_total, offset, level, ax, plotType):
 
 	return are_any_nodes_labelled	
 
-def getNodeAggregatedStats(callPathID, runID, processID, db):
+def getNodeAggregatedStats(db, runID, processID, callPathID, window=None):
 	# ToDo: If looping over nodes, this will lead to the same data being loaded from the database multiple
 	# times, which is likely expensive.
 	# Options: Load full data from database into tree in memory (might be v. large)
@@ -852,22 +852,50 @@ def getNodeAggregatedStats(callPathID, runID, processID, db):
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
 
-	# Get Node Aggregate Details - Should only ever have one entry
-	query = "SELECT D.NodeName AS Name, " + \
-			"T.TypeName AS TypeName, " + \
-			"A.MinWallTime AS AggMinTime, A.AvgWallTime AS AggAvgTime, A.MaxWallTime AS AggMaxTime, A.Count AS CallCount " + \
-			"FROM AggregateTime AS A " + \
-			"NATURAL JOIN CallPathData AS C NATURAL JOIN ProfileNodeData AS D NATURAL JOIN ProfileNodeType AS T " + \
-			"WHERE A.CallPathID = {0} AND A.RunID = {1} AND A.ProcessID = {2} ;".format(callPathID, runID, processID)
-
-	cur.execute(query)
-	result = cur.fetchall()
-	if result is None:
-		print(query)
-		raise Exception("No CallPath node meeting criteria: processID={0}, callPathID={1}".format(processID, callPathID))
-	if len(result) > 1:
-		raise Exception("Multiple CallPath nodes ({2}) meeting criteria: processID={0}, callPathID={1}".format(processID, callPathID, len(result)))
-	result = result[0]
+	## Get Node Aggregate Details - Should only ever have one entry
+	## If target code enabled windowed aggregation, then for a given CallPathID there will be multiple rows.
+	## - if window is specified, then expect one row
+	## - else then re-calculate statistics across all rows
+	if window is None:
+		query = "SELECT D.NodeName AS Name, " + \
+				"T.TypeName AS TypeName, " + \
+				"A.MinWallTime AS AggMinTime, A.AvgWallTime AS AggAvgTime, A.MaxWallTime AS AggMaxTime, A.Count AS CallCount " + \
+				"FROM AggregateTime AS A " + \
+				"NATURAL JOIN CallPathData AS C NATURAL JOIN ProfileNodeData AS D NATURAL JOIN ProfileNodeType AS T " + \
+				"WHERE A.RunID = {0} AND A.ProcessID = {1} AND A.CallPathID = {2} ;".format(runID, processID, callPathID)
+		cur.execute(query)
+		result = cur.fetchall()
+		if result is None or len(result) == 0:
+			raise Exception("No CallPath node meeting criteria: runID={0}, processID={1}, callPathID={2}".format(runID, processID, callPathID))
+		if len(result) == 1:
+			result = result[0]
+		else:
+			# col_names = ["Name", "TypeName", "AggMinTime", "AggAvgTime", "AggMaxTime", "CallCount"]
+			sumTime = 0.0
+			minTime = result[0][2]
+			maxTime = result[0][4]
+			callCountSum = 0
+			for r in result:
+				callCountSum += r[5]
+				sumTime += (r[3]*r[5])
+				minTime = min(minTime, r[2])
+				maxTime = max(maxTime, r[4])
+			avgTime = sumTime / float(callCountSum)
+			result = {"Name":r[0], "TypeName":r[1], "AggMinTime":minTime, "AggAvgTime":avgTime, "AggMaxTime":maxTime, "CallCount":callCountSum}
+	else:
+		query = "SELECT D.NodeName AS Name, " + \
+				"T.TypeName AS TypeName, " + \
+				"A.Window AS Window, A.MinWallTime AS AggMinTime, A.AvgWallTime AS AggAvgTime, A.MaxWallTime AS AggMaxTime, A.Count AS CallCount " + \
+				"FROM AggregateTime AS A " + \
+				"NATURAL JOIN CallPathData AS C NATURAL JOIN ProfileNodeData AS D NATURAL JOIN ProfileNodeType AS T " + \
+				"WHERE A.RunID = {0} AND A.ProcessID = {1} AND A.CallPathID = {2} AND A.Window = {3} ;".format(runID, processID, callPathID, window)
+		cur.execute(query)
+		result = cur.fetchall()
+		if result is None:
+			raise Exception("No CallPath node meeting criteria: processID={0}, callPathID={1}, window={2}".format(processID, callPathID, window))
+		if len(result) > 1:
+			raise Exception("Multiple CallPath nodes ({0}) meeting criteria: processID={1}, callPathID={2}, window={3}".format(len(result), processID, callPathID, window))
+		result = result[0]
 	nodeStats = {k:result[k] for k in result.keys()}
 	nodeStats['AggTotalTimeI'] = nodeStats['AggAvgTime'] * nodeStats['CallCount']
 
@@ -943,7 +971,7 @@ def aggregateTimesByType(runID, db):
 		df = None
 		df_cols = {c:[] for c in col_names}
 		for callpathID in callpathIDs:
-			r = getNodeAggregatedStats(callpathID, runID, processID, db)
+			r = getNodeAggregatedStats(db, runID, processID, callpathID)
 			for k in col_names:
 				df_cols[k].append(r[k])
 		df = pd.DataFrame(data=df_cols, columns=col_names)
