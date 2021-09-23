@@ -450,7 +450,7 @@ namespace treetimer
 									int callPathID;
 									// Get processID, which only root will know from earlier:
 									int processID = dataAccess->rankLocalToProcessID[srcRank];
-									tt_sql::drivers::writeCallPathData(*dataAccess, processID, profileNodeID, r.parentID, &callPathID, false);
+									tt_sql::drivers::writeCallPathData(*dataAccess, processID, profileNodeID, r.parentID, &callPathID, true);
 									if (callPathID == 0) {
 										fprintf(stderr, "TreeTimer error: writeCallPathData() has returned callPathID=%d\n", callPathID);
 										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
@@ -1095,11 +1095,11 @@ namespace treetimer
 							//tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.parent->nodeData.blockType], &parentBlockType);
 							//tt_sql::drivers::findProfileNodeID(dataAccess, parentName, parentBlockType, &parentNodeID);
 
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID, false);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID, true);
 						}
 						else
 						{
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID, false);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID, true);
 						}
 					}
 					else {
@@ -1271,11 +1271,11 @@ namespace treetimer
 						// Could create an 'unknown' profile node to point to, that has a profile node entry but no callpath node entry
 						if(node.parent != nullptr)
 						{
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID, false);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID, true);
 						}
 						else
 						{
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID, false);
+							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID, true);
 						}
 					}
 					else {
