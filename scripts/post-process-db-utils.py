@@ -15,6 +15,31 @@ def table_empty(db, table):
 	count = cur.fetchone()[0]
 	return count == 0
 
+def getProcessCallpathIds(db, runID, processID):
+	db.row_factory = sqlite3.Row
+	cur = db.cursor()
+	query = "SELECT DISTINCT CallPathID FROM AggregateTime NATURAL JOIN CallPathData WHERE RunID = {0} AND ProcessID = {1};".format(runID, processID)
+	cur.execute(query)
+	result = cur.fetchall()
+	return [row['CallPathID'] for row in result]
+
+def getNodeCallpathId(db, processID, nodeName):
+	db.row_factory = sqlite3.Row
+	cur = db.cursor()
+	cmd = "SELECT CallPathID FROM CallPathData NATURAL JOIN ProfileNodeData WHERE ProcessID = {0} AND NodeName = '{1}'".format(processID, nodeName)
+	cur.execute(cmd)
+	ids = [r["CallPathID"] for r in cur.fetchall()]
+	if len(ids) > 1:
+		raise Exception("getNodeCallpathId(processID={0}, nodeName={1}) has returned {2} IDs: {3}".format(processID, nodeName, len(ids), ids))
+	return ids[0]
+
+def getNodeChildrenIDs(db, callPathID):
+	db.row_factory = sqlite3.Row
+	cur = db.cursor()
+	cmd = "SELECT CallPathID FROM CallPathData WHERE ParentNodeID = {0}".format(callPathID)
+	cur.execute(cmd)
+	return [i['CallPathID'] for i in cur.fetchall()]
+
 def getProcessIds(db):
 	if isinstance(db, str):
 		db_fp = db
