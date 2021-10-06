@@ -7,6 +7,8 @@ import pandas as pd
 import imp
 imp.load_source("PostProcessDbUtils", os.path.join(os.path.dirname(os.path.realpath(__file__)), "post-process-db-utils.py"))
 from PostProcessDbUtils import *
+imp.load_source("PostProcessPdUtils", os.path.join(os.path.dirname(os.path.realpath(__file__)), "post-process-pandas-utils.py"))
+from PostProcessPdUtils import *
 imp.load_source("PostProcessPlotUtils", os.path.join(os.path.dirname(os.path.realpath(__file__)), "post-process-plot-utils.py"))
 from PostProcessPlotUtils import *
 
@@ -192,7 +194,9 @@ def traceParameter_aggregateByNode(db, runID, processID, tree, nodeName, paramNa
 				raise Exception("ParamName {0} is present in multiple tables: {1} and {2}".format(paramName, paramTable, t))
 			paramTable = t
 	if paramTable is None:
-		raise Exception("ParamName {0} not found in any TraceParameter* table".format(paramName))
+		# raise Exception("ParamName {0} not found in any TraceParameter* table".format(paramName))
+		# print("WARNING: ParamName {0} not found in any TraceParameter* table".format(paramName))
+		return None
 
 	query = "SELECT COUNT(*) FROM TraceParameterBoolData WHERE ProcessID = {0} AND ParamName = \"TraceConductorEnabled?\";".format(processID)
 	cur.execute(query)
@@ -245,24 +249,6 @@ def add_unit_stride_index_column(df, id_colname):
 		col_indices += indices.tolist()
 	df_ids = pd.DataFrame({"Rank":col_ranks, id_colname:col_ids, "TimestepIndex":col_indices})
 	df = df.merge(df_ids, validate="many_to_one")
-
-	return df
-
-def sample_n_timesteps(df, n, indexColname):
-	## Evenly sample n timepoints
-	timestepIndices = df[indexColname].unique()
-	timestepIndices.sort()
-	if n < len(timestepIndices):
-		index_step = len(timestepIndices) / n
-		traceTimesIDs_sampled = [timestepIndices[round(i*index_step)] for i in range(0, n)]
-		df = df[df[indexColname].isin(traceTimesIDs_sampled)].reset_index(drop=True)
-	elif n > len(timestepIndices):
-		## For consistent chart X-axis, re-calculate indices to scale 0->100
-		index_step = n / len(timestepIndices)
-		traceTimesIDs_scaled = [round(index_step*i) for i in range(0, len(timestepIndices))]
-		df_ids = pd.DataFrame({indexColname:timestepIndices, indexColname+"new":traceTimesIDs_scaled})
-		df = df.merge(df_ids, validate="many_to_one")
-		df = df.drop(indexColname, axis=1).rename(columns={indexColname+"new":indexColname})
 
 	return df
 

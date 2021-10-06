@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 import sqlite3
 
@@ -17,6 +18,7 @@ class CallTreeNodeIterator:
 		self.am_root = am_root
 
 	def __next__(self):
+		raise Exception("Entered CallTreeNodeIterator.__next__(), apparently it is used.")
 		n = None
 		if self.index == -1:
 			n = self.callTreeNode.time
@@ -38,7 +40,8 @@ class CallTreeNodeIterator:
 		return n
 
 class CallTreeNode:
-	def __init__(self, name, typeName, time, calls):
+	def __init__(self, dbID, name, typeName, time, calls):
+		self.dbID = dbID
 		self.name = name
 		self.typeName = typeName
 		self.time = time
@@ -47,6 +50,51 @@ class CallTreeNode:
 
 	def addLeaf(self, leaf):
 		self.leaves.append(leaf)
+
+	def findTreeNodeByType(self, typeName):
+		if self.typeName == typeName:
+			return self
+		else:
+			for l in self.leaves:
+				r = l.findTreeNodeByType(typeName)
+				if not r is None:
+					return r
+		return None
+
+	def findTreeNodeByName(self, name):
+		if self.name == name:
+			return self
+		else:
+			for l in self.leaves:
+				r = l.findTreeNodeByName(name)
+				if not r is None:
+					return r
+		return None
+
+	def getAllChildrenMembers(self, member):
+		validMembers = ["dbID", "name", "typeName", "time", "calls"]
+		if not member in validMembers:
+			raise Exception("member '{0}' not in valid members {1}".format(member, validMembers))
+		if member == "dbID":
+			val = self.dbID
+		elif member == "name":
+			val = self.name
+		elif member == "typeName":
+			val = self.typeName
+		elif member == "time":
+			val = self.time
+		elif member == "calls":
+			val = self.calls
+		else:
+			raise Exception("member '{0}' not recognised".format(member))
+
+		if len(self.leaves) == 0:
+			return [val]
+		else:
+			vals = [val]
+			for l in self.leaves:
+				vals += l.getAllChildrenMembers(member)
+			return vals
 
 	## Comparison operators for tree structure, ignoring time:
 	def __lt__(self, other):
@@ -100,6 +148,7 @@ class CallTreeNode:
 		return summed
 
 	def __iter__(self, am_root=False):
+		raise Exception("Entered CallTreeNode.__iter__(), apparently it is used.")
 		return CallTreeNodeIterator(self, self.name=="ProgramRoot")
 
 class CallTreeNodeAggregated:
@@ -109,6 +158,7 @@ class CallTreeNodeAggregated:
 
 		self.name = node.name
 		self.typeName = node.typeName
+		self.dbIDs = [node.dbID]
 		self.times = [node.time]
 		self.calls = [node.calls]
 		self.leaves = []
@@ -124,6 +174,7 @@ class CallTreeNodeAggregated:
 		if self.init_node_copy != node:
 			raise Exception("Attempting to add node to CallTreeNodeAggregated with different topology")
 
+		self.dbIDs.append(node.dbID)
 		self.times.append(node.time)
 		self.calls.append(node.calls)
 		self.ranks.append(rank)
@@ -133,7 +184,7 @@ class CallTreeNodeAggregated:
 
 	def sumElementwise(self):
 		timesSum = sum(self.times)
-		sumNode = CallTreeNode(self.name, self.typeName, timesSum, None)
+		sumNode = CallTreeNode(self.dbIDs[0], self.name, self.typeName, timesSum, None)
 		for l in self.leaves:
 			sumNode.addLeaf(l.sumElementwise())
 		return(sumNode)
@@ -169,6 +220,7 @@ def getNodeCallStats(callPathID, db):
 
 	# Get Node Details - Should only ever have one entry
 	query = "SELECT D.NodeName AS Name, " + \
+			"C.CallPathID AS CallPathID, " + \
 			"T.TypeName AS TypeName " + \
 			"FROM CallPathData AS C " + \
 			"NATURAL JOIN ProfileNodeData AS D NATURAL JOIN ProfileNodeType AS T " + \
@@ -187,10 +239,14 @@ def buildCallPathNodeTraversal(db, runID, processID, treeNode, nodeID, indentLev
 	# Recursive depth-first traversal through call stack
 	if table_empty(db, "AggregateTime"):
 		record = getNodeCallStats(nodeID, db)
-		leaf = CallTreeNode(record["Name"], record["TypeName"], 0.0, -1)
+		leaf = CallTreeNode(record["CallPathID"], record["Name"], record["TypeName"], 0.0, -1)
 	else:
 		record = getNodeAggregatedTimeStats(db, runID, processID, nodeID)
-		leaf = CallTreeNode(record["Name"], record["TypeName"], record["AggTotalTimeI"], record["CallCount"])
+		if not record is None:
+			leaf = CallTreeNode(record["CallPathID"], record["Name"], record["TypeName"], record["AggTotalTimeI"], record["CallCount"])
+		else:
+			record = getNodeCallStats(nodeID, db)
+			leaf = CallTreeNode(record["CallPathID"], record["Name"], record["TypeName"], 0.0, -1)
 
 	am_root = False
 	if treeNode is None:
@@ -199,7 +255,7 @@ def buildCallPathNodeTraversal(db, runID, processID, treeNode, nodeID, indentLev
 	else:
 		treeNode.addLeaf(leaf)
 
-	childNodes = getNodeChildrenIDs(db, nodeID)
+	childNodes = getNodeChildrenIDs(db, processID, nodeID)
 	for childID in childNodes:
 		buildCallPathNodeTraversal(db, runID, processID, leaf, childID, indentLevel + 1)
 
@@ -220,22 +276,4 @@ def findSolverNode(tree, parentCalls, walltime):
 				return r
 	return None
 
-def findTreeNodeByType(tree, typeName):
-	if tree.typeName == typeName:
-		return tree
-	else:
-		for l in tree.leaves:
-			r = findTreeNodeByType(l, typeName)
-			if not r is None:
-				return r
-	return None
 
-def findTreeNodeByName(tree, name):
-	if tree.name == name:
-		return tree
-	else:
-		for l in tree.leaves:
-			r = findTreeNodeByName(l, name)
-			if not r is None:
-				return r
-	return None

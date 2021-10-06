@@ -30,7 +30,6 @@ if sys.version_info[0] < 3:
 
 import os, re, math
 from pprint import pprint
-from copy import deepcopy
 from time import sleep
 
 import sqlite3
@@ -49,24 +48,18 @@ from PostProcessTraceUtils import *
 imp.load_source("PostProcessPlotUtils", os.path.join(os.path.dirname(os.path.realpath(__file__)), "post-process-plot-utils.py"))
 from PostProcessPlotUtils import *
 
-parallel_process = True
 verbose = False
-parallel_process = False
-verbose = True
-max_nprocs = 16
+#verbose = True
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
-from multiprocessing import Pool, current_process, cpu_count
-nprocs = min(cpu_count() - 1, max_nprocs)
 import tqdm
 
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--tt-results-dirpath', help="Dirpath to 'tt_results' folder")
+parser.add_argument('-m', '--parallel', action='store_true', help="Process multiple DB files in parallel")
 parser.add_argument('-b', '--db-filepath', help="Analyse this specific database file")
 parser.add_argument('-t', '--trace-group-focus', help='When grouping traces by loop iterator, can filter by a block within loop')
 parser.add_argument('-p', '--parameter', help='Which trace parameter to process')
@@ -75,6 +68,9 @@ parser.add_argument('-r', '--chart-ranks', action='store_true', help="If chartin
 parser.add_argument('-l', '--label', action='store_true', help="Add labels to chart elements. Optional because can create clutter")
 args = parser.parse_args()
 
+if args.parallel:
+	from multiprocessing import Pool, current_process, cpu_count
+
 tt_folder_dirpath = args.tt_results_dirpath
 tt_db_filepath = args.db_filepath
 if (tt_folder_dirpath is None) and (tt_db_filepath is None):
@@ -82,32 +78,14 @@ if (tt_folder_dirpath is None) and (tt_db_filepath is None):
 if (not tt_folder_dirpath is None) and (not tt_db_filepath is None):
 	raise Exception("Don't specify folder and DB file. Just one.")
 
-
-import enum
-class PlotType(enum.Enum):
-	Polar = 1
-	Horizontal = 2
-	Vertical = 3
-plotTypeToString = {PlotType.Polar:"Polar", PlotType.Horizontal:"Horizontal", PlotType.Vertical:"Vertical"}
-
-# fig_dims = (16,16)
-fig_dims = (8,8)
+if args.charts == "polar":
+	plotType = PlotType.Polar
+elif args.charts == "vertical":
+	plotType = PlotType.Vertical
+else:
+	plotType = PlotType.Horizontal
 
 
-methodTypeToColour = {}
-methodTypeToColour["Program"] = "silver"
-methodTypeToColour["TraceConductor"] = "silver"
-methodTypeToColour["Method"] = "silver"
-methodTypeToColour["Block"] = "silver"
-methodTypeToColour["Compute"] = "fuchsia"
-methodTypeToColour["Loop"] = "silver"
-methodTypeToColour["ComputeLoop"] = "fuchsia"
-methodTypeToColour["NonMPIMethodCall"] = "fuchsia"
-methodTypeToColour["MPICommCall"] = "aqua"
-methodTypeToColour["MPINonCommMethodCall"] = "orange"
-methodTypeToColour["MPISyncCall"] = "orange"
-methodTypeToColour["MPICollectiveCall"] = "red"
-methodTypeToColour["LibraryCall"] = "yellowgreen"
 
 def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 	if verbose: print("Processing: {0} ({1}/{2})".format(db_fp, ctr, num_dbs))
@@ -120,22 +98,6 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 	dbm = None
 
 	f = os.path.basename(db_fp)
-
-	df_csv = os.path.join(cache_dp, f+".csv")
-	if not os.path.isfile(df_csv):
-		if verbose: print("- generating: " + df_csv)
-		if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
-		df = getAllAggregatedTimeStats(runID, dbm)
-		if not df is None:
-			df.to_csv(df_csv, index=False)
-
-	df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
-	if not os.path.isfile(df_agg_fp):
-		if verbose: print("- generating: " + df_agg_fp)
-		if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
-		df_agg = aggregateTimesByType(runID, dbm)
-		if not df_agg is None:
-			df_agg.to_csv(df_agg_fp, index=False)
 
 	trees_fp = os.path.join(cache_dp, f+".call-trees.pkl")
 	trees = None
@@ -150,20 +112,54 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 			#pickle.dump(t, output, pickle.HIGHEST_PROTOCOL)
 			pickle.dump(trees, output, 4)
 
-	# if not table_empty(db, "AggregateTime"):
-	# 	if trees is None:
-	# 		with open(trees_fp, 'rb') as input:
-	# 			trees = pickle.load(input)
-	# 	didRanksPerformWindowedAggregation = True
-	# 	for rank, t in trees.items():
-	# 		n = findTreeNodeByType(t, "AggregationStepper")
-	# 		# print("n = {0}".format(n))
-	# 		if n is None:
-	# 			didRanksPerformWindowedAggregation = False
-	# 			break
-	# 	if didRanksPerformWindowedAggregation:
-	# 		if verbose: print("- generating: " + traceTimes_fp)
-	# 	quit()
+	# df_agg_fp = os.path.join(cache_dp, f+".csv")
+	df_agg_fp = os.path.join(cache_dp, f+".aggTimes.csv")
+	if not os.path.isfile(df_agg_fp):
+		if verbose: print("- generating: " + df_agg_fp)
+		if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+		df = getAllAggregatedTimeStats(dbm, runID)
+		if not df is None:
+			df.to_csv(df_agg_fp, index=False)
+
+	df_agg_grouped_fp = os.path.join(cache_dp, f+".aggTimes.groupByType.csv")
+	if not os.path.isfile(df_agg_grouped_fp):
+		if verbose: print("- generating: " + df_agg_grouped_fp)
+		if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+		df_agg_grouped = aggregateTimesByType(dbm, runID)
+		if not df_agg_grouped is None:
+			df_agg_grouped.to_csv(df_agg_grouped_fp, index=False)
+
+	if not table_empty(db, "AggregateTime"):
+		windowedAggTimes_fp = os.path.join(cache_dp, f+".aggTimes.windowed.groupByType.csv")
+		if not os.path.isfile(windowedAggTimes_fp):
+			if trees is None:
+				with open(trees_fp, 'rb') as input:
+					trees = pickle.load(input)
+			didAllRanksPerformWindowedAggregation = True
+			for rank, t in trees.items():
+				n = t.findTreeNodeByType("AggregationStepper")
+				if n is None:
+					didAllRanksPerformWindowedAggregation = False
+					break
+			if didAllRanksPerformWindowedAggregation:
+				if verbose: print("- generating: " + windowedAggTimes_fp)
+				if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+				df_all = None
+				## This loop is expensive. Can I cache every N iterations?
+				#for rank, t in trees.items():
+				ranks = [r for r in trees.keys()]
+				print("Collating windowed aggregated times ...")
+				for i in tqdm.tqdm(range(0, len(ranks))):
+					rank = ranks[i]
+					t = trees[rank]
+					processID = getProcessID(dbm, rank)
+					df = collateWindowedAggregateTimes(dbm, runID, processID, t)
+					if df_all is None:
+						df_all = df
+					else:
+						df_all = df_all.append(df)
+				df_all.sort_values(["Window", "Type", "Rank"], inplace=True)
+				df_all.to_csv(windowedAggTimes_fp, index=False)
 
 	if not table_empty(db, "TraceTimeData"):
 		traceTimes_fp = os.path.join(cache_dp, f+".traceTimes.csv")
@@ -175,11 +171,11 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 
 			traces_df_all = None
 			for rank, t in trees.items():
-				n = findTreeNodeByType(t, "TraceConductor")
+				n = t.findTreeNodeByType("TraceConductor")
 				if n is None:
 					n = findSolverNode(t, 1, t.time)
-				#if n is None:
-				#	raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+				if n is None:
+					raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
 				if not n is None:
 					traceGroupNode = n.name
 					if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
@@ -203,7 +199,7 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 
 				traces_df_all = None
 				for rank, t in trees.items():
-					n = findTreeNodeByType(t, "TraceConductor")
+					n = t.findTreeNodeByType("TraceConductor")
 					if n is None:
 						n = findSolverNode(t, 1, t.time)
 					if n is None:
@@ -221,6 +217,33 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 				traces_df_all.to_csv(traceTimes_focused_fp, index=False)
 
 	if not args.parameter is None:
+		windowedAggParam_fp = os.path.join(cache_dp, f+".aggParameter-{0}.windowed.csv".format(args.parameter))
+		if not os.path.isfile(windowedAggParam_fp):
+			if trees is None:
+				with open(trees_fp, 'rb') as input:
+					trees = pickle.load(input)
+			aggParam_df_all = None
+			didAllRanksPerformWindowedAggregation = True
+			for rank, t in trees.items():
+				n = t.findTreeNodeByType("AggregationStepper")
+				if n is None:
+					didAllRanksPerformWindowedAggregation = False
+					break
+			if didAllRanksPerformWindowedAggregation:
+				if verbose: print("- generating: " + windowedAggParam_fp)
+				if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+				df_all = None
+				## This loop is expensive. Can I cache every N iterations?
+				for rank, t in trees.items():
+					processID = getProcessID(dbm, rank)
+					df = collateWindowedAggregateParameter(dbm, runID, processID, t, args.parameter)
+					if df_all is None:
+						df_all = df
+					else:
+						df_all = df_all.append(df)
+				df_all.sort_values(["Window", "Rank"], inplace=True)
+				df_all.to_csv(windowedAggParam_fp, index=False)
+
 		traceParameter_fp = os.path.join(cache_dp, f+".traceParameter-{0}.csv".format(args.parameter))
 		if not os.path.isfile(traceParameter_fp):
 			if verbose: print("- generating: " + traceParameter_fp)
@@ -230,7 +253,7 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 
 			traces_df_all = None
 			for rank, t in trees.items():
-				n = findTreeNodeByType(t, "TraceConductor")
+				n = t.findTreeNodeByType("TraceConductor")
 				if n is None:
 					n = findSolverNode(t, 1, t.time)
 				if n is None:
@@ -240,12 +263,14 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 					if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 					processID = getProcessID(dbm, rank)
 					traces_df = traceParameter_aggregateByNode(dbm, runID, processID, t, traceGroupNode, args.parameter)
-					traces_df["Rank"] = rank
-					if traces_df_all is None:
-						traces_df_all = traces_df
-					else:
-						traces_df_all = traces_df_all.append(traces_df)
-			traces_df_all.to_csv(traceParameter_fp, index=False)
+					if not traces_df is None:
+						traces_df["Rank"] = rank
+						if traces_df_all is None:
+							traces_df_all = traces_df
+						else:
+							traces_df_all = traces_df_all.append(traces_df)
+			if not traces_df_all is None:
+				traces_df_all.to_csv(traceParameter_fp, index=False)
 
 	return True
 
@@ -260,8 +285,10 @@ def main():
 	if (not tt_folder_dirpath is None) and not os.path.isdir(tt_folder_dirpath):
 		raise Exception("Folder does not exist: {0}".format(tt_folder_dirpath))
 
-	df_all_raw = None
-	df_all_aggregated = None
+	aggTimes_raw_df = None
+	aggTimes_grouped_df = None
+	aggTimesWindowed_grouped_df = None
+	aggParamWindowed_all_df = None
 
 	traceTimes_all_df = None
 	traceTimes_focused_all_df = None
@@ -288,7 +315,8 @@ def main():
 	if not os.path.isdir(cache_dp):
 		os.mkdir(cache_dp)
 
-	if parallel_process:
+	if args.parallel:
+		nprocs = min(cpu_count(), len(db_fps))
 		print("Processing {0} DB files in parallel on {1} CPUs".format(len(db_fps), nprocs))
 		dbs_pending = []
 		for i in range(0, len(db_fps)):
@@ -301,6 +329,8 @@ def main():
 			for _ in tqdm.tqdm(p.imap_unordered(preprocess_db_job, dbs_pending), total=len(dbs_pending)):
 				pass
 	else:
+		if len(db_fps) > 1:
+			print("Hint: speedup post-processing with parallelism: --parallel")
 		print("Processing {0} DB files".format(len(db_fps)))
 		for i in tqdm.tqdm(range(0, len(db_fps))):
 			preprocess_db(db_fps[i], i+1, len(db_fps), cache_dp)
@@ -317,26 +347,42 @@ def main():
 			ctr += 1
 			db_ranks = getMpiRanks(db_fp)
 			for rank in db_ranks: ranks.add(rank)
-			if verbose: print("Collating data from rank {0}".format(db_ranks))
+			if verbose: print("Collating data from DB {0}".format(f))
 
-			df_csv = os.path.join(cache_dp, f+".csv")
+			df_csv = os.path.join(cache_dp, f+".aggTimes.csv")
 			if not os.path.isfile(df_csv):
 				print("Processing: {0} ({1}/{2})".format(db_fp, ctr, len(db_fps)))
 				preprocess_db(db_fp, ctr, len(db_fps), cache_dp)
 			if os.path.isfile(df_csv):
 				df = pd.read_csv(df_csv)
-				if df_all_raw is None:
-					df_all_raw = df
+				if aggTimes_raw_df is None:
+					aggTimes_raw_df = df
 				else:
-					df_all_raw = df_all_raw.append(df)
+					aggTimes_raw_df = aggTimes_raw_df.append(df)
 
-			df_agg_fp = os.path.join(cache_dp, f+".typeAgg.csv")
+			df_agg_fp = os.path.join(cache_dp, f+".aggTImes.groupByType.csv")
 			if os.path.isfile(df_agg_fp):
 				df_agg = pd.read_csv(df_agg_fp)
-				if df_all_aggregated is None:
-					df_all_aggregated = df_agg
+				if aggTimes_grouped_df is None:
+					aggTimes_grouped_df = df_agg
 				else:
-					df_all_aggregated = df_all_aggregated.append(df_agg)
+					aggTimes_grouped_df = aggTimes_grouped_df.append(df_agg)
+
+			windowedAggTimes_fp = os.path.join(cache_dp, f+".aggTimes.windowed.groupByType.csv")
+			if os.path.isfile(windowedAggTimes_fp):
+				df = pd.read_csv(windowedAggTimes_fp)
+				if aggTimesWindowed_grouped_df is None:
+					aggTimesWindowed_grouped_df = df
+				else:
+					aggTimesWindowed_grouped_df = aggTimesWindowed_grouped_df.append(df)
+
+			windowedAggParam_fp = os.path.join(cache_dp, f+".aggParameter-{0}.windowed.csv".format(args.parameter))
+			if os.path.isfile(windowedAggParam_fp):
+				df = pd.read_csv(windowedAggParam_fp)
+				if aggParamWindowed_all_df is None:
+					aggParamWindowed_all_df = df
+				else:
+					aggParamWindowed_all_df = aggParamWindowed_all_df.append(df)
 
 			traceTimes_fp = os.path.join(cache_dp, f+".traceTimes.csv")
 			if os.path.isfile(traceTimes_fp):
@@ -388,7 +434,7 @@ def main():
 					# Plot this call tree
 					if args.charts and (args.chart_ranks or rank==1):
 						print(" - drawing call-tree chart ...")
-						chartCallPath(t, "Call stack times of rank {0}".format(rank), "rank-{0}.png".format(rank))
+						chartCallPath(t, plotType, "Call stack times of rank {0}".format(rank), args.tt_results_dirpath, "rank-{0}.png".format(rank), args.label)
 
 	if (not args.charts is None) and (not groupedCallTrees is None):
 		## Aggregate together call trees within each group, and create plots:
@@ -404,9 +450,17 @@ def main():
 				else:
 					agg.appendNodeElementwise(t, rank)
 			aggSum = agg.sumElementwise()
-			chartCallPath(aggSum, "Call stack times summed across ranks "+sorted(agg.ranks).__str__(), "rankGroup{0}.png".format(gn))
+			chartCallPath(aggSum, plotType, "Call stack times summed across ranks "+sorted(agg.ranks).__str__(), args.tt_results_dirpath, "rankGroup{0}.png".format(gn), args.label)
 
 	if len(ranks) > 1:
+		if not aggTimesWindowed_grouped_df is None:
+			print("Drawing windowed aggregated times charts")
+			aggTimes_chartDynamicLoadBalance(aggTimesWindowed_grouped_df, output_dirpath=args.tt_results_dirpath)
+
+		if not aggParamWindowed_all_df is None:
+			print("Drawing windowed aggregated parameter '{0}' chart".format(args.parameter))
+			aggParam_chartDynamicLoadBalance(aggParamWindowed_all_df, args.parameter, output_dirpath=args.tt_results_dirpath)
+
 		print("Drawing trace charts")
 		if not traceTimes_all_df is None:
 			traceTimes_chartDynamicLoadBalance(traceTimes_all_df, output_dirpath=args.tt_results_dirpath)
@@ -416,16 +470,16 @@ def main():
 			traceParameter_chart(traceParameter_all_df, args.parameter, output_dirpath=args.tt_results_dirpath)
 
 	print("Writing out collated CSVs")
-	df_all_raw["num_ranks"] = len(ranks)
-	df_all_raw.sort_values(["Name", "Rank"], inplace=True)
+	aggTimes_raw_df["num_ranks"] = len(ranks)
+	aggTimes_raw_df.sort_values(["Name", "Rank"], inplace=True)
 	df_filename = os.path.join(output_dirpath, "timings_raw.csv")
-	df_all_raw.to_csv(df_filename, index=False)
+	aggTimes_raw_df.to_csv(df_filename, index=False)
 	print("Collated raw data written to '{0}'".format(df_filename))
 
-	if not df_all_aggregated is None:
-		df_all_aggregated.sort_values(["Method type", "Rank"], inplace=True)
+	if not aggTimes_grouped_df is None:
+		aggTimes_grouped_df.sort_values(["Method type", "Rank"], inplace=True)
 		df_filename = os.path.join(output_dirpath, "timings_aggregated.csv")
-		df_all_aggregated.to_csv(df_filename, index=False)
+		aggTimes_grouped_df.to_csv(df_filename, index=False)
 		print("Collated aggregated data written to '{0}'".format(df_filename))
 
 

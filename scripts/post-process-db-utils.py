@@ -24,6 +24,7 @@ def getProcessCallpathIds(db, runID, processID):
 	return [row['CallPathID'] for row in result]
 
 def getNodeCallpathId(db, processID, nodeName):
+	## Note: runID not needed because assuming call tree is same across repeat runs.
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
 	cmd = "SELECT CallPathID FROM CallPathData NATURAL JOIN ProfileNodeData WHERE ProcessID = {0} AND NodeName = '{1}'".format(processID, nodeName)
@@ -33,10 +34,11 @@ def getNodeCallpathId(db, processID, nodeName):
 		raise Exception("getNodeCallpathId(processID={0}, nodeName={1}) has returned {2} IDs: {3}".format(processID, nodeName, len(ids), ids))
 	return ids[0]
 
-def getNodeChildrenIDs(db, callPathID):
+def getNodeChildrenIDs(db, processID, callPathID):
+	## Note: runID not needed because assuming call tree is same across repeat runs.
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
-	cmd = "SELECT CallPathID FROM CallPathData WHERE ParentNodeID = {0}".format(callPathID)
+	cmd = "SELECT CallPathID FROM CallPathData WHERE ProcessID = {0} AND ParentNodeID = {1}".format(processID, callPathID)
 	cur.execute(cmd)
 	return [i['CallPathID'] for i in cur.fetchall()]
 
