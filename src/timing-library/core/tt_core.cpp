@@ -74,7 +74,7 @@ namespace treetimer
 				 treetimer::core::instrumState->config->sqlIOFilename = "results." + std::to_string(rank) + ".db";
 
 			    // (1) Read in configuration from environment into global state
-			    treetimer::config::drivers::setConfigFromEnv(*(treetimer::core::instrumState->config));
+			    treetimer::core::instrumState->config->setFromEnv();
 
 			    // Configure 'Trace Conductor'
 			    //treetimer::core::instrumState->traceCallCollectionEnabled = treetimer::core::instrumState->config->eTTimers;
@@ -118,76 +118,58 @@ namespace treetimer
 				treetimer::core::instrumState->sleeping = false;
 			}
 
-			void TreeTimerEnterTraceConductor(std::string blockName, int traceCallInterval)
-			{
-				if (!treetimer::core::instrumState->sleeping) {
-					//if (instrumState->config->eTTimers) {
-					if (instrumState->config->eTTimers || instrumState->config->eTParam) {
-						if (instrumState->traceConductorNodeName == "") {
-							// Initialise
-							instrumState->traceConductorNodeName = blockName;
-							instrumState->traceCallInterval = traceCallInterval;
-							instrumState->traceCallIntervalCounter = 0;
-						}
-						if (instrumState->traceConductorNodeName != blockName) {
-							printf("Attempting to set node '%s' as conductor, but another already is (%s)\n", blockName.c_str(), instrumState->traceConductorNodeName.c_str());
-							exit(EXIT_FAILURE);
-						}
-
-						// Decide whether to enable/block trace collection during this call:
-						instrumState->traceCallIntervalCounter--;
-						if (instrumState->traceCallIntervalCounter <= 0) {
-							// Enable trace collection
-							instrumState->traceCallCollectionEnabled = true;
-							instrumState->traceCallIntervalCounter = instrumState->traceCallInterval;
-						}
-						else {
-							// Disable trace collection
-							instrumState->traceCallCollectionEnabled = false;
-						}
-					}
-				}
-				
-				TreeTimerEnterBlock(blockName, TT_NODE_TYPE_TRACE_CONDUCTOR);
-
-				if (!treetimer::core::instrumState->sleeping) {
-					// In case trace timing is disabled, but trace parameters enabled, store a dummy parameter to ease data analysis:
-					TreeTimerLogParameter("TraceConductorEnabled?", true);
-				}
-			}
-
-			void TreeTimerEnterAggregationStepper(std::string blockName, int stepInterval)
-			{
-				// Move to the next aggregation window. A little tricky, as each CallPath 
-				// node performs its own aggregation. So each node will have to advance its 
-				// own aggregation window according to 'targetNumAggWindows'.
-
-				if (!treetimer::core::instrumState->sleeping) {
-					if (instrumState->config->eATimers || instrumState->config->eAParam) {
-						if (instrumState->aggStepInterval <= 0) {
-							// Initialise
-							instrumState->aggStepInterval = stepInterval;
-							instrumState->aggStepIntervalCounter = stepInterval;
-							instrumState->targetNumAggWindows = 1;
-							// Negate the subsequent decrement:
-							instrumState->aggStepIntervalCounter++;
-						}
-
-						// Decide whether to step to next aggregation window:
-						instrumState->aggStepIntervalCounter--;
-						if (instrumState->aggStepIntervalCounter <= 0) {
-							// Trigger a step to a next window
-							instrumState->targetNumAggWindows++;
-							instrumState->aggStepIntervalCounter = instrumState->aggStepInterval;
-						}
-					}
-				}
-
-				TreeTimerEnterBlock(blockName, TT_NODE_TYPE_AGGREGATION_STEPPER);
-			}
-
 			void TreeTimerEnterBlock(std::string blockName, CodeBlockType blockType)
 			{
+				if (!treetimer::core::instrumState->sleeping) {
+					if (blockName == instrumState->config->aggregationStepperNodeName) {
+						if (instrumState->config->eATimers || instrumState->config->eAParam) {
+							int stepInterval = instrumState->config->aggregationStepInterval;
+							if (stepInterval <= 0) stepInterval = 1;
+							if (instrumState->aggStepInterval <= 0) {
+								// Initialise
+								instrumState->aggStepInterval = stepInterval;
+								instrumState->aggStepIntervalCounter = stepInterval;
+								instrumState->targetNumAggWindows = 1;
+								// Negate the subsequent decrement:
+								instrumState->aggStepIntervalCounter++;
+							}
+
+							// Decide whether to step to next aggregation window:
+							instrumState->aggStepIntervalCounter--;
+							if (instrumState->aggStepIntervalCounter <= 0) {
+								// Trigger a step to a next window
+								instrumState->targetNumAggWindows++;
+								instrumState->aggStepIntervalCounter = instrumState->aggStepInterval;
+							}
+						}
+					}
+
+					if (blockName == instrumState->config->traceConductorNodeName) {
+						if (instrumState->config->eTTimers || instrumState->config->eTParam) {
+							int traceCallInterval = instrumState->config->traceConductorInterval;
+							if (traceCallInterval <= 0) traceCallInterval = 1;
+							if (instrumState->traceConductorNodeName == "") {
+								// Initialise
+								instrumState->traceConductorNodeName = blockName;
+								instrumState->traceCallInterval = traceCallInterval;
+								instrumState->traceCallIntervalCounter = 0;
+							}
+
+							// Decide whether to enable/block trace collection during this call:
+							instrumState->traceCallIntervalCounter--;
+							if (instrumState->traceCallIntervalCounter <= 0) {
+								// Enable trace collection
+								instrumState->traceCallCollectionEnabled = true;
+								instrumState->traceCallIntervalCounter = instrumState->traceCallInterval;
+							}
+							else {
+								// Disable trace collection
+								instrumState->traceCallCollectionEnabled = false;
+							}
+						}
+					}
+				}
+
 				// Move position in callpath tree
 				instrumState->callTree->moveToChild(blockName);
 

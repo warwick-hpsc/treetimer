@@ -450,7 +450,13 @@ namespace treetimer
 									int callPathID;
 									// Get processID, which only root will know from earlier:
 									int processID = dataAccess->rankLocalToProcessID[srcRank];
-									tt_sql::drivers::writeCallPathData(*dataAccess, processID, profileNodeID, r.parentID, &callPathID, true);
+
+									tt_sql::TT_CallPathNode c;
+									c.processID = processID;
+									c.profileNodeID = profileNodeID;
+									c.parentID = r.parentID;
+									tt_sql::drivers::writeCallPathData(*dataAccess, c, &callPathID, true);
+
 									if (callPathID == 0) {
 										fprintf(stderr, "TreeTimer error: writeCallPathData() has returned callPathID=%d\n", callPathID);
 										MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
@@ -1083,24 +1089,17 @@ namespace treetimer
 						// (b) Call Path Data
 						// CallPath Data should have been written for the parent as part of the tree traversal, and identified by parentID.
 
+						tt_sql::TT_CallPathNode c;
+						c.processID = processID;
+						c.profileNodeID = profileNodeID;
 						// ToDo: Is there a better way of handling no parent (i.e. root node?) - NULL would be equivalent.
 						// Could create an 'unknown' profile node to point to, that has a profile node entry but no callpath node entry
-						if(node.parent != nullptr)
-						{
-							// Get details of parent
-							//int parentNodeID;
-							//int parentBlockType;
-
-							//std::string parentName = node.parent->key;
-							//tt_sql::drivers::findProfileNodeTypeID(dataAccess, codeBlockNames[node.parent->nodeData.blockType], &parentBlockType);
-							//tt_sql::drivers::findProfileNodeID(dataAccess, parentName, parentBlockType, &parentNodeID);
-
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID, true);
+						if(node.parent != nullptr) {
+							c.parentID = parentID;
+						} else {
+							c.parentID = -1;
 						}
-						else
-						{
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID, true);
-						}
+						tt_sql::drivers::writeCallPathData(dataAccess, c, callPathID, true);
 					}
 					else {
 						// Write to local cache, to be sent to local root rank for writing:
@@ -1267,16 +1266,17 @@ namespace treetimer
 						// (b) Call Path Data
 						// CallPath Data should have been written for the parent as part of the tree traversal, and identified by parentID.
 
+						tt_sql::TT_CallPathNode c;
+						c.processID = processID;
+						c.profileNodeID = profileNodeID;
 						// ToDo: Is there a better way of handling no parent (i.e. root node?) - NULL would be equivalent.
 						// Could create an 'unknown' profile node to point to, that has a profile node entry but no callpath node entry
-						if(node.parent != nullptr)
-						{
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, parentID, callPathID, true);
+						if(node.parent != nullptr) {
+							c.parentID = parentID;
+						} else {
+							c.parentID = -1;
 						}
-						else
-						{
-							tt_sql::drivers::writeCallPathData(dataAccess, processID, profileNodeID, -1, callPathID, true);
-						}
+						tt_sql::drivers::writeCallPathData(dataAccess, c, callPathID, true);
 					}
 					else {
 						// Write to local cache, to be sent to local root rank for writing:

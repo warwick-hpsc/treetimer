@@ -440,24 +440,20 @@ namespace treetimer
 					int err;
 					MPI_Datatype aggParamIntRecord_MPI, tmpType;
 
-					int lengths[10] = {1, 1, 1, 1, MAX_STRING_LENGTH, 1, 1, 1, 1, 1};
-					MPI_Aint displacements[10];
+					const int n = 10;
+					MPI_Aint displacements[n]; MPI_Datatype types[n]; int lengths[n];
 					int i=0;
-					displacements[i] = offsetof(TT_AggParamInt, rank); i++;
-					displacements[i] = offsetof(TT_AggParamInt, processID); i++;
-					displacements[i] = offsetof(TT_AggParamInt, window); i++;
-					displacements[i] = offsetof(TT_AggParamInt, callPathID); i++;
-					displacements[i] = offsetof(TT_AggParamInt, paramName); i++;
-					displacements[i] = offsetof(TT_AggParamInt, minValue); i++;
-					displacements[i] = offsetof(TT_AggParamInt, maxValue); i++;
-					displacements[i] = offsetof(TT_AggParamInt, count); i++;
-					displacements[i] = offsetof(TT_AggParamInt, avgValue); i++;
-					displacements[i] = offsetof(TT_AggParamInt, stdev); i++;
-					MPI_Datatype types[10] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, 
-												MPI_CHAR, 
-												MPI_INT, MPI_INT, MPI_INT, 
-												MPI_DOUBLE, MPI_DOUBLE };
-					err = MPI_Type_create_struct(10, lengths, displacements, types, &tmpType);
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, rank);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, processID);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, window);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, callPathID);	lengths[i] = 1 ; i++;
+					types[i] = MPI_CHAR		; displacements[i] = offsetof(TT_AggParamInt, paramName);	lengths[i] = MAX_STRING_LENGTH ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, minValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, maxValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, count);		lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamInt, avgValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamInt, stdev);		lengths[i] = 1 ; i++;
+					err = MPI_Type_create_struct(n, lengths, displacements, types, &tmpType);
 
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Failed to create custom type for aggParamIntRecord\n");
@@ -493,24 +489,20 @@ namespace treetimer
 					int err;
 					MPI_Datatype aggParamFloatRecord_MPI, tmpType;
 
-					int lengths[10] = {1, 1, 1, 1, MAX_STRING_LENGTH, 1, 1, 1, 1, 1};
-					MPI_Aint displacements[10];
+					const int n = 10;
+					MPI_Aint displacements[n]; MPI_Datatype types[n]; int lengths[n];
 					int i=0;
-					displacements[i] = offsetof(TT_AggParamFloat, rank); i++;
-					displacements[i] = offsetof(TT_AggParamFloat, processID); i++;
-					displacements[i] = offsetof(TT_AggParamFloat, window); i++;
-					displacements[i] = offsetof(TT_AggParamFloat, callPathID); i++;
-					displacements[i] = offsetof(TT_AggParamFloat, paramName); i++;
-					displacements[i] = offsetof(TT_AggParamFloat, minValue); i++;
-					displacements[i] = offsetof(TT_AggParamFloat, maxValue); i++;
-					displacements[i] = offsetof(TT_AggParamFloat, count); i++;
-					displacements[i] = offsetof(TT_AggParamFloat, avgValue); i++;
-					displacements[i] = offsetof(TT_AggParamFloat, stdev); i++;
-					MPI_Datatype types[10] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, 
-												MPI_CHAR, 
-												MPI_DOUBLE, MPI_DOUBLE, MPI_INT, 
-												MPI_DOUBLE, MPI_DOUBLE };
-					err = MPI_Type_create_struct(10, lengths, displacements, types, &tmpType);
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamFloat, rank);			lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamFloat, processID);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamFloat, window);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamFloat, callPathID);	lengths[i] = 1 ; i++;
+					types[i] = MPI_CHAR		; displacements[i] = offsetof(TT_AggParamFloat, paramName);		lengths[i] = MAX_STRING_LENGTH ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamFloat, minValue);		lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamFloat, maxValue);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamFloat, count);			lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamFloat, avgValue);		lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamFloat, stdev);			lengths[i] = 1 ; i++;
+					err = MPI_Type_create_struct(n, lengths, displacements, types, &tmpType);
 
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Failed to create custom type for aggParamFloatRecord\n");
@@ -546,24 +538,20 @@ namespace treetimer
 					int err;
 					MPI_Datatype aggParamBoolRecord_MPI, tmpType;
 
-					int lengths[10] = {1, 1, 1, 1, MAX_STRING_LENGTH, 1, 1, 1, 1, 1};
-					MPI_Aint displacements[10];
+					const int n = 10;
+					MPI_Aint displacements[n]; MPI_Datatype types[n]; int lengths[n];
 					int i=0;
-					displacements[i] = offsetof(TT_AggParamBool, rank); i++;
-					displacements[i] = offsetof(TT_AggParamBool, processID); i++;
-					displacements[i] = offsetof(TT_AggParamBool, window); i++;
-					displacements[i] = offsetof(TT_AggParamBool, callPathID); i++;
-					displacements[i] = offsetof(TT_AggParamBool, paramName); i++;
-					displacements[i] = offsetof(TT_AggParamBool, minValue); i++;
-					displacements[i] = offsetof(TT_AggParamBool, maxValue); i++;
-					displacements[i] = offsetof(TT_AggParamBool, count); i++;
-					displacements[i] = offsetof(TT_AggParamBool, avgValue); i++;
-					displacements[i] = offsetof(TT_AggParamBool, stdev); i++;
-					MPI_Datatype types[10] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, 
-												MPI_CHAR, 
-												MPI_INT, MPI_INT, MPI_INT, 
-												MPI_DOUBLE, MPI_DOUBLE };
-					err = MPI_Type_create_struct(10, lengths, displacements, types, &tmpType);
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, rank);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, processID);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, window);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, callPathID);	lengths[i] = 1 ; i++;
+					types[i] = MPI_CHAR		; displacements[i] = offsetof(TT_AggParamBool, paramName);	lengths[i] = MAX_STRING_LENGTH ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, minValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, maxValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, count);		lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamBool, avgValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamBool, stdev);		lengths[i] = 1 ; i++;
+					err = MPI_Type_create_struct(n, lengths, displacements, types, &tmpType);
 
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Failed to create custom type for aggParamBoolRecord\n");

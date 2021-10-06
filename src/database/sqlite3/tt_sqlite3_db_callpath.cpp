@@ -39,7 +39,7 @@ namespace treetimer
 					}
 				}
 
-				void findCallPathDataID(TTSQLite3& dataAccess, int processID, int profileNodeID, int parentNodeID, int *callPathID)
+				void findCallPathDataID(TTSQLite3& dataAccess, TT_CallPathNode c, int *callPathID)
 				{
 					sqlite3_stmt *pStmt = nullptr;
 
@@ -49,10 +49,10 @@ namespace treetimer
 												"ProfileNodeID = ? AND "
 												"ParentNodeID = ?",
 												-1, &pStmt, NULL);
-
-					sqlite3_bind_int(pStmt,1, processID);
-					sqlite3_bind_int(pStmt,2, profileNodeID);
-					sqlite3_bind_int(pStmt,3, parentNodeID);
+					int i=1;
+					sqlite3_bind_int(pStmt,i, c.processID); i++;
+					sqlite3_bind_int(pStmt,i, c.profileNodeID); i++;
+					sqlite3_bind_int(pStmt,i, c.parentID); i++;
 					err = sqlite3_step(pStmt);
 
 					if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
@@ -79,7 +79,7 @@ namespace treetimer
 					sqlite3_finalize(pStmt);
 				}
 
-				void writeCallPathData(TTSQLite3& dataAccess, int processID, int profileNodeID, int parentNodeID, int *callPathID, bool verifyUnique)
+				void writeCallPathData(TTSQLite3& dataAccess, TT_CallPathNode c, int *callPathID, bool verifyUnique)
 				{
 					sqlite3_stmt *pStmt = nullptr;
 					int err;
@@ -87,7 +87,7 @@ namespace treetimer
 					if (verifyUnique) {
 						// Check for existing entry
 						int tmpID = -1;
-						findCallPathDataID(dataAccess, processID, profileNodeID, parentNodeID, &tmpID);
+						findCallPathDataID(dataAccess, c, &tmpID);
 						if (tmpID != -1) {
 							if(callPathID!=nullptr) *callPathID = tmpID;
 							return;
@@ -96,9 +96,10 @@ namespace treetimer
 
 					err = sqlite3_prepare(dataAccess.db,"INSERT INTO CallPathData VALUES(NULL, ?, ?, ?)", -1, &pStmt, NULL);
 
-					sqlite3_bind_int(pStmt,1, processID);
-					sqlite3_bind_int(pStmt,2, profileNodeID);
-					sqlite3_bind_int(pStmt,3, parentNodeID);
+					int i=1;
+					sqlite3_bind_int(pStmt,i, c.processID); i++;
+					sqlite3_bind_int(pStmt,i, c.profileNodeID); i++;
+					sqlite3_bind_int(pStmt,i, c.parentID); i++;
 					err = sqlite3_step(pStmt);
 
 					if (err != SQLITE_OK && err != SQLITE_DONE) {
@@ -129,39 +130,37 @@ namespace treetimer
 					int err;
 					MPI_Datatype callpathNodeRecord_MPI, tmpType;
 
-					int lengths[5] = {1, MAX_STRING_LENGTH, 1, 1, 1};
-					MPI_Aint displacements[5];
-					displacements[0] = offsetof(TT_CallPathNode, rank);
-					displacements[1] = offsetof(TT_CallPathNode, nodeName);
-					displacements[2] = offsetof(TT_CallPathNode, blockType);
-					displacements[3] = offsetof(TT_CallPathNode, callPathID);
-					displacements[4] = offsetof(TT_CallPathNode, parentID);
-					MPI_Datatype types[5] = { MPI_INT, MPI_CHAR, MPI_INT, MPI_INT, MPI_INT };
-					err = MPI_Type_create_struct(5, lengths, displacements, types, &tmpType);
+					const int n = 7;
+					MPI_Aint displacements[n]; MPI_Datatype types[n]; int lengths[n];
+					int i=0;
+					types[i] = MPI_INT  ; displacements[i] = offsetof(TT_CallPathNode, rank);          lengths[i] = 1 ; i++;
+					types[i] = MPI_INT  ; displacements[i] = offsetof(TT_CallPathNode, processID);     lengths[i] = 1 ; i++;
+					types[i] = MPI_CHAR ; displacements[i] = offsetof(TT_CallPathNode, nodeName);      lengths[i] = MAX_STRING_LENGTH ; i++;
+					types[i] = MPI_INT  ; displacements[i] = offsetof(TT_CallPathNode, blockType);     lengths[i] = 1 ; i++;
+					types[i] = MPI_INT  ; displacements[i] = offsetof(TT_CallPathNode, callPathID);    lengths[i] = 1 ; i++;
+					types[i] = MPI_INT  ; displacements[i] = offsetof(TT_CallPathNode, parentID);      lengths[i] = 1 ; i++;
+					types[i] = MPI_INT  ; displacements[i] = offsetof(TT_CallPathNode, profileNodeID); lengths[i] = 1 ; i++;
+					err = MPI_Type_create_struct(n, lengths, displacements, types, &tmpType);
 
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Failed to create custom type for callpathNodeRecord\n");
-						MPI_Abort(MPI_COMM_WORLD, err);
-						exit(EXIT_FAILURE);
+						MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 					}
 					MPI_Aint lb, extent;
 					err = MPI_Type_get_extent(tmpType, &lb, &extent);
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Failed to get extent of custom type for callpathNodeRecord\n");
-						MPI_Abort(MPI_COMM_WORLD, err);
-						exit(EXIT_FAILURE);
+						MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 					}
 					err = MPI_Type_create_resized(tmpType, lb, extent, &callpathNodeRecord_MPI);
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Failed to resize custom type for callpathNodeRecord\n");
-						MPI_Abort(MPI_COMM_WORLD, err);
-						exit(EXIT_FAILURE);
+						MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 					}
 					err = MPI_Type_commit(&callpathNodeRecord_MPI);
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Failed to commit custom type for callpathNodeRecord\n");
-						MPI_Abort(MPI_COMM_WORLD, err);
-						exit(EXIT_FAILURE);
+						MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 					}
 
 					return callpathNodeRecord_MPI;

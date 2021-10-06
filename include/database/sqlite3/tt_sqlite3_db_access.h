@@ -95,10 +95,10 @@ namespace treetimer
 			} TT_TraceParamString;
 
 			typedef struct {
-				int rank;
+				int rank, processID;
 				char nodeName[MAX_STRING_LENGTH];
 				int blockType;
-				int callPathID, parentID;
+				int callPathID, parentID, profileNodeID;
 			} TT_CallPathNode;
 
 

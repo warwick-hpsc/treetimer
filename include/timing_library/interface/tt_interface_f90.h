@@ -29,9 +29,6 @@ int F2C(c_tree_timer_log_parameter_int, C_TREE_TIMER_LOG_PARAMETER_INT)(const ch
 int F2C(c_tree_timer_log_parameter_double, C_TREE_TIMER_LOG_PARAMETER_DOUBLE)(const char *name, int *text_len,  double *value);
 int F2C(c_tree_timer_log_parameter_bool, C_TREE_TIMER_LOG_PARAMETER_BOOL)(const char *name, int *text_len,  int *value);
 
-int F2C(c_tree_timer_enter_trace_conductor, TreeTimerEnterTraceConductor)(const char *name, int *text_len, int *trace_call_interval);
-int F2C(c_tree_timer_enter_aggregation_stepper, TreeTimerEnterAggregationStepper)(const char *name, int *text_len, int *step_interval);
-
 int F2C(c_tree_timer_enter_method, C_TREE_TIMER_ENTER_METHOD)(const char *name, int *text_len);
 int F2C(c_tree_timer_enter_loop, C_TREE_TIMER_ENTER_LOOP)(const char *name, int *text_len);
 int F2C(c_tree_timer_enter_compute, C_TREE_TIMER_ENTER_COMPUTE)(const char *name, int *text_len);
