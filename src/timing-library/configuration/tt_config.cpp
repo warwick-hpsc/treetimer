@@ -26,8 +26,22 @@ namespace treetimer
 		Config::Config()
 		{
 			// By default, capture nothing but aggregate times.
-			drivers::setConfig(*this, "Unknown", "Unknown", "Unknown", "./tt_results", 0,
-							   1, 0, 0, 0, 0, 0, 0, 0, 0);
+			this->appName = "Unknown";
+			this->appVersion = "Unknown";
+			this->machineName = "Unknown";
+			this->outputFolder = "./tt_results";
+			this->libVerMajor = 0;
+			this->libVerMinor = 1;
+			this->processCount = 0;
+			this->eATimers = false;
+			this->eTTimers = false;
+			this->eAPAPI = false;
+			this->eTPAPI = false;
+			this->eAParam = false;
+			this->eTParam = false;
+			this->eMPIHooks = false;
+			this->eMPIHooksTParam = false;
+			this->inLibrary = false;
 
 			// ToDo: move this into a separate SQLConfig
 
@@ -44,67 +58,86 @@ namespace treetimer
 
 		}
 
-		namespace drivers
-		{
-			void setConfigFromEnv(Config& config)
-			{
-				/*
-				setAppNameFromEnv(config);
-				setAppVerFromEnv(config);
-				setMachineNameFromEnv(config);
-				*/
-				
-				setOutputFolderFromEnv(config);
-				setAggTimerFromEnv(config);
-				setTraceTimerFromEnv(config);
-				setAggPAPIFromEnv(config);
-				setTracePAPIFromEnv(config);
-				setAggParamFromEnv(config);
-				setTraceParamFromEnv(config);
-				setMPIHooksFromEnv(config);
-				setMPIHooksTParamFromEnv(config);
+		void Config::setFromEnv() {
+			char *envVar = nullptr;
 
-				// setGlobalParamFromEnv(config);
-			}
+			envVar = getenv("TT_CONFIG_OUTPUT_DIR");
+			if(envVar != nullptr) this->outputFolder = std::string(envVar);
 
 			// Update: TT: does not need to know these GLOBAL, STATIC values:
-/*
-			void setAppNameFromEnv(Config& config)
-			{
-				// ====== Application Name ========
-				char *envVar = getenv("TT_CONFIG_APPNAME");
-				if(envVar != nullptr) {
-					config.appName = std::string(envVar);
-				}
-			}
+			/*
+			*envVar = getenv("TT_CONFIG_APPNAME");
+			if(envVar != nullptr) this->appName = std::string(envVar);
+			envVar = getenv("TT_CONFIG_APPVER");
+			if(envVar != nullptr) this->appVersion = std::string(envVar);
+			envVar = getenv("TT_CONFIG_MACHINENAME");
+			if(envVar != nullptr) this->machineName = std::string(envVar);
+			*/
 
-			void setAppVerFromEnv(Config& config)
-			{
-				// ====== Application Name ========
-				char *envVar = getenv("TT_CONFIG_APPVER");
-				if(envVar != nullptr) {
-					config.appVersion = std::string(envVar);
-				}
-			}
+			envVar = getenv("TT_CONFIG_ATIMERS");
+			this->eATimers = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
+			envVar = getenv("TT_CONFIG_TTIMERS");
+			this->eTTimers = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
 
-			void setMachineNameFromEnv(Config& config)
-			{
-				// ====== Application Name ========
-				char *envVar = getenv("TT_CONFIG_MACHINENAME");
-				if(envVar != nullptr) {
-					config.machineName = std::string(envVar);
-				}
-			}
-*/
+			envVar = getenv("TT_CONFIG_APAPI");
+			this->eAPAPI = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
+			envVar = getenv("TT_CONFIG_TPAPI");
+			this->eAPAPI = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
 
-			void setOutputFolderFromEnv(Config& config)
-			{
-				// ====== Application Name ========
-				char *envVar = getenv("TT_CONFIG_OUTPUT_DIR");
-				if(envVar != nullptr) {
-					config.outputFolder = std::string(envVar);
-				}
-			}
+			envVar = getenv("TT_CONFIG_APARAM");
+			this->eAParam = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
+			envVar = getenv("TT_CONFIG_TPARAM");
+			this->eTParam = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
+
+			envVar = getenv("TT_CONFIG_AGG_STEP_NODE");
+			if(envVar != nullptr) this->aggregationStepperNodeName = std::string(envVar);
+			envVar = getenv("TT_CONFIG_AGG_STEP_INTERVAL");
+			if(envVar != nullptr) this->aggregationStepInterval = std::stoi(std::string(envVar));
+			envVar = getenv("TT_CONFIG_TRACE_CONDUCTOR_NODE");
+			if(envVar != nullptr) this->traceConductorNodeName = std::string(envVar);
+			envVar = getenv("TT_CONFIG_TRACE_INTERVAL");
+			if(envVar != nullptr) this->traceConductorInterval = std::stoi(std::string(envVar));
+
+			envVar = getenv("TT_CONFIG_MPI_HOOKS");
+			this->eMPIHooks = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
+			envVar = getenv("TT_CONFIG_MPI_HOOKS_TPARAM");
+			this->eMPIHooksTParam = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
+
+			// setGlobalParamFromEnv(this);
+
+			this->print();
+		}
+
+		void Config::print() {
+			printf("--------\n");
+			printf("CONFIG:\n");
+			printf("--------\n");
+			printf("appName = %s\n", this->appName.c_str());
+			printf("appVersion = %s\n", this->appVersion.c_str());
+			printf("machineName = %s\n", this->machineName.c_str());
+			printf("outputFolder = %s\n", this->outputFolder.c_str());
+
+			printf("libVerMajor = %d\n", this->libVerMajor);
+			printf("libVerMinor = %d\n", this->libVerMinor);
+
+			printf("eATimers = %d\n", this->eATimers);
+			printf("eTTimers = %d\n", this->eTTimers);
+			printf("eAPAPI = %d\n", this->eAPAPI);
+			printf("eTPAPI = %d\n", this->eTPAPI);
+			printf("eAParam = %d\n", this->eAParam);
+			printf("eTParam = %d\n", this->eTParam);
+			printf("eMPIHooks = %d\n", this->eMPIHooks);
+			printf("eMPIHooksTParam = %d\n", this->eMPIHooksTParam);
+
+			printf("aggregationStepperNodeName = %s\n", this->aggregationStepperNodeName.c_str());
+			printf("aggregationStepInterval = %d\n", this->aggregationStepInterval);
+			printf("traceConductorNodeName = %s\n", this->traceConductorNodeName.c_str());
+			printf("traceConductorInterval = %d\n", this->traceConductorInterval);
+			printf("--------\n");
+		}
+
+		namespace drivers
+		{
 
 /*
 			void setFormatFromEnv(Config& config)
@@ -126,55 +159,6 @@ namespace treetimer
 			}
 */
 
-			void setAggTimerFromEnv(Config& config)
-			{
-				char *envVar = getenv("TT_CONFIG_ATIMERS");
-				config.eATimers = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
-			}
-
-			void setTraceTimerFromEnv(Config& config)
-			{
-				char *envVar = getenv("TT_CONFIG_TTIMERS");
-				config.eTTimers = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
-			}
-
-			void setAggPAPIFromEnv(Config& config)
-			{
-				char *envVar = getenv("TT_CONFIG_APAPI");
-				config.eAPAPI = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
-			}
-
-			void setTracePAPIFromEnv(Config& config)
-			{
-				char *envVar = getenv("TT_CONFIG_TPAPI");
-				config.eAPAPI = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
-			}
-
-
-			void setAggParamFromEnv(Config& config)
-			{
-				char *envVar = getenv("TT_CONFIG_APARAM");
-				config.eAParam = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
-			}
-
-			void setTraceParamFromEnv(Config& config)
-			{
-				char *envVar = getenv("TT_CONFIG_TPARAM");
-				config.eTParam = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
-			}
-
-			void setMPIHooksFromEnv(Config& config)
-			{
-				char *envVar = getenv("TT_CONFIG_MPI_HOOKS");
-				config.eMPIHooks = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
-			}
-
-			void setMPIHooksTParamFromEnv(Config& config)
-			{
-				char *envVar = getenv("TT_CONFIG_MPI_HOOKS_TPARAM");
-				config.eMPIHooksTParam = (envVar != nullptr) && (strcmp(envVar, "1") == 0);
-			}
-
 			void strSplit(std::string input, std::vector<std::string>& output, char delimiter)
 			{
 				std::vector<int> delimPos;
@@ -184,7 +168,6 @@ namespace treetimer
 						delimPos.push_back(i);
 					}
 				}
-
 
 				int ptr = 0;
 
@@ -392,33 +375,6 @@ namespace treetimer
 				}
 			}
 */
-
-			void setConfig(Config& config, std::string appName, std::string appVersion, std::string machineName, std::string outputFolder,
-						   int processCount,
-						   bool eATimers, bool eTTimers, 
-						   bool eAPAPI, bool eTPAPI, 
-						   bool eAParam, bool eTParam, 
-						   bool eMPIHooks, bool eMPIHooksTParam, bool inLibrary)
-			{
-				config.appName = appName;
-				config.appVersion = appVersion;
-				config.machineName = machineName;
-				config.outputFolder = outputFolder;
-				config.libVerMajor = TT_VERSION_MAJOR;
-				config.libVerMinor = TT_VERSION_MINOR;
-
-				config.processCount = processCount;
-
-				config.eATimers = eATimers;
-				config.eTTimers = eTTimers;
-				config.eAPAPI = eAPAPI;
-				config.eTPAPI = eTPAPI;
-				config.eAParam = eAParam;
-				config.eTParam = eTParam;
-				config.eMPIHooks = eMPIHooks;
-				config.eMPIHooksTParam = eMPIHooksTParam;
-				config.inLibrary = inLibrary;
-			}
 		}
 	}
 }

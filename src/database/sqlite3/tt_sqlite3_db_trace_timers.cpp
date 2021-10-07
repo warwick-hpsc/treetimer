@@ -152,17 +152,18 @@ namespace treetimer
 					int err;
 					MPI_Datatype traceTimeRecord_MPI, tmpType;
 
-					int lengths[6] = {1, 1, 1, 1, 1, 1};
-					MPI_Aint displacements[6];
+					const int n = 6;
+					int lengths[n] = {1, 1, 1, 1, 1, 1};
+					MPI_Aint displacements[n];
 					displacements[0] = offsetof(TT_TraceTiming, rank);
 					displacements[1] = offsetof(TT_TraceTiming, callPathID);
 					displacements[2] = offsetof(TT_TraceTiming, processID);
 					displacements[3] = offsetof(TT_TraceTiming, nodeEntryID);
 					displacements[4] = offsetof(TT_TraceTiming, nodeExitID);
 					displacements[5] = offsetof(TT_TraceTiming, walltime);
-					MPI_Datatype types[6] = { MPI_INT, MPI_INT, MPI_INT, 
+					MPI_Datatype types[n] = { MPI_INT, MPI_INT, MPI_INT, 
 												MPI_INT, MPI_INT, MPI_DOUBLE };
-					err = MPI_Type_create_struct(6, lengths, displacements, types, &tmpType);
+					err = MPI_Type_create_struct(n, lengths, displacements, types, &tmpType);
 
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Failed to create custom type for traceTimeRecord\n");

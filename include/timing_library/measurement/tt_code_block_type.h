@@ -18,7 +18,7 @@
 
 //ToDo: Fix namespace
 
-#define TT_CODE_BLOCK_COUNT 11
+#define TT_CODE_BLOCK_COUNT 12
 
 enum CodeBlockType {
 	TT_NODE_TYPE_PROG = 0,
@@ -31,12 +31,14 @@ enum CodeBlockType {
 	TT_NODE_TYPE_MPI_COLLECTIVE_CALL = 7,
 	TT_NODE_TYPE_IO_CALL = 8,
 	TT_NODE_TYPE_LIB_CALL = 9,
-	TT_NODE_TYPE_TRACE_CONDUCTOR = 10
+	TT_NODE_TYPE_TRACE_CONDUCTOR = 10,
+	TT_NODE_TYPE_AGGREGATION_STEPPER = 11
 	// TT_NODE_TYPE_MPI_NONCOMM_CALL = ,
 	// TT_NODE_TYPE_NONMPI_CALL = ,
 	// TT_NODE_TYPE_UNSPECIFIED = ,
 };
 
 extern const std::string codeBlockNames[TT_CODE_BLOCK_COUNT];
+// codeBlockNames is defined in tt_core.cpp
 
 #endif

@@ -36,11 +36,6 @@ void TreeTimerWake()
 	treetimer::core::drivers::TreeTimerWake();
 }
 
-void TreeTimerEnterTraceConductor(const char *name, int traceCallInterval)
-{
-	treetimer::core::drivers::TreeTimerEnterTraceConductor(name, traceCallInterval);
-}
-
 void TreeTimerEnterMethod(const char *blockName)
 {
 	std::string strName(blockName);

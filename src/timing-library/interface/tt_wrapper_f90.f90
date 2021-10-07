@@ -65,13 +65,6 @@ module treetimer
 
 	end subroutine
 
-	subroutine TreeTimerEnterTraceConductor(blockName, traceCallInterval)
-		character(len=*)    :: blockName
-		integer :: traceCallInterval
-
-		call c_tree_timer_enter_trace_conductor(blockName, len_trim(blockname), traceCallInterval)
-	end subroutine
-	
 	subroutine TreeTimerEnterMethod(blockName)
 		character(len=*)	:: blockName
 		

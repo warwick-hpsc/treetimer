@@ -28,7 +28,6 @@ void TreeTimerLogParameterLong(const char *paramName, long value);
 void TreeTimerLogParameterDouble(const char *paramName, double value);
 void TreeTimerLogParameterBool(const char *paramName, int value);
 
-void TreeTimerEnterTraceConductor(const char *name, int traceCallInterval);
 void TreeTimerEnterMethod(const char *blockName);
 void TreeTimerEnterLoop(const char *blockName);
 void TreeTimerEnterCompute(const char *blockName);

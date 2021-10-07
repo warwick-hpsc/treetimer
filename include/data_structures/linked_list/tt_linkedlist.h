@@ -28,6 +28,7 @@ namespace treetimer
 
 				LinkedListNode<T> * head;
 				LinkedListNode<T> * tail;
+				int size;
 
 				// ToDo: Should add an iterator to loop over contents
 				void add(T data);

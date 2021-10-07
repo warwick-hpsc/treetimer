@@ -29,6 +29,9 @@ namespace treetimer
 				Config();
 				~Config();
 
+				void setFromEnv();
+				void print();
+
 				// Variables
 				std::string appName;		// Store the registered name of the application
 				std::string appVersion;		// Store the registered version of the application
@@ -74,6 +77,12 @@ namespace treetimer
 				std::unordered_map<std::string, treetimer::parameters::ParameterSingular<std::string> *> stringGlobalParams;
 				*/
 
+				std::string aggregationStepperNodeName; // Optional: which callpath node to use for stepping of windowed aggregation
+				int aggregationStepInterval = 0;
+
+				std::string traceConductorNodeName; // Optional: which callpath node to use for conducting trace collection
+				int traceConductorInterval = 0;
+
 				// SQL I/O Config Parameters
 				std::string sqlIOFilename;
 				int sqlIOProcessID;
@@ -96,30 +105,13 @@ namespace treetimer
 			void setMachineNameFromEnv(Config& config);
 			*/
 			
-			void setOutputFolderFromEnv(Config& config);
-			void setAggTimerFromEnv(Config& config);
-			void setTraceTimerFromEnv(Config& config);
-			void setAggPAPIFromEnv(Config& config);
-			void setTracePAPIFromEnv(Config& config);
-			void setAggParamFromEnv(Config& config);
-			void setTraceParamFromEnv(Config& config);
-			void setMPIHooksFromEnv(Config& config);
-			void setMPIHooksTParamFromEnv(Config& config);
-
-			void setGlobalParamFromEnv(Config& config);
-
+			// Update: What is the purpose of "global" parameters? Codebase only sets them, never uses them.
+			// void setGlobalParamFromEnv(Config& config);
 			// ToDo: Template these
-			void setGlobalParam(Config& config, std::string name, int val);
-			void setGlobalParam(Config& config, std::string name, double val);
-			void setGlobalParam(Config& config, std::string name, bool val);
-			void setGlobalParam(Config& config, std::string name, std::string val);
-
-			void setConfig(Config& config, std::string appName, std::string appVersion, std::string machineName, std::string outputFolder,
-						   int processCount,
-						   bool eATimers, bool eTTimers, 
-						   bool eAPAPI, bool eTPAPI, 
-						   bool eAParam, bool eTParam, 
-						   bool eMPIHooks, bool eMPIHooksTParam, bool inLibrary);
+			// void setGlobalParam(Config& config, std::string name, int val);
+			// void setGlobalParam(Config& config, std::string name, double val);
+			// void setGlobalParam(Config& config, std::string name, bool val);
+			// void setGlobalParam(Config& config, std::string name, std::string val);
 		}
 	}
 }

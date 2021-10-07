@@ -24,6 +24,14 @@ namespace treetimer
 			this->config = new Config();
 			this->callTree = new treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData>();
 
+			// Aggregation window management:
+			// -- window stepping:
+			this->aggStepInterval = -1;
+			this->aggStepIntervalCounter = 0;
+			// -- window synchronisation across nodes:
+			this->currentAggWindow = 1;
+			this->targetNumAggWindows = 1;
+
 			this->traceConductorNodeName = std::string("");
 			this->traceCallInterval = 0;
 			this->traceCallIntervalCounter = 0;

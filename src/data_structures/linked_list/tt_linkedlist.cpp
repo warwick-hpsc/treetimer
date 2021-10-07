@@ -12,6 +12,8 @@
 
 #include "tt_linkedlist.h"
 #include "tt_linkedlist_node.h"
+#include "tt_agg_timings.h"
+#include "tt_agg_parameter.h"
 #include "tt_trace_timer.h"
 #include "tt_trace_parameter.h"
 #include <iostream>
@@ -23,6 +25,7 @@ namespace treetimer
 		template <class T>
 		LinkedList<T>::LinkedList()
 		{
+			size = 0;
 			head = nullptr;
 			tail = nullptr;
 		}
@@ -65,12 +68,19 @@ namespace treetimer
 				tail->next = new LinkedListNode<T>(data);
 				tail = tail->next;
 			}
-
+			this->size++;
 		}
 	}
 }
 
 // Explicit Instantiation
+template class treetimer::data_structures::LinkedList<treetimer::timers::AggTimings>;
+template class treetimer::data_structures::LinkedList<treetimer::parameters::AggParameter<int>>;
+template class treetimer::data_structures::LinkedList<treetimer::parameters::AggParameter<long>>;
+template class treetimer::data_structures::LinkedList<treetimer::parameters::AggParameter<double>>;
+template class treetimer::data_structures::LinkedList<treetimer::parameters::AggParameter<bool>>;
+template class treetimer::data_structures::LinkedList<treetimer::parameters::AggParameter<std::string>>;
+
 template class treetimer::data_structures::LinkedList<treetimer::timers::TraceTimer>;
 template class treetimer::data_structures::LinkedList<treetimer::parameters::TraceParameter<int>>;
 template class treetimer::data_structures::LinkedList<treetimer::parameters::TraceParameter<long>>;

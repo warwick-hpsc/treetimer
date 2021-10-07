@@ -29,8 +29,9 @@ namespace treetimer
 
 					stmt = "CREATE TABLE IF NOT EXISTS AggregateParameterInt(AggParamIntID INTEGER, "
 																				  "RunID INTEGER, "
-																				  "CallPathID INTEGER, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "ProcessID INTEGER, "
+							  	  	  	  	  	  	  	  	  	  	  	  	  	  "Window INTEGER, "
+																				  "CallPathID INTEGER, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "ParamName TEXT, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "MinValue INTEGER, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "AvgValue REAL, "
@@ -48,8 +49,9 @@ namespace treetimer
 
 					stmt = "CREATE TABLE IF NOT EXISTS AggregateParameterFloat(AggParamFloatID INTEGER, "
 																				  "RunID INTEGER, "
-																				  "CallPathID INTEGER, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "ProcessID INTEGER, "
+							  	  	  	  	  	  	  	  	  	  	  	  	  	  "Window INTEGER, "
+																				  "CallPathID INTEGER, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "ParamName TEXT, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "MinValue REAL, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "AvgValue REAL, "
@@ -67,8 +69,9 @@ namespace treetimer
 
 					stmt = "CREATE TABLE IF NOT EXISTS AggregateParameterBool(AggParamBoolID INTEGER, "
 																				  "RunID INTEGER, "
-																				  "CallPathID INTEGER, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "ProcessID INTEGER, "
+							  	  	  	  	  	  	  	  	  	  	  	  	  	  "Window INTEGER, "
+																				  "CallPathID INTEGER, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "ParamName TEXT, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "MinValue INTEGER, "
 							  	  	  	  	  	  	  	  	  	  	  	  	  	  "AvgValue REAL, "
@@ -92,8 +95,9 @@ namespace treetimer
 					int err = sqlite3_prepare(dataAccess.db,
 											  "SELECT AggParamIntID FROM AggregateParameterInt WHERE "
 										      "RunID = ? AND "
-											  "CallPathID = ? AND "
 							  	  	  	  	  "ProcessID = ? AND "
+							  	  	  	  	  "Window = ? AND "
+											  "CallPathID = ? AND "
 			  	  	  	  	  	  	  	  	  "ParamName LIKE ? AND "
 			  	  	  	  	  	  	  	  	  "MinValue = ? AND "
 											  "AvgValue = ? AND "
@@ -102,15 +106,17 @@ namespace treetimer
 											  "Count = ?",
 											  -1, &pStmt, NULL);
 
-					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
-					sqlite3_bind_int   (pStmt,2, p.callPathID);
-					sqlite3_bind_int   (pStmt,3, p.processID);
-					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
-					sqlite3_bind_int   (pStmt,5, p.minValue);
-					sqlite3_bind_double(pStmt,6, p.avgValue);
-					sqlite3_bind_int   (pStmt,7, p.maxValue);
-					sqlite3_bind_double(pStmt,8, p.stdev);
-					sqlite3_bind_int   (pStmt,9, p.count);
+					int i=1;
+					sqlite3_bind_int   (pStmt,i, dataAccess.runID); i++;
+					sqlite3_bind_int   (pStmt,i, p.processID); i++;
+					sqlite3_bind_int   (pStmt,i, p.window); i++;
+					sqlite3_bind_int   (pStmt,i, p.callPathID); i++;
+					sqlite3_bind_text  (pStmt,i, p.paramName, -1, SQLITE_TRANSIENT); i++;
+					sqlite3_bind_int   (pStmt,i, p.minValue); i++;
+					sqlite3_bind_double(pStmt,i, p.avgValue); i++;
+					sqlite3_bind_int   (pStmt,i, p.maxValue); i++;
+					sqlite3_bind_double(pStmt,i, p.stdev); i++;
+					sqlite3_bind_int   (pStmt,i, p.count); i++;
 
 					err = sqlite3_step(pStmt);
 
@@ -146,8 +152,9 @@ namespace treetimer
 					int err = sqlite3_prepare(dataAccess.db,
 											  "SELECT AggParamFloatID FROM AggregateParameterFloat WHERE "
 										      "RunID = ? AND "
-											  "CallPathID = ? AND "
 							  	  	  	  	  "ProcessID = ? AND "
+							  	  	  	  	  "Window = ? AND "
+											  "CallPathID = ? AND "
 			  	  	  	  	  	  	  	  	  "ParamName LIKE ? AND "
 			  	  	  	  	  	  	  	  	  "MinValue = ? AND "
 											  "AvgValue = ? AND "
@@ -156,15 +163,17 @@ namespace treetimer
 											  "Count = ?",
 											  -1, &pStmt, NULL);
 
-					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
-					sqlite3_bind_int   (pStmt,2, p.callPathID);
-					sqlite3_bind_int   (pStmt,3, p.processID);
-					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
-					sqlite3_bind_double(pStmt,5, p.minValue);
-					sqlite3_bind_double(pStmt,6, p.avgValue);
-					sqlite3_bind_double(pStmt,7, p.maxValue);
-					sqlite3_bind_double(pStmt,8, p.stdev);
-					sqlite3_bind_int   (pStmt,9, p.count);
+					int i=1;
+					sqlite3_bind_int   (pStmt,i, dataAccess.runID); i++;
+					sqlite3_bind_int   (pStmt,i, p.processID); i++;
+					sqlite3_bind_int   (pStmt,i, p.window); i++;
+					sqlite3_bind_int   (pStmt,i, p.callPathID); i++;
+					sqlite3_bind_text  (pStmt,i, p.paramName, -1, SQLITE_TRANSIENT); i++;
+					sqlite3_bind_double(pStmt,i, p.minValue); i++;
+					sqlite3_bind_double(pStmt,i, p.avgValue); i++;
+					sqlite3_bind_double(pStmt,i, p.maxValue); i++;
+					sqlite3_bind_double(pStmt,i, p.stdev); i++;
+					sqlite3_bind_int   (pStmt,i, p.count); i++;
 
 					err = sqlite3_step(pStmt);
 
@@ -200,8 +209,9 @@ namespace treetimer
 					int err = sqlite3_prepare(dataAccess.db,
 											  "SELECT AggParamBoolID FROM AggregateParameterBool WHERE "
 										      "RunID = ? AND "
-											  "CallPathID = ? AND "
 							  	  	  	  	  "ProcessID = ? AND "
+							  	  	  	  	  "Window = ? AND "
+											  "CallPathID = ? AND "
 			  	  	  	  	  	  	  	  	  "ParamName LIKE ? AND "
 			  	  	  	  	  	  	  	  	  "MinValue = ? AND "
 											  "AvgValue = ? AND "
@@ -210,15 +220,17 @@ namespace treetimer
 											  "Count = ?",
 											  -1, &pStmt, NULL);
 
-					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
-					sqlite3_bind_int   (pStmt,2, p.callPathID);
-					sqlite3_bind_int   (pStmt,3, p.processID);
-					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
-					sqlite3_bind_double(pStmt,5, p.minValue);
-					sqlite3_bind_double(pStmt,6, p.avgValue);
-					sqlite3_bind_double(pStmt,7, p.maxValue);
-					sqlite3_bind_double(pStmt,8, p.stdev);
-					sqlite3_bind_int   (pStmt,9, p.count);
+					int i=1;
+					sqlite3_bind_int   (pStmt,i, dataAccess.runID); i++;
+					sqlite3_bind_int   (pStmt,i, p.processID); i++;
+					sqlite3_bind_int   (pStmt,i, p.window); i++;
+					sqlite3_bind_int   (pStmt,i, p.callPathID); i++;
+					sqlite3_bind_text  (pStmt,i, p.paramName, -1, SQLITE_TRANSIENT); i++;
+					sqlite3_bind_double(pStmt,i, p.minValue); i++;
+					sqlite3_bind_double(pStmt,i, p.avgValue); i++;
+					sqlite3_bind_double(pStmt,i, p.maxValue); i++;
+					sqlite3_bind_double(pStmt,i, p.stdev); i++;
+					sqlite3_bind_int   (pStmt,i, p.count); i++;
 
 					err = sqlite3_step(pStmt);
 
@@ -267,17 +279,19 @@ namespace treetimer
 						}
 					}
 
-					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterInt VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterInt VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
-					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
-					sqlite3_bind_int   (pStmt,2, p.callPathID);
-					sqlite3_bind_int   (pStmt,3, p.processID);
-					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
-					sqlite3_bind_int   (pStmt,5, p.minValue);
-					sqlite3_bind_double(pStmt,6, p.avgValue);
-					sqlite3_bind_int   (pStmt,7, p.maxValue);
-					sqlite3_bind_double(pStmt,8, p.stdev);
-					sqlite3_bind_int   (pStmt,9, p.count);
+					int i=1;
+					sqlite3_bind_int   (pStmt,i, dataAccess.runID); i++;
+					sqlite3_bind_int   (pStmt,i, p.processID); i++;
+					sqlite3_bind_int   (pStmt,i, p.window); i++;
+					sqlite3_bind_int   (pStmt,i, p.callPathID); i++;
+					sqlite3_bind_text  (pStmt,i, p.paramName, -1, SQLITE_TRANSIENT); i++;
+					sqlite3_bind_int   (pStmt,i, p.minValue); i++;
+					sqlite3_bind_double(pStmt,i, p.avgValue); i++;
+					sqlite3_bind_int   (pStmt,i, p.maxValue); i++;
+					sqlite3_bind_double(pStmt,i, p.stdev); i++;
+					sqlite3_bind_int   (pStmt,i, p.count); i++;
 					err = sqlite3_step(pStmt);
 
 					if (err != SQLITE_OK && err != SQLITE_DONE) {
@@ -324,17 +338,19 @@ namespace treetimer
 						}
 					}
 
-					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterFloat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterFloat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
-					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
-					sqlite3_bind_int   (pStmt,2, p.callPathID);
-					sqlite3_bind_int   (pStmt,3, p.processID);
-					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
-					sqlite3_bind_double(pStmt,5, p.minValue);
-					sqlite3_bind_double(pStmt,6, p.avgValue);
-					sqlite3_bind_double(pStmt,7, p.maxValue);
-					sqlite3_bind_double(pStmt,8, p.stdev);
-					sqlite3_bind_int   (pStmt,9, p.count);
+					int i=1;
+					sqlite3_bind_int   (pStmt,i, dataAccess.runID); i++;
+					sqlite3_bind_int   (pStmt,i, p.processID); i++;
+					sqlite3_bind_int   (pStmt,i, p.window); i++;
+					sqlite3_bind_int   (pStmt,i, p.callPathID); i++;
+					sqlite3_bind_text  (pStmt,i, p.paramName, -1, SQLITE_TRANSIENT); i++;
+					sqlite3_bind_double(pStmt,i, p.minValue); i++;
+					sqlite3_bind_double(pStmt,i, p.avgValue); i++;
+					sqlite3_bind_double(pStmt,i, p.maxValue); i++;
+					sqlite3_bind_double(pStmt,i, p.stdev); i++;
+					sqlite3_bind_int   (pStmt,i, p.count); i++;
 					err = sqlite3_step(pStmt);
 
 					if (err != SQLITE_OK && err != SQLITE_DONE) {
@@ -381,17 +397,19 @@ namespace treetimer
 						}
 					}
 
-					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterBool VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
+					err = sqlite3_prepare(dataAccess.db,"INSERT INTO AggregateParameterBool VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", -1, &pStmt, NULL);
 
-					sqlite3_bind_int   (pStmt,1, dataAccess.runID);
-					sqlite3_bind_int   (pStmt,2, p.callPathID);
-					sqlite3_bind_int   (pStmt,3, p.processID);
-					sqlite3_bind_text  (pStmt,4, p.paramName, -1, SQLITE_TRANSIENT);
-					sqlite3_bind_int   (pStmt,5, p.minValue);
-					sqlite3_bind_double(pStmt,6, p.avgValue);
-					sqlite3_bind_int   (pStmt,7, p.maxValue);
-					sqlite3_bind_double(pStmt,8, p.stdev);
-					sqlite3_bind_int   (pStmt,9, p.count);
+					int i=1;
+					sqlite3_bind_int   (pStmt,i, dataAccess.runID); i++;
+					sqlite3_bind_int   (pStmt,i, p.processID); i++;
+					sqlite3_bind_int   (pStmt,i, p.window); i++;
+					sqlite3_bind_int   (pStmt,i, p.callPathID); i++;
+					sqlite3_bind_text  (pStmt,i, p.paramName, -1, SQLITE_TRANSIENT); i++;
+					sqlite3_bind_int   (pStmt,i, p.minValue); i++;
+					sqlite3_bind_double(pStmt,i, p.avgValue); i++;
+					sqlite3_bind_int   (pStmt,i, p.maxValue); i++;
+					sqlite3_bind_double(pStmt,i, p.stdev); i++;
+					sqlite3_bind_int   (pStmt,i, p.count); i++;
 					err = sqlite3_step(pStmt);
 
 					if (err != SQLITE_OK && err != SQLITE_DONE) {
@@ -422,22 +440,20 @@ namespace treetimer
 					int err;
 					MPI_Datatype aggParamIntRecord_MPI, tmpType;
 
-					int lengths[9] = {1, 1, 1, MAX_STRING_LENGTH, 1, 1, 1, 1, 1};
-					MPI_Aint displacements[9];
-					displacements[0] = offsetof(TT_AggParamInt, rank);
-					displacements[1] = offsetof(TT_AggParamInt, callPathID);
-					displacements[2] = offsetof(TT_AggParamInt, processID);
-					displacements[3] = offsetof(TT_AggParamInt, paramName);
-					displacements[4] = offsetof(TT_AggParamInt, minValue);
-					displacements[5] = offsetof(TT_AggParamInt, maxValue);
-					displacements[6] = offsetof(TT_AggParamInt, count);
-					displacements[7] = offsetof(TT_AggParamInt, avgValue);
-					displacements[8] = offsetof(TT_AggParamInt, stdev);
-					MPI_Datatype types[9] = { MPI_INT, MPI_INT, MPI_INT, 
-												MPI_CHAR, 
-												MPI_INT, MPI_INT, MPI_INT, 
-												MPI_DOUBLE, MPI_DOUBLE };
-					err = MPI_Type_create_struct(9, lengths, displacements, types, &tmpType);
+					const int n = 10;
+					MPI_Aint displacements[n]; MPI_Datatype types[n]; int lengths[n];
+					int i=0;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, rank);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, processID);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, window);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, callPathID);	lengths[i] = 1 ; i++;
+					types[i] = MPI_CHAR		; displacements[i] = offsetof(TT_AggParamInt, paramName);	lengths[i] = MAX_STRING_LENGTH ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, minValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, maxValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamInt, count);		lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamInt, avgValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamInt, stdev);		lengths[i] = 1 ; i++;
+					err = MPI_Type_create_struct(n, lengths, displacements, types, &tmpType);
 
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Failed to create custom type for aggParamIntRecord\n");
@@ -473,22 +489,20 @@ namespace treetimer
 					int err;
 					MPI_Datatype aggParamFloatRecord_MPI, tmpType;
 
-					int lengths[9] = {1, 1, 1, MAX_STRING_LENGTH, 1, 1, 1, 1, 1};
-					MPI_Aint displacements[9];
-					displacements[0] = offsetof(TT_AggParamFloat, rank);
-					displacements[1] = offsetof(TT_AggParamFloat, callPathID);
-					displacements[2] = offsetof(TT_AggParamFloat, processID);
-					displacements[3] = offsetof(TT_AggParamFloat, paramName);
-					displacements[4] = offsetof(TT_AggParamFloat, minValue);
-					displacements[5] = offsetof(TT_AggParamFloat, maxValue);
-					displacements[6] = offsetof(TT_AggParamFloat, count);
-					displacements[7] = offsetof(TT_AggParamFloat, avgValue);
-					displacements[8] = offsetof(TT_AggParamFloat, stdev);
-					MPI_Datatype types[9] = { MPI_INT, MPI_INT, MPI_INT, 
-												MPI_CHAR, 
-												MPI_DOUBLE, MPI_DOUBLE, MPI_INT, 
-												MPI_DOUBLE, MPI_DOUBLE };
-					err = MPI_Type_create_struct(9, lengths, displacements, types, &tmpType);
+					const int n = 10;
+					MPI_Aint displacements[n]; MPI_Datatype types[n]; int lengths[n];
+					int i=0;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamFloat, rank);			lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamFloat, processID);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamFloat, window);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamFloat, callPathID);	lengths[i] = 1 ; i++;
+					types[i] = MPI_CHAR		; displacements[i] = offsetof(TT_AggParamFloat, paramName);		lengths[i] = MAX_STRING_LENGTH ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamFloat, minValue);		lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamFloat, maxValue);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamFloat, count);			lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamFloat, avgValue);		lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamFloat, stdev);			lengths[i] = 1 ; i++;
+					err = MPI_Type_create_struct(n, lengths, displacements, types, &tmpType);
 
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Failed to create custom type for aggParamFloatRecord\n");
@@ -524,22 +538,20 @@ namespace treetimer
 					int err;
 					MPI_Datatype aggParamBoolRecord_MPI, tmpType;
 
-					int lengths[9] = {1, 1, 1, MAX_STRING_LENGTH, 1, 1, 1, 1, 1};
-					MPI_Aint displacements[9];
-					displacements[0] = offsetof(TT_AggParamBool, rank);
-					displacements[1] = offsetof(TT_AggParamBool, callPathID);
-					displacements[2] = offsetof(TT_AggParamBool, processID);
-					displacements[3] = offsetof(TT_AggParamBool, paramName);
-					displacements[4] = offsetof(TT_AggParamBool, minValue);
-					displacements[5] = offsetof(TT_AggParamBool, maxValue);
-					displacements[6] = offsetof(TT_AggParamBool, count);
-					displacements[7] = offsetof(TT_AggParamBool, avgValue);
-					displacements[8] = offsetof(TT_AggParamBool, stdev);
-					MPI_Datatype types[9] = { MPI_INT, MPI_INT, MPI_INT, 
-												MPI_CHAR, 
-												MPI_INT, MPI_INT, MPI_INT, 
-												MPI_DOUBLE, MPI_DOUBLE };
-					err = MPI_Type_create_struct(9, lengths, displacements, types, &tmpType);
+					const int n = 10;
+					MPI_Aint displacements[n]; MPI_Datatype types[n]; int lengths[n];
+					int i=0;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, rank);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, processID);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, window);		lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, callPathID);	lengths[i] = 1 ; i++;
+					types[i] = MPI_CHAR		; displacements[i] = offsetof(TT_AggParamBool, paramName);	lengths[i] = MAX_STRING_LENGTH ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, minValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, maxValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_INT		; displacements[i] = offsetof(TT_AggParamBool, count);		lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamBool, avgValue);	lengths[i] = 1 ; i++;
+					types[i] = MPI_DOUBLE	; displacements[i] = offsetof(TT_AggParamBool, stdev);		lengths[i] = 1 ; i++;
+					err = MPI_Type_create_struct(n, lengths, displacements, types, &tmpType);
 
 					if (err != MPI_SUCCESS) {
 						fprintf(stderr, "Failed to create custom type for aggParamBoolRecord\n");

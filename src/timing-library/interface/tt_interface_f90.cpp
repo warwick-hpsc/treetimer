@@ -67,14 +67,6 @@ int F2C(c_tree_timer_log_parameter_bool, C_TREE_TIMER_LOG_PARAMETER_BOOL)(const 
 	return 0;
 }
 
-int F2C(c_tree_timer_enter_trace_conductor, C_TREE_TIMER_ENTER_TRACE_CONDUCTOR)(const char *name, int *text_len,  int *traceCallInterval)
-{
-	char c_name[*text_len + 1];
-	F2C_strcpy(c_name, name, *text_len);
-	TreeTimerEnterTraceConductor(c_name, *traceCallInterval);
-	return 0;
-}
-
 int F2C(c_tree_timer_enter_method, C_TREE_TIMER_ENTER_METHOD)(const char *name, int *text_len)
 {
 	char c_name[*text_len + 1];

@@ -24,6 +24,9 @@ namespace treetimer
 				AggTimings();
 				~AggTimings();
 
+			   	void resetTimings();
+			   	void addTimes(double wallTime, double CPUTime);
+
 				// Variables
 				// Walltime - Aggregate Statistics
 			   	double avgWalltime;
@@ -44,12 +47,6 @@ namespace treetimer
 			   	// Call Count
 			   	int count;
 		};
-
-		namespace drivers
-		{
-			void resetTimings(AggTimings& timings);
-			void addTimes(AggTimings& timings, double wallTime, double CPUTime);
-		}
 	}
 }
 

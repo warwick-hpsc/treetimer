@@ -33,6 +33,14 @@ namespace treetimer
 				Config *config;
 				treetimer::data_structures::Tree<std::string, treetimer::measurement::InstrumentationData> *callTree;
 
+				// Aggregation window management:
+				// -- window stepping:
+				int aggStepInterval;
+				int aggStepIntervalCounter;
+				// -- window synchronisation across nodes:
+				int currentAggWindow;
+				int targetNumAggWindows;
+
 				std::string traceConductorNodeName;
 				int traceCallInterval;
 				int traceCallIntervalCounter;

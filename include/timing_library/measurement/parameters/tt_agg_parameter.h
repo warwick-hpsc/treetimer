@@ -26,6 +26,8 @@ namespace treetimer
 				AggParameter();
 				~AggParameter();
 
+				void updateValue(T value);
+
 				T minVal;
 				T maxVal;
 
@@ -33,12 +35,6 @@ namespace treetimer
 				double variance;
 				int count;
 		};
-
-		namespace drivers
-		{
-			template <class T>
-			void updateValue(AggParameter<T>&, T value);
-		}
 	}
 }
 
