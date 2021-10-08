@@ -49,19 +49,19 @@ The data storage layout is too lengthy to detail here, but the schemas used can 
 
 Provision is made to store machine data in a location in the database, but this data is not currently captured and thus these tables in the database remain empty.
 
-RunTime Options
+Runtime Options
 ==========================================
 
 The TreeTimer Library has a number of configuration options that can be set at runtime via the use of enviromental parameters:
 
 - TT_CONFIG_APPNAME : String. This environment variable contains the application name that will be associated with the results in the database.
 
-## Aggregate Data: This will store aggregated data to minimise data output.
+#### Aggregate Data: This will store aggregated data to minimise data output.
 - TT_CONFIG_ATIMERS : [0|1] Disable/enable aggregate timing data for a block. Default 1. 
 - TT_CONFIG_APARAM : [0|1] Disable/enable aggregate parameter data for a block. Default 1.
 - TT_CONFIG_APAPI : [0|1] Disable/enable aggregate papi data for a block. This is a placeholder - PAPI is not yet included in this version.
 
-## Trace Data: This will store a unique data entry for every block entry/exit, enabling traces to be reconstructed.
+#### Trace Data: This will store a unique data entry for every block entry/exit, enabling traces to be reconstructed.
 - TT_CONFIG_TTIMERS : [0|1] Disable/enable trace timing data for a block. Default 0.
 - TT_CONFIG_TPARAM : [0|1] Disable/enable trace parameter data for a block. Default 0.
 - TT_CONFIG_TPAPI : [0|1] Disable/enable trace papi data for a block. This is a placeholder - PAPI is not yet included in this version.
@@ -71,10 +71,10 @@ TT_CONFIG_MPI_HOOKS: [0|1] Disable/enable the wrapping of all MPI function calls
 TT_CONFIG_MPI_HOOKS_TPARAM : [0|1] Special option for collecting MPI parameters while tracing - destinations, byte sizes, buffer sizes etc. Default 0. If enabled, the traces are enormous, so you probably don't want this unless debugging. Requires TT_CONFIG_TPARAM and TT_CONFIG_MPI_HOOKS to also be set.
 
 Measuring performance dynamics over time: It can be useful to measure how performance data varies over a run. Collecting a full trace is likely prohibitively expensive. Here are two means for feasibly measuring dynamic load, intended for codes with one main loop:
-## Windowed aggregation: aggregate within a fixed-size 'time' window. At end, move to next window.
+#### Windowed aggregation: aggregate within a fixed-size 'time' window. At end, move to next window.
 - TT_CONFIG_AGG_STEP_NODE : String. Node to use to determine when to move to next window, all children nodes synchronise with this.
 - TT_CONFIG_AGG_STEP_INTERVAL : Integer. Number of specified node entries/exits per window.
-## Intermittent tracing: collect full traces of 1-in-N entries of a particlular node
+#### Intermittent tracing: collect full traces of 1-in-N entries of a particlular node
 - TT_CONFIG_TRACE_CONDUCTOR_NODE : String. Node to use to determine when to enable/disable tracing, all children nodes synchronise with this.
 - TT_CONFIG_TRACE_INTERVAL : Integer. Number of specified node entries/exits to ignore between traces.
 
