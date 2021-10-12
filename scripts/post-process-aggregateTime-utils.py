@@ -14,26 +14,6 @@ def getNodeAggregatedTimeStats(db, runID, processID, callPathID, window=None):
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
 
-	aggTimesProcess_tmpTableName = "aggTime_r{0}_p{1}".format(runID, processID)
-	if not temp_table_exists(db, aggTimesProcess_tmpTableName):
-		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM AggregateTime AS A WHERE A.RunID = {1} AND A.ProcessID = {2}".format(aggTimesProcess_tmpTableName, runID, processID)
-		cur.execute(query)
-	callpathProcess_tmpTableName = "callpath_p{0}".format(processID)
-	if not temp_table_exists(db, callpathProcess_tmpTableName):
-		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM CallPathData AS C WHERE C.ProcessID = {1}".format(callpathProcess_tmpTableName, processID)
-		cur.execute(query)
-
-	premergedData_tmpTableName = "aggTimeCallpath_r{0}_p{1}".format(runID, processID)
-	if not temp_table_exists(db, premergedData_tmpTableName):
-		query = "CREATE TEMPORARY TABLE {0} AS SELECT ".format(premergedData_tmpTableName) + \
-				"A.CallPathID AS CallPathID, " + \
-				"D.NodeName AS NodeName, " + \
-				"T.TypeName AS TypeName, " + \
-				"A.Window AS Window, A.MinWallTime AS MinWallTime, A.AvgWallTime AS AvgWallTime, A.MaxWallTime AS MaxWallTime, A.Count AS Count " + \
-				"FROM {0} AS A NATURAL JOIN {1} AS C ".format(aggTimesProcess_tmpTableName, callpathProcess_tmpTableName) + \
-				"NATURAL JOIN ProfileNodeData AS D NATURAL JOIN ProfileNodeType AS T ;"
-		cur.execute(query)
-
 	## Get Node Aggregate Details - Should only ever have one entry
 	## If target code enabled windowed aggregation, then for a given CallPathID there may be multiple rows:
 	## - exception is nodes above 'AggregationStepper' in tree hierarchy
@@ -42,11 +22,13 @@ def getNodeAggregatedTimeStats(db, runID, processID, callPathID, window=None):
 	if window is None:
 		query = "SELECT " + \
 				"A.CallPathID AS CallPathID, " + \
-				"A.NodeName AS Name, " + \
-				"A.TypeName AS TypeName, " + \
+				"D.NodeName AS Name, " + \
+				"T.TypeName AS TypeName, " + \
 				"A.MinWallTime AS AggMinTime, A.AvgWallTime AS AggAvgTime, A.MaxWallTime AS AggMaxTime, A.Count AS CallCount " + \
-				"FROM {0} AS A ".format(premergedData_tmpTableName) + \
-				"WHERE A.CallPathID = {0} ;".format(callPathID)
+				"FROM AggregateTime AS A " + \
+				"NATURAL JOIN CallPathData AS C " + \
+				"NATURAL JOIN ProfileNodeData AS D NATURAL JOIN ProfileNodeType AS T " + \
+				"WHERE A.RunID = {0} AND A.ProcessID = {1} AND A.CallPathID = {2} ;".format(runID, processID, callPathID)
 		cur.execute(query)
 		result = cur.fetchall()
 		if result is None or len(result) == 0:
@@ -72,11 +54,13 @@ def getNodeAggregatedTimeStats(db, runID, processID, callPathID, window=None):
 	else:
 		query = "SELECT " + \
 				"A.CallPathID AS CallPathID, " + \
-				"A.NodeName AS Name, " + \
-				"A.TypeName AS TypeName, " + \
+				"D.NodeName AS Name, " + \
+				"T.TypeName AS TypeName, " + \
 				"A.Window AS Window, A.MinWallTime AS AggMinTime, A.AvgWallTime AS AggAvgTime, A.MaxWallTime AS AggMaxTime, A.Count AS CallCount " + \
-				"FROM {0} AS A ".format(premergedData_tmpTableName) + \
-				"WHERE A.CallPathID = {0} AND A.Window = {1} ;".format(callPathID, window)
+				"FROM AggregateTime AS A " + \
+				"NATURAL JOIN CallPathData AS C " + \
+				"NATURAL JOIN ProfileNodeData AS D NATURAL JOIN ProfileNodeType AS T " + \
+				"WHERE A.RunID = {0} AND A.ProcessID = {1} AND A.CallPathID = {2} AND A.Window = {3} ;".format(runID, processID, callPathID, window)
 		cur.execute(query)
 		result = cur.fetchall()
 		if result is None or len(result) == 0:
@@ -97,15 +81,17 @@ def getNodeAggregatedTimeStats(db, runID, processID, callPathID, window=None):
 		nodeStats['AggTotalTimeE'] = nodeStats['AggTotalTimeI']
 
 	else:
-		# ## Get sum of inclusive times taken by child nodes
+		## Get sum of inclusive times taken by child nodes
 		childIDStr = ','.join([str(x) for x in childIDs])
 		if window is None:
 			## Note: safe to ignore 'window', because 'SUM()' will sum across windows as well as children.
-			query = "SELECT SUM(AvgWallTime * Count) AS ChildrenWalltime FROM {0}".format(aggTimesProcess_tmpTableName) + \
-				  " WHERE CallPathID IN ({0}) ;".format(childIDStr)
+			query = "SELECT SUM(AvgWallTime * Count) AS ChildrenWalltime FROM AggregateTime" + \
+				  " WHERE RunID = {0} AND ProcessID = {1} ".format(runID, processID) + \
+				  " AND CallPathID IN ({0}) ;".format(childIDStr)
 		else:
-			query = "SELECT SUM(AvgWallTime * Count) AS ChildrenWalltime FROM {0}".format(aggTimesProcess_tmpTableName) + \
-			  " WHERE Window = {0}".format(window) + \
+			query = "SELECT SUM(AvgWallTime * Count) AS ChildrenWalltime FROM AggregateTime" + \
+			  " WHERE RunID = {0} AND ProcessID = {1} ".format(runID, processID) + \
+			  " AND Window = {0}".format(window) + \
 			  " AND CallPathID IN ({0}) ;".format(childIDStr)
 		cur.execute(query);
 		childrenWalltime = cur.fetchone()['ChildrenWalltime']
@@ -115,7 +101,7 @@ def getNodeAggregatedTimeStats(db, runID, processID, callPathID, window=None):
 			nodeStats['AggTotalTimeI'] = childrenWalltime
 		else:
 			nodeStats['AggTotalTimeE'] = nodeStats['AggTotalTimeI'] - childrenWalltime
-			## Due to overhead, potentially possible for this to be slightly negative, so will correct here
+			#s# Due to overhead, potentially possible for this to be slightly negative, so will correct here
 			if nodeStats['AggTotalTimeE'] < 0.0:
 				print("Note: negative 'AggTotalTimeE' detected for nodeName '{0}', zeroing ({1})".format(nodeStats["Name"], nodeStats['AggTotalTimeE']))
 				nodeStats['AggTotalTimeE'] = 0.0

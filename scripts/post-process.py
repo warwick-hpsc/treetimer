@@ -146,7 +146,12 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 				if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
 				df_all = None
 				## This loop is expensive. Can I cache every N iterations?
-				for rank, t in trees.items():
+				#for rank, t in trees.items():
+				ranks = [r for r in trees.keys()]
+				print("Collating windowed aggregated times ...")
+				for i in tqdm.tqdm(range(0, len(ranks))):
+					rank = ranks[i]
+					t = trees[rank]
 					processID = getProcessID(dbm, rank)
 					df = collateWindowedAggregateTimes(dbm, runID, processID, t)
 					if df_all is None:
