@@ -86,6 +86,14 @@ else:
 	plotType = PlotType.Horizontal
 
 
+def move_db_to_memory(db):
+	dbm = sqlite3.connect(':memory:')
+	db.backup(dbm)
+
+	## Put temp data into memory instead of disk to avoid hitting size limits. Confusing because /tmp is big, so where was sqlite3 putting temp tables?
+	dbm.execute("PRAGMA temp_store = MEMORY")
+
+	return dbm
 
 def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 	if verbose: print("Processing: {0} ({1}/{2})".format(db_fp, ctr, num_dbs))
@@ -103,7 +111,7 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 	trees = None
 	if not os.path.isfile(trees_fp):
 		if verbose: print("- generating: " + trees_fp)
-		if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+		if dbm is None: dbm = move_db_to_memory(db)
 		trees = {}
 		for processID in getProcessIds(dbm):
 			rank = getMpiRank(dbm, processID)
@@ -116,7 +124,7 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 	df_agg_fp = os.path.join(cache_dp, f+".aggTimes.csv")
 	if not os.path.isfile(df_agg_fp):
 		if verbose: print("- generating: " + df_agg_fp)
-		if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+		if dbm is None: dbm = move_db_to_memory(db)
 		df = getAllAggregatedTimeStats(dbm, runID)
 		if not df is None:
 			df.to_csv(df_agg_fp, index=False)
@@ -124,7 +132,7 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 	df_agg_grouped_fp = os.path.join(cache_dp, f+".aggTimes.groupByType.csv")
 	if not os.path.isfile(df_agg_grouped_fp):
 		if verbose: print("- generating: " + df_agg_grouped_fp)
-		if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+		if dbm is None: dbm = move_db_to_memory(db)
 		df_agg_grouped = aggregateTimesByType(dbm, runID)
 		if not df_agg_grouped is None:
 			df_agg_grouped.to_csv(df_agg_grouped_fp, index=False)
@@ -143,7 +151,7 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 					break
 			if didAllRanksPerformWindowedAggregation:
 				if verbose: print("- generating: " + windowedAggTimes_fp)
-				if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+				if dbm is None: dbm = move_db_to_memory(db)
 				df_all = None
 				## This loop is expensive. Can I cache every N iterations?
 				for rank, t in trees.items():
@@ -166,14 +174,14 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 
 			traces_df_all = None
 			for rank, t in trees.items():
-				n = t.findTreeNodeByType("TraceConductor")
-				if n is None:
-					n = findSolverNode(t, 1, t.time)
-				if n is None:
+				n = t.findTreeNodeByName(findTraceConductorNodeName(db))
+				if n is None: n = t.findTreeNodeByType("TraceConductor")
+				if n is None: n = t.findSolverNode(1, t.time)
+				if n is None: 
 					raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
 				if not n is None:
 					traceGroupNode = n.name
-					if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+					if dbm is None: dbm = move_db_to_memory(db)
 					processID = getProcessID(dbm, rank)
 					traces_df = traceTimes_aggregateByNode(dbm, runID, processID, t, traceGroupNode)
 					traces_df["Rank"] = rank
@@ -194,14 +202,14 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 
 				traces_df_all = None
 				for rank, t in trees.items():
-					n = t.findTreeNodeByType("TraceConductor")
-					if n is None:
-						n = findSolverNode(t, 1, t.time)
+					n = t.findTreeNodeByName(findTraceConductorNodeName(db))
+					if n is None: n = t.findTreeNodeByType("TraceConductor")
+					if n is None: n = t.findSolverNode(1, t.time)
 					if n is None:
 						raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
 					else:
 						traceGroupNode = n.name
-						if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+						if dbm is None: dbm = move_db_to_memory(db)
 						processID = getProcessID(dbm, rank)
 						traces_df = traceTimes_aggregateByNode(dbm, runID, processID, t, traceGroupNode, args.trace_group_focus)
 						traces_df["Rank"] = rank
@@ -226,7 +234,7 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 					break
 			if didAllRanksPerformWindowedAggregation:
 				if verbose: print("- generating: " + windowedAggParam_fp)
-				if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+				if dbm is None: dbm = move_db_to_memory(db)
 				df_all = None
 				## This loop is expensive. Can I cache every N iterations?
 				for rank, t in trees.items():
@@ -248,14 +256,14 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 
 			traces_df_all = None
 			for rank, t in trees.items():
-				n = t.findTreeNodeByType("TraceConductor")
-				if n is None:
-					n = findSolverNode(t, 1, t.time)
+				n = t.findTreeNodeByName(findTraceConductorNodeName(db))
+				if n is None: n = t.findTreeNodeByType("TraceConductor")
+				if n is None: n = t.findSolverNode(1, t.time)
 				if n is None:
 					raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
 				else:
 					traceGroupNode = n.name
-					if dbm is None: dbm = sqlite3.connect(':memory:') ; db.backup(dbm)
+					if dbm is None: dbm = move_db_to_memory(db)
 					processID = getProcessID(dbm, rank)
 					traces_df = traceParameter_aggregateByNode(dbm, runID, processID, t, traceGroupNode, args.parameter)
 					if not traces_df is None:
@@ -464,12 +472,13 @@ def main():
 		if not traceParameter_all_df is None:
 			traceParameter_chart(traceParameter_all_df, args.parameter, output_dirpath=args.tt_results_dirpath)
 
-	print("Writing out collated CSVs")
-	aggTimes_raw_df["num_ranks"] = len(ranks)
-	aggTimes_raw_df.sort_values(["Name", "Rank"], inplace=True)
-	df_filename = os.path.join(output_dirpath, "timings_raw.csv")
-	aggTimes_raw_df.to_csv(df_filename, index=False)
-	print("Collated raw data written to '{0}'".format(df_filename))
+	if not aggTimes_raw_df is None:
+		print("Writing out collated CSVs")
+		aggTimes_raw_df["num_ranks"] = len(ranks)
+		aggTimes_raw_df.sort_values(["Name", "Rank"], inplace=True)
+		df_filename = os.path.join(output_dirpath, "timings_raw.csv")
+		aggTimes_raw_df.to_csv(df_filename, index=False)
+		print("Collated raw data written to '{0}'".format(df_filename))
 
 	if not aggTimes_grouped_df is None:
 		aggTimes_grouped_df.sort_values(["Method type", "Rank"], inplace=True)

@@ -16,11 +16,11 @@ def getNodeAggregatedTimeStats(db, runID, processID, callPathID, window=None):
 
 	aggTimesProcess_tmpTableName = "aggTime_r{0}_p{1}".format(runID, processID)
 	if not temp_table_exists(db, aggTimesProcess_tmpTableName):
-		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM AggregateTime AS A WHERE A.RunID = {1} AND A.ProcessID = {2}".format(aggTimesProcess_tmpTableName, runID, processID)
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM AggregateTime WHERE RunID = {1} AND ProcessID = {2}".format(aggTimesProcess_tmpTableName, runID, processID)
 		cur.execute(query)
 	callpathProcess_tmpTableName = "callpath_p{0}".format(processID)
 	if not temp_table_exists(db, callpathProcess_tmpTableName):
-		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM CallPathData AS C WHERE C.ProcessID = {1}".format(callpathProcess_tmpTableName, processID)
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM CallPathData WHERE ProcessID = {1}".format(callpathProcess_tmpTableName, processID)
 		cur.execute(query)
 
 	premergedData_tmpTableName = "aggTimeCallpath_r{0}_p{1}".format(runID, processID)
@@ -97,7 +97,7 @@ def getNodeAggregatedTimeStats(db, runID, processID, callPathID, window=None):
 		nodeStats['AggTotalTimeE'] = nodeStats['AggTotalTimeI']
 
 	else:
-		# ## Get sum of inclusive times taken by child nodes
+		## Get sum of inclusive times taken by child nodes
 		childIDStr = ','.join([str(x) for x in childIDs])
 		if window is None:
 			## Note: safe to ignore 'window', because 'SUM()' will sum across windows as well as children.

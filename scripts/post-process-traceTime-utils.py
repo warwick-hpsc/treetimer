@@ -15,11 +15,31 @@ from PostProcessPlotUtils import *
 def traceTimes_aggregateTraceRange(db, runID, processID, nodeEntryId, nodeExitId):
 	cur = db.cursor()
 
+	traceTimesProcess_tmpTableName = "traceTime_r{0}_p{1}".format(runID, processID)
+	if not temp_table_exists(db, traceTimesProcess_tmpTableName):
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM TraceTimeData WHERE RunID = {1} AND ProcessID = {2}".format(traceTimesProcess_tmpTableName, runID, processID)
+		cur.execute(query)
+	callpathProcess_tmpTableName = "callpath_p{0}".format(processID)
+	if not temp_table_exists(db, callpathProcess_tmpTableName):
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM CallPathData WHERE ProcessID = {1}".format(callpathProcess_tmpTableName, processID)
+		cur.execute(query)
+	premergedData_tmpTableName = "traceTimeCallpath_r{0}_p{1}".format(runID, processID)
+	if not temp_table_exists(db, premergedData_tmpTableName):
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * ".format(premergedData_tmpTableName) + \
+				"FROM {0} NATURAL JOIN {1} NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType".format(traceTimesProcess_tmpTableName, callpathProcess_tmpTableName)
+		cur.execute(query)
+
 	## Query to get trace entries that occur between nodeEntryId and nodeExitId, summing by CallPathId:
-	qGetTraceWalltime = "SELECT TraceTimeID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY CallPathID".format(runID, processID, nodeEntryId, nodeExitId)
+	qGetTraceWalltime = "SELECT TraceTimeID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName " + \
+						"FROM {0} ".format(premergedData_tmpTableName) + \
+						"WHERE NodeEntryID >= {0} AND NodeExitID <= {1} ".format(nodeEntryId, nodeExitId) + \
+						"GROUP BY CallPathID"
 
 	## Query to, for each trace entry in range, sum walltimes of its immediate children
-	qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, nodeEntryId, nodeExitId)
+	qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime " + \
+							"FROM {0} ".format(premergedData_tmpTableName) +\
+							"WHERE NodeEntryID >= {0} AND NodeExitID <= {1} ".format(nodeEntryId, nodeExitId) + \
+							"GROUP BY ParentNodeID"
 
 	## Query to join the above two queries into one, bringing together inclusive waltims of each node and its children. Seems to work.
 	query12 = "SELECT TraceTimeID, WallTime, ChildrenWalltime, TypeName FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraceWalltime, qGetChildrenWalltime)
@@ -33,12 +53,29 @@ def traceTimes_aggregateTraceRange(db, runID, processID, nodeEntryId, nodeExitId
 def traceTimes_aggregateTraceSubRanges(db, runID, processID, nodeEntryId, nodeExitId, subnodeEntryIds, subnodeExitIds):
 	cur = db.cursor()
 
+	traceTimesProcess_tmpTableName = "traceTime_r{0}_p{1}".format(runID, processID)
+	if not temp_table_exists(db, traceTimesProcess_tmpTableName):
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM TraceTimeData WHERE RunID = {1} AND ProcessID = {2}".format(traceTimesProcess_tmpTableName, runID, processID)
+		cur.execute(query)
+	callpathProcess_tmpTableName = "callpath_p{0}".format(processID)
+	if not temp_table_exists(db, callpathProcess_tmpTableName):
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM CallPathData WHERE ProcessID = {1}".format(callpathProcess_tmpTableName, processID)
+		cur.execute(query)
+	premergedData_tmpTableName = "traceTimeCallpath_r{0}_p{1}".format(runID, processID)
+	if not temp_table_exists(db, premergedData_tmpTableName):
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM {1} NATURAL JOIN {2} NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType".format(premergedData_tmpTableName, traceTimesProcess_tmpTableName, callpathProcess_tmpTableName)
+		cur.execute(query)
+
 	## Query to get trace entries that occur between nodeEntryId and nodeExitId, summing by CallPathId:
-	# qGetTraceWalltime = "SELECT TraceTimeID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY CallPathID".format(runID, processID, nodeEntryId, nodeExitId)
-	qGetTraceWalltime = "SELECT MIN(TraceTimeID) AS TraceTimeID, MIN(NodeEntryID) AS NodeEntryID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName FROM TraceTimeData NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY CallPathID".format(runID, processID, nodeEntryId, nodeExitId)
+	qGetTraceWalltime = "SELECT MIN(TraceTimeID) AS TraceTimeID, MIN(NodeEntryID) AS NodeEntryID, CallPathID, SUM(WallTime) AS WallTime, ParentNodeID, TypeName " + \
+						"FROM {0} ".format(premergedData_tmpTableName) + \
+						"WHERE NodeEntryID >= {0} AND NodeExitID <= {1} ".format(nodeEntryId, nodeExitId) + \
+						"GROUP BY CallPathID"
 
 	## Query to, for each trace entry in range, sum walltimes of its immediate children
-	qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime FROM TraceTimeData AS T2 NATURAL JOIN CallPathData NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType WHERE RunID = {0} AND ProcessID = {1} AND NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(runID, processID, nodeEntryId, nodeExitId)
+	qGetChildrenWalltime = "SELECT ParentNodeID AS PID, SUM(WallTime) AS ChildrenWalltime " + \
+						"FROM {0} ".format(premergedData_tmpTableName) + \
+						"WHERE NodeEntryID >= {0} AND NodeExitID <= {1} GROUP BY ParentNodeID".format(nodeEntryId, nodeExitId)
 
 	## Query to join the above two queries into one, bringing together inclusive waltimes of each node and its children. Seems to work.
 	query12 = "SELECT NodeEntryID, TraceTimeID, WallTime, ChildrenWalltime, TypeName FROM ({0}) AS A LEFT OUTER JOIN ({1}) AS B ON A.CallPathID = B.PID".format(qGetTraceWalltime, qGetChildrenWalltime)
@@ -69,7 +106,12 @@ def traceTimes_aggregateByNode(db, runID, processID, tree, nodeName, nodeOfInter
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
 	cid = getNodeCallpathId(db, processID, nodeName)
-	query = "SELECT NodeEntryID, NodeExitID FROM TraceTimeData WHERE RunID = {0} AND ProcessID = {1} AND CallPathID = {2};".format(runID, processID, cid)
+	traceTimesProcess_tmpTableName = "traceTime_r{0}_p{1}".format(runID, processID)
+	if not temp_table_exists(db, traceTimesProcess_tmpTableName):
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM TraceTimeData WHERE RunID = {1} AND ProcessID = {2}".format(traceTimesProcess_tmpTableName, runID, processID)
+		cur.execute(query)
+	query = "SELECT NodeEntryID, NodeExitID FROM {0} WHERE CallPathID = {1};".format(traceTimesProcess_tmpTableName, cid)
+
 	cur.execute(query)
 	result = cur.fetchall()
 	nodeEntryIds = [row['NodeEntryID'] for row in result]
@@ -94,7 +136,7 @@ def traceTimes_aggregateByNode(db, runID, processID, tree, nodeName, nodeOfInter
 			raise Exception("'{0}' not child of '{1}'".format(nodeOfInterestName, nodeName))
 
 		cid = getNodeCallpathId(db, processID, nodeOfInterestName)
-		query = "SELECT NodeEntryID, NodeExitID FROM TraceTimeData WHERE RunID = {0} AND ProcessID = {1} AND CallPathID = {2};".format(runID, processID, cid)
+		query = "SELECT NodeEntryID, NodeExitID FROM {0} WHERE CallPathID = {0};".format(traceTimesProcess_tmpTableName, cid)
 		cur.execute(query)
 		result = cur.fetchall()
 		subnodeEntryIds = [row['NodeEntryID'] for row in result]
@@ -161,10 +203,24 @@ def traceParameter_aggregateTraceRange(db, runID, processID, paramTable, paramNa
 	traceParamIdColMap["TraceParameterLongData"] = "TraceParamLongID"
 	traceParamIdColMap["TraceParameterDoubleData"] = "TraceParamDoubleID"
 
+	traceParamProcess_tmpTableName = "traceParam_{0}_r{1}_p{2}".format(paramName, runID, processID)
+	if not temp_table_exists(db, traceParamProcess_tmpTableName):
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM {1} ".format(traceParamProcess_tmpTableName, paramTable) + \
+				"WHERE RunID = {0} AND ProcessID = {1} AND ParamName = \"{2}\"".format(runID, processID, paramName)
+		cur.execute(query)
+	callpathProcess_tmpTableName = "callpath_p{0}".format(processID)
+	if not temp_table_exists(db, callpathProcess_tmpTableName):
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM CallPathData WHERE ProcessID = {1}".format(callpathProcess_tmpTableName, processID)
+		cur.execute(query)
+	premergedData_tmpTableName = "traceParamCallpath_{0}_r{1}_p{2}".format(paramName, runID, processID)
+	if not temp_table_exists(db, premergedData_tmpTableName):
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM {1} NATURAL JOIN {2} NATURAL JOIN ProfileNodeData NATURAL JOIN ProfileNodeType".format(premergedData_tmpTableName, traceParamProcess_tmpTableName, callpathProcess_tmpTableName)
+		cur.execute(query)
+
 	## To reduce code development time, check that parameter only has one value in specified nodeID range.
 	## If this is not the case, then need to think about what statistics to report (average? max and min? variance?). 
 	## Multiple parameter values cannot be handled like runtimes (which can be summed).
-	qCountQuery = "SELECT COUNT(*) FROM {0} NATURAL JOIN CallPathData WHERE ProcessID = {1} AND ParamName = \"{2}\" AND NodeEntryID >= {3} AND NodeExitID <= {4} GROUP BY ParentNodeID".format(paramTable, processID, paramName, nodeEntryId, nodeExitId)
+	qCountQuery = "SELECT COUNT(*) FROM {0} WHERE NodeEntryID >= {1} AND NodeExitID <= {2} GROUP BY ParentNodeID".format(premergedData_tmpTableName, nodeEntryId, nodeExitId)
 	cur.execute(qCountQuery)
 	res = cur.fetchone()
 	if res is None:
@@ -173,20 +229,25 @@ def traceParameter_aggregateTraceRange(db, runID, processID, paramTable, paramNa
 	if count > 1:
 		raise Exception("Parameter '{0}' recorded multiple values between a specific nodeID range. This situation has not been coded in TreeTimer, contact developers to request average, variance, or some other aggregating function.")
 
-	query = "SELECT {0} AS TraceParamId, ParamValue FROM {1} NATURAL JOIN CallPathData WHERE ProcessID = {2} AND ParamName = \"{3}\" AND NodeEntryID >= {4} AND NodeExitID <= {5} GROUP BY ParentNodeID".format(traceParamIdColMap[paramTable], paramTable, processID, paramName, nodeEntryId, nodeExitId)
+	query = "SELECT {0} AS TraceParamId, ParamValue FROM {1} WHERE NodeEntryID >= {2} AND NodeExitID <= {3} GROUP BY ParentNodeID".format(traceParamIdColMap[paramTable], premergedData_tmpTableName, nodeEntryId, nodeExitId)
 	cur.execute(query)
 	res = cur.fetchone()
 	row = [res["TraceParamId"], res["ParamValue"]]
 	return [row]
 
-def traceParameter_aggregateByNode(db, runID, processID, tree, nodeName, paramName, nodeOfInterestName=None):
+def traceParameter_aggregateByNode(db, runID, processID, tree, nodeName, paramName):
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
 
 	## First, determine parameter type:
 	paramTable = None
 	for t in ["TraceParameterBoolData", "TraceParameterIntData", "TraceParameterFloatData"]:
-		query = "SELECT COUNT(*) FROM {0} WHERE RunID = {1} and ProcessID = {2} AND ParamName = \"{3}\" ;".format(t, runID, processID, paramName)
+		traceParamsProcess_tmpTableName = "{0}_r{1}_p{2}".format(t, runID, processID)
+		if not temp_table_exists(db, traceParamsProcess_tmpTableName):
+			query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM {1} ".format(traceParamsProcess_tmpTableName, t) + \
+					"WHERE RunID = {0} AND ProcessID = {1}".format(runID, processID)
+			cur.execute(query)
+		query = "SELECT COUNT(*) FROM {0} WHERE ParamName = \"{1}\" ;".format(traceParamsProcess_tmpTableName, paramName)
 		cur.execute(query)
 		count = cur.fetchone()[0]
 		if count > 0:
@@ -198,14 +259,9 @@ def traceParameter_aggregateByNode(db, runID, processID, tree, nodeName, paramNa
 		# print("WARNING: ParamName {0} not found in any TraceParameter* table".format(paramName))
 		return None
 
-	query = "SELECT COUNT(*) FROM TraceParameterBoolData WHERE ProcessID = {0} AND ParamName = \"TraceConductorEnabled?\";".format(processID)
-	cur.execute(query)
-	count = cur.fetchone()[0]
-	if count == 0:
-		raise Exception("TreeTimer processID {0} has not written parameter 'TraceConductorEnabled?' to table TraceParameterBoolData, which is necessary for grouping trace parameter by ".format(processID))
-
 	cid = getNodeCallpathId(db, processID, nodeName)
-	query = "SELECT NodeEntryID, NodeExitID FROM TraceParameterBoolData WHERE RunID = {0} AND ProcessID = {1} AND CallPathID = {2} AND ParamName = \"TraceConductorEnabled?\";".format(runID, processID, cid)
+	traceParamsProcess_tmpTableName = "{0}_r{1}_p{2}".format(paramTable, runID, processID)
+	query = "SELECT NodeEntryID, NodeExitID FROM {0} WHERE CallPathID = {1};".format(traceParamsProcess_tmpTableName, cid)
 	cur.execute(query)
 	result = cur.fetchall()
 	nodeEntryIds = [row['NodeEntryID'] for row in result]
