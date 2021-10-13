@@ -34,10 +34,10 @@ extern const std::string codeBlockNames[TT_CODE_BLOCK_COUNT] = {std::string("Pro
 																std::string("MPIIOCall"),
 																std::string("LibraryCall"),
 																std::string("TraceConductor"),
-																std::string("AggregationStepper")};
+																std::string("AggregationStepper"),
+																std::string("Unspecified")};
 																// std::string("MPINonCommMethodCall"),
 																// std::string("NonMPIMethodCall"),
-																// std::string("Unspecified"),
 
 namespace treetimer
 {
@@ -120,20 +120,23 @@ namespace treetimer
 
 			void TreeTimerEnterBlock(std::string blockName, CodeBlockType blockType)
 			{
-				if (!treetimer::core::instrumState->sleeping) {
-					if (blockName == instrumState->config->aggregationStepperNodeName) {
-						if (instrumState->config->eATimers || instrumState->config->eAParam) {
+				bool wasTraceConductorInitialised = false;
+				if (blockName == instrumState->config->aggregationStepperNodeName) {
+					blockType = TT_NODE_TYPE_AGGREGATION_STEPPER;
+
+					if (instrumState->config->eATimers || instrumState->config->eAParam) {
+						if (instrumState->aggStepInterval <= 0) {
+							// Initialise
 							int stepInterval = instrumState->config->aggregationStepInterval;
 							if (stepInterval <= 0) stepInterval = 1;
-							if (instrumState->aggStepInterval <= 0) {
-								// Initialise
-								instrumState->aggStepInterval = stepInterval;
-								instrumState->aggStepIntervalCounter = stepInterval;
-								instrumState->targetNumAggWindows = 1;
-								// Negate the subsequent decrement:
-								instrumState->aggStepIntervalCounter++;
-							}
+							instrumState->aggStepInterval = stepInterval;
+							instrumState->aggStepIntervalCounter = stepInterval;
+							instrumState->targetNumAggWindows = 1;
+							// Negate the subsequent decrement:
+							instrumState->aggStepIntervalCounter++;
+						}
 
+						if (!treetimer::core::instrumState->sleeping) {
 							// Decide whether to step to next aggregation window:
 							instrumState->aggStepIntervalCounter--;
 							if (instrumState->aggStepIntervalCounter <= 0) {
@@ -143,18 +146,22 @@ namespace treetimer
 							}
 						}
 					}
+				}
+				else if (blockName == instrumState->config->traceConductorNodeName) {
+					blockType = TT_NODE_TYPE_TRACE_CONDUCTOR;
 
-					if (blockName == instrumState->config->traceConductorNodeName) {
-						if (instrumState->config->eTTimers || instrumState->config->eTParam) {
+					if (instrumState->config->eTTimers || instrumState->config->eTParam) {
+						if (instrumState->traceConductorNodeName == "") {
+							// Initialise
 							int traceCallInterval = instrumState->config->traceConductorInterval;
 							if (traceCallInterval <= 0) traceCallInterval = 1;
-							if (instrumState->traceConductorNodeName == "") {
-								// Initialise
-								instrumState->traceConductorNodeName = blockName;
-								instrumState->traceCallInterval = traceCallInterval;
-								instrumState->traceCallIntervalCounter = 0;
-							}
+							instrumState->traceConductorNodeName = blockName;
+							instrumState->traceCallInterval = traceCallInterval;
+							instrumState->traceCallIntervalCounter = 0;
+							wasTraceConductorInitialised = true;
+						}
 
+						if (!treetimer::core::instrumState->sleeping) {
 							// Decide whether to enable/block trace collection during this call:
 							instrumState->traceCallIntervalCounter--;
 							if (instrumState->traceCallIntervalCounter <= 0) {
@@ -174,7 +181,9 @@ namespace treetimer
 				instrumState->callTree->moveToChild(blockName);
 
 				// Ensure that code block data is set (would be undefined for new nodes)
-				instrumState->callTree->pos->nodeData.blockType = blockType;
+				if (instrumState->callTree->pos->nodeData.blockType == TT_NODE_TYPE_UNSPECIFIED) {
+					instrumState->callTree->pos->nodeData.blockType = blockType;
+				}
 
 				instrumState->callTree->pos->nodeData.currentNodeEntryID = instrumState->callTree->nodeEntryCounter;
 
@@ -196,6 +205,12 @@ namespace treetimer
 						instrumState->config->eTTimers && instrumState->traceCallCollectionEnabled,
 						// (instrumState->config->eTTimers || instrumState->config->eTParam) && instrumState->traceCallCollectionEnabled,
 						instrumState->callTree->nodeEntryCounter);
+				}
+
+				if (wasTraceConductorInitialised) {
+					// Ensure that if TreeTimer is sleeping, that a record is made that 
+					// this node is the TraceConductor:
+					TreeTimerLogParameter("__IsTraceConductor__", true);
 				}
 			}
 

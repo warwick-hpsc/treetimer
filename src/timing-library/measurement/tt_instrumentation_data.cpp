@@ -20,6 +20,8 @@ namespace treetimer
 		InstrumentationData::InstrumentationData()
 		{
 			this->blockTimer = new treetimer::timers::Timer();
+
+			this->blockType = TT_NODE_TYPE_UNSPECIFIED;
 		}
 
 		InstrumentationData::~InstrumentationData()
