@@ -105,7 +105,7 @@ namespace treetimer
 
 			// setGlobalParamFromEnv(this);
 
-			this->print();
+			// this->print();
 		}
 
 		void Config::print() {
