@@ -8,12 +8,23 @@ def get_table_count(db, table):
 	return count
 
 def table_empty(db, table):
-	# return get_table_count(db, table) == 0
 	cur = db.cursor()
 	query = "SELECT COUNT(*) FROM (SELECT * FROM {0} LIMIT 1);".format(table)
 	cur.execute(query)
 	count = cur.fetchone()[0]
 	return count == 0
+
+def table_exists(db, table):
+	cur = db.cursor()
+	query = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='{0}'".format(table)
+	cur.execute(query)
+	return (cur.fetchone()[0] > 0)
+
+def temp_table_exists(db, table):
+	cur = db.cursor()
+	query = "SELECT count(*) FROM sqlite_temp_master WHERE type='table' AND name='{0}'".format(table)
+	cur.execute(query)
+	return (cur.fetchone()[0] > 0)
 
 def getProcessCallpathIds(db, runID, processID):
 	db.row_factory = sqlite3.Row
@@ -38,7 +49,13 @@ def getNodeChildrenIDs(db, processID, callPathID):
 	## Note: runID not needed because assuming call tree is same across repeat runs.
 	db.row_factory = sqlite3.Row
 	cur = db.cursor()
-	cmd = "SELECT CallPathID FROM CallPathData WHERE ProcessID = {0} AND ParentNodeID = {1}".format(processID, callPathID)
+
+	callpathProcess_tmpTableName = "callpath_p{0}".format(processID)
+	if not temp_table_exists(db, callpathProcess_tmpTableName):
+		query = "CREATE TEMPORARY TABLE {0} AS SELECT * FROM CallPathData WHERE ProcessID = {1}".format(callpathProcess_tmpTableName, processID)
+		cur.execute(query)
+	cmd = "SELECT CallPathID FROM {0} WHERE ParentNodeID = {1}".format(callpathProcess_tmpTableName, callPathID)
+
 	cur.execute(cmd)
 	return [i['CallPathID'] for i in cur.fetchall()]
 
@@ -78,3 +95,25 @@ def getProcessID(db, MPIRank):
 		raise Exception("getMpiRank(MPIRank={0}) has returned {1} rows".format(MPIRank, len(results)))
 	return results[0]["ProcessID"]
 
+def findTraceConductorNodeName(db):
+	# If parameter collection was enabled, either aggregate or trace, then
+	# there will be a special parameter for the TraceConductor node
+	query = None
+	if table_exists(db, "AggregateParameterBool") and not table_empty(db, "AggregateParameterBool"):
+		query = "SELECT CallPathID FROM AggregateParameterBool WHERE ParamName = \"__IsTraceConductor__\" ;"
+	elif table_exists(db, "TraceParameterBoolData") and not table_empty(db, "TraceParameterBoolData"):
+		query = "SELECT CallPathID FROM TraceParameterBoolData WHERE ParamName = \"__IsTraceConductor__\" ;"
+	if query is None:
+		return None
+
+	cur = db.cursor()
+	cur.execute(query)
+	results = cur.fetchall()
+	if len(results) == 0:
+		return None
+	callPathID = results[0][0]
+
+	query = "SELECT NodeName FROM CallPathData NATURAL JOIN ProfileNodeData WHERE CallPathID = {0};".format(callPathID)
+	cur.execute(query)
+	results = cur.fetchall()
+	return results[0][0]

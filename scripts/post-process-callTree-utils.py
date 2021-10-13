@@ -71,6 +71,20 @@ class CallTreeNode:
 					return r
 		return None
 
+	def findSolverNode(self, parentCalls, walltime):
+		con1 = self.time > (0.7*walltime)
+		#con2 = self.calls > (50*parentCalls)
+		#con2 = self.calls > (10*parentCalls)
+		con2 = self.calls > (3*parentCalls)
+		if con1 and con2:
+			return self
+		elif len(self.leaves) > 0:
+			for l in self.leaves:
+				r = findSolverNode(l, self.calls, walltime)
+				if not r is None:
+					return r
+		return None
+
 	def getAllChildrenMembers(self, member):
 		validMembers = ["dbID", "name", "typeName", "time", "calls"]
 		if not member in validMembers:
@@ -261,19 +275,5 @@ def buildCallPathNodeTraversal(db, runID, processID, treeNode, nodeID, indentLev
 
 	if am_root:
 		return treeNode
-
-def findSolverNode(tree, parentCalls, walltime):
-	con1 = tree.time > (0.7*walltime)
-	#con2 = tree.calls > (50*parentCalls)
-	#con2 = tree.calls > (10*parentCalls)
-	con2 = tree.calls > (3*parentCalls)
-	if con1 and con2:
-		return tree
-	elif len(tree.leaves) > 0:
-		for l in tree.leaves:
-			r = findSolverNode(l, tree.calls, walltime)
-			if not r is None:
-				return r
-	return None
 
 
