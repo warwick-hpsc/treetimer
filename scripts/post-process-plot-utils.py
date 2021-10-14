@@ -295,7 +295,6 @@ def aggParam_chartDynamicLoadBalance(aggParam_df, paramName, output_dirpath=None
 		fig_filepath = os.path.join(output_dirpath, fig_filename)
 	else:
 		fig_filepath = fig_filename
-	print(aggParam_df)
 	plot_heatmap(aggParam_df, "Window", "Value", fig_filepath)
 
 
