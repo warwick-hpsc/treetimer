@@ -80,7 +80,7 @@ class CallTreeNode:
 			return self
 		elif len(self.leaves) > 0:
 			for l in self.leaves:
-				r = findSolverNode(l, self.calls, walltime)
+				r = l.findSolverNode(self.calls, walltime)
 				if not r is None:
 					return r
 		return None
