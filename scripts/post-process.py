@@ -60,12 +60,13 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--tt-results-dirpath', help="Dirpath to 'tt_results' folder")
 parser.add_argument('-m', '--parallel', action='store_true', help="Process multiple DB files in parallel")
-parser.add_argument('-b', '--db-filepath', help="Analyse this specific database file")
-parser.add_argument('-t', '--trace-group-focus', help='When grouping traces by loop iterator, can filter by a block within loop')
+parser.add_argument('-f', '--db-filepath', help="Analyse this specific database file")
+parser.add_argument('-g', '--trace-group-focus', help='When grouping traces by loop iterator, can filter by a block within loop')
 parser.add_argument('-p', '--parameter', help='Which trace parameter to process')
 parser.add_argument('-c', '--charts', choices=["polar", "horizontal", "vertical"], help="Chart the call stack runtime breakdown across ranks")
 parser.add_argument('-r', '--chart-ranks', action='store_true', help="If charting, also draw call stack chart for each rank. Expensive!")
 parser.add_argument('-l', '--label', action='store_true', help="Add labels to chart elements. Optional because can create clutter")
+parser.add_argument('-t', '--tree', help="Print call tree of this rank")
 args = parser.parse_args()
 
 if args.parallel:
@@ -220,60 +221,60 @@ def preprocess_db(db_fp, ctr, num_dbs, cache_dp):
 				traces_df_all.to_csv(traceTimes_focused_fp, index=False)
 
 	if not args.parameter is None:
-		windowedAggParam_fp = os.path.join(cache_dp, f+".aggParameter-{0}.windowed.csv".format(args.parameter))
-		if not os.path.isfile(windowedAggParam_fp):
-			if trees is None:
-				with open(trees_fp, 'rb') as input:
-					trees = pickle.load(input)
-			aggParam_df_all = None
-			didAllRanksPerformWindowedAggregation = True
-			for rank, t in trees.items():
-				n = t.findTreeNodeByType("AggregationStepper")
-				if n is None:
-					didAllRanksPerformWindowedAggregation = False
-					break
-			if didAllRanksPerformWindowedAggregation:
-				if verbose: print("- generating: " + windowedAggParam_fp)
-				if dbm is None: dbm = move_db_to_memory(db)
-				df_all = None
-				## This loop is expensive. Can I cache every N iterations?
+		if dbm is None: dbm = move_db_to_memory(db)
+		if not table_empty(dbm, "AggregateTime"):
+			windowedAggParam_fp = os.path.join(cache_dp, f+".aggParameter-{0}.windowed.csv".format(args.parameter))
+			if not os.path.isfile(windowedAggParam_fp):
+				if trees is None:
+					with open(trees_fp, 'rb') as input:
+						trees = pickle.load(input)
+				didAllRanksPerformWindowedAggregation = True
 				for rank, t in trees.items():
-					processID = getProcessID(dbm, rank)
-					df = collateWindowedAggregateParameter(dbm, runID, processID, t, args.parameter)
-					if df_all is None:
-						df_all = df
-					else:
-						df_all = df_all.append(df)
-				df_all.sort_values(["Window", "Rank"], inplace=True)
-				df_all.to_csv(windowedAggParam_fp, index=False)
-
-		traceParameter_fp = os.path.join(cache_dp, f+".traceParameter-{0}.csv".format(args.parameter))
-		if not os.path.isfile(traceParameter_fp):
-			if verbose: print("- generating: " + traceParameter_fp)
-			if trees is None:
-				with open(trees_fp, 'rb') as input:
-					trees = pickle.load(input)
-
-			traces_df_all = None
-			for rank, t in trees.items():
-				n = t.findTreeNodeByName(findTraceConductorNodeName(db))
-				if n is None: n = t.findTreeNodeByType("TraceConductor")
-				if n is None: n = t.findSolverNode(1, t.time)
-				if n is None:
-					raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
-				else:
-					traceGroupNode = n.name
-					if dbm is None: dbm = move_db_to_memory(db)
-					processID = getProcessID(dbm, rank)
-					traces_df = traceParameter_aggregateByNode(dbm, runID, processID, t, traceGroupNode, args.parameter)
-					if not traces_df is None:
-						traces_df["Rank"] = rank
-						if traces_df_all is None:
-							traces_df_all = traces_df
+					n = t.findTreeNodeByType("AggregationStepper")
+					if n is None:
+						didAllRanksPerformWindowedAggregation = False
+						break
+				if didAllRanksPerformWindowedAggregation:
+					if verbose: print("- generating: " + windowedAggParam_fp)
+					df_all = None
+					## This loop is expensive. Can I cache every N iterations?
+					for rank, t in trees.items():
+						processID = getProcessID(dbm, rank)
+						df = collateWindowedAggregateParameter(dbm, runID, processID, t, args.parameter)
+						if df_all is None:
+							df_all = df
 						else:
-							traces_df_all = traces_df_all.append(traces_df)
-			if not traces_df_all is None:
-				traces_df_all.to_csv(traceParameter_fp, index=False)
+							df_all = df_all.append(df)
+					df_all.sort_values(["Window", "Rank"], inplace=True)
+					df_all.to_csv(windowedAggParam_fp, index=False)
+
+		if not table_empty(dbm, "TraceTimeData"):
+			traceParameter_fp = os.path.join(cache_dp, f+".traceParameter-{0}.csv".format(args.parameter))
+			if not os.path.isfile(traceParameter_fp):
+				if verbose: print("- generating: " + traceParameter_fp)
+				if trees is None:
+					with open(trees_fp, 'rb') as input:
+						trees = pickle.load(input)
+
+				traces_df_all = None
+				for rank, t in trees.items():
+					n = t.findTreeNodeByName(findTraceConductorNodeName(db))
+					if n is None: n = t.findTreeNodeByType("TraceConductor")
+					if n is None: n = t.findSolverNode(1, t.time)
+					if n is None:
+						raise Exception("Could not deduce top-most callpath node in solver loop, so cannot perform trace analysis")
+					else:
+						traceGroupNode = n.name
+						processID = getProcessID(dbm, rank)
+						traces_df = traceParameter_aggregateByNode(dbm, runID, processID, t, traceGroupNode, args.parameter)
+						if not traces_df is None:
+							traces_df["Rank"] = rank
+							if traces_df_all is None:
+								traces_df_all = traces_df
+							else:
+								traces_df_all = traces_df_all.append(traces_df)
+				if not traces_df_all is None:
+					traces_df_all.to_csv(traceParameter_fp, index=False)
 
 	return True
 
@@ -416,8 +417,8 @@ def main():
 				trees = pickle.load(input)
 
 			for rank, t in trees.items():
-				if not tt_db_filepath is None:
-					# Just one DB being analysed, so print out call tree:
+				if (not args.tree is None) and (rank == int(args.tree)):
+					print("Printing call tree of rank {0}:".format(rank))
 					print(t)
 
 				if not args.charts is None:
@@ -435,8 +436,8 @@ def main():
 							groupedCallTrees.append({rank:t})
 
 					# Plot this call tree
-					if args.charts and (args.chart_ranks or rank==1):
-						print(" - drawing call-tree chart ...")
+					if args.charts and args.chart_ranks and t.time > 0.0:
+						print(" - drawing call-tree chart of rank {0} ...".format(rank))
 						chartCallPath(t, plotType, "Call stack times of rank {0}".format(rank), args.tt_results_dirpath, "rank-{0}.png".format(rank), args.label)
 
 	if (not args.charts is None) and (not groupedCallTrees is None):

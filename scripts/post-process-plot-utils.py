@@ -40,6 +40,9 @@ methodTypeToColour["MPICollectiveCall"] = "red"
 methodTypeToColour["LibraryCall"] = "yellowgreen"
 
 def chartCallPath(tree, plotType, title, output_dir, filename, addLabels):
+	if tree.time <= 0.0:
+		return
+
 	fig = plt.figure(figsize=fig_dims)
 	plotCallPath_root(tree, plotType, addLabels)
 	fig.suptitle(title)
@@ -54,6 +57,9 @@ def chartCallPath(tree, plotType, title, output_dir, filename, addLabels):
 	plt.close(fig)
 
 def plotCallPath_root(tree, plotType, addLabels):
+	if tree.time <= 0.0:
+		return
+
 	if plotType == PlotType.Polar:
 		root_total = np.pi * 2
 		ax = plt.subplot(111, projection='polar')
@@ -366,6 +372,8 @@ def plot_heatmap(df, index_colname, value_colname, fig_filepath):
 
 	plt.savefig(fig_filepath)
 	plt.close(fig)
+
+	df_pvt.to_csv(fig_filepath+".csv", index=False)
 
 	print("Heatmap written to: " + fig_filepath)
 
