@@ -36,12 +36,17 @@ namespace treetimer
 				this->gatherIntraNode = gatherIntraNode;
 
 				if (gatherIntraNode) {
-					MPI_Comm nodeComm;
+					MPI_Comm nodeComm = MPI_COMM_NULL;
 					int rankLocal, nRanksLocal, err;
-					MPI_Info info = 0;
+					MPI_Info info;
+					err = MPI_Info_create(&info);
+					if (err != MPI_SUCCESS) {
+						fprintf(stderr, "Rank %d failed to create MPI_Info (error = %d)\n", rankGlobal, err);
+						MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
+					}
 					err = MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rankGlobal, info, &nodeComm);
 					if (err != MPI_SUCCESS) {
-						fprintf(stderr, "Rank %d failed to create intra-node MPI communicator\n", rankGlobal);
+						fprintf(stderr, "Rank %d failed to create intra-node MPI communicator (error = %d)\n", rankGlobal, err);
 						MPI_Abort(MPI_COMM_WORLD, err); exit(EXIT_FAILURE);
 					}
 					MPI_Comm_rank(nodeComm, &rankLocal);
