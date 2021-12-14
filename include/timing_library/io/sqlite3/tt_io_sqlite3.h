@@ -67,7 +67,7 @@ namespace treetimer
 											int elemBytes, MPI_Datatype elemType, int mpiTag);
 
 				int sendRecordsToRoot(tt_sql::TTSQLite3& dataAccess, const void *data, int nElems, 
-									MPI_Datatype elemType, int elemBytes, int mpiTag);
+									int elemBytes, MPI_Datatype elemType, int mpiTag);
 
 				void callTreeTraversal(tt_sql::TTSQLite3& dataAccess,
 									   tt_ds::TreeNode<std::string, tt_m::InstrumentationData>& node,

@@ -141,7 +141,7 @@ namespace treetimer
 					int rankLocal = -1;
 					int nRanksLocal = -1;
 					bool gatherIntraNode = false;
-					MPI_Comm nodeComm = -1;
+					MPI_Comm nodeComm = MPI_COMM_NULL;
 
 					std::vector<TT_CallPathNode> callPathNodeRecords;
 					std::vector<TT_AggTiming> aggTimeRecords;
